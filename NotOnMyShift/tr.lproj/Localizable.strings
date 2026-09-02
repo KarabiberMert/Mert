@@ -1,0 +1,40 @@
+/* Not On My Shift — Türkçe (birincil dil)
+   İngilizce sonra en.lproj olarak eklenecek.
+   Anahtarlar Support/Strings.swift içindeki L ile birebir aynı. */
+
+/* Kasa */
+"cash.label" = "Kasa";
+"cash.perSecond" = "saniyede";
+"cash.byHand" = "Şimdilik her kahveyi sen yapıyorsun.";
+
+/* Eylemler */
+"action.sell" = "Kahve sat";
+"action.hire" = "Eleman tut";
+"action.upgradeWarehouse" = "Depoyu büyüt";
+"action.staffFull" = "Arabaya daha fazla eleman sığmıyor";
+"action.warehouseMaxed" = "Depo son seviyede";
+
+/* Kadro */
+"crew.title" = "Kadro";
+"crew.empty" = "Henüz kimse yok. İlk elemanı tuttuğunda iş sensiz de yürümeye başlar.";
+
+/* Depo */
+"warehouse.title" = "Depo";
+"warehouse.explainer" = "Sen yokken bu kadar süre üretim birikir.";
+
+/* Çevrimdışı dönüş */
+"offline.title" = "Dönmüşsün";
+"offline.full" = "Depo doldu, ürünler bekliyor. Büyütürsen daha uzun süre çalışır.";
+"offline.continue" = "Devam";
+
+/* Motor / tanılama */
+"engine.title" = "Motor";
+"engine.played" = "İşlenen süre";
+"engine.manualSales" = "Elle satış";
+"engine.lifetime" = "Toplam kazanç";
+
+/* Uyarılar */
+"error.funds" = "Para yetmiyor";
+"save.recovered" = "Kayıt bozulmuştu, yedekten geri alındı.";
+"save.failed" = "Kayıt yazılamadı. Cihazda yer olduğundan emin ol.";
+"boot.failed" = "Oyun açılamadı";

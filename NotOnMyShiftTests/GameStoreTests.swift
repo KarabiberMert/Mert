@@ -1,0 +1,137 @@
+import Foundation
+import XCTest
+@testable import NotOnMyShift
+
+/// Sahne fazı akışı: uygulama arka plana gidip geri geldiğinde para doğru mu?
+/// Saat enjekte edildiği için gerçek zaman beklemeden ölçebiliyoruz.
+///
+/// Not: `setUp`/`tearDown` ezilmiyor. `XCTestCase` bunları nonisolated tanımlar;
+/// `@MainActor` bir sınıfta ezmek Swift 6'da izolasyon uyuşmazlığı olur.
+/// Onun yerine her test kendi geçici klasörünü kurup temizliyor.
+@MainActor
+final class GameStoreTests: XCTestCase {
+
+    func testReturningAfterFiveMinutesCreditsOfflineEarnings() async throws {
+        try await withTemporaryDirectory { directory in
+            let config = BalanceFixture.config()
+            let clock = TestClock(BalanceFixture.epoch)
+            let store = GameStore(
+                config: config,
+                saves: SaveStore(containerDirectory: directory),
+                now: clock.provider
+            )
+
+            // Çağ 0 → Çağ 1: elle biriktir, ilk elemanı tut.
+            for _ in 0..<10 { store.sellManually() }          // 10 x 10 ₺ = 100 ₺
+            store.hireStaff()
+            XCTAssertEqual(store.state.staff.count, 1)
+            XCTAssertEqual(store.state.money, 0, accuracy: 1e-9)
+
+            // Uygulamayı kapat, beş dakika sonra dön.
+            store.handleWillResignActive()
+            clock.date = BalanceFixture.epoch.addingTimeInterval(300)
+            store.handleBecameActive()
+
+            XCTAssertEqual(store.state.money, 300, accuracy: 1e-6)   // 1 ₺/sn
+            XCTAssertNotNil(store.offlineReport)
+            XCTAssertEqual(store.offlineReport?.earned ?? 0, 300, accuracy: 1e-6)
+
+            store.handleWillResignActive()                            // zamanlayıcıyı durdur
+        }
+    }
+
+    func testProgressSurvivesRelaunch() async throws {
+        try await withTemporaryDirectory { directory in
+            let config = BalanceFixture.config()
+            let saves = SaveStore(containerDirectory: directory)
+            let clock = TestClock(BalanceFixture.epoch)
+
+            let first = GameStore(config: config, saves: saves, now: clock.provider)
+            for _ in 0..<25 { first.sellManually() }                  // 250 ₺
+            first.hireStaff()                                         // -100 ₺
+            first.handleWillResignActive()                            // kaydeder
+
+            // Uygulama öldürüldü, yeniden açıldı.
+            let second = GameStore(config: config, saves: saves, now: clock.provider)
+
+            XCTAssertEqual(second.state.money, 150, accuracy: 1e-6)
+            XCTAssertEqual(second.state.staff.count, 1)
+            XCTAssertEqual(second.state.stats.manualSales, 25)
+        }
+    }
+
+    func testOfflineEarningsStopAtWarehouseCapacity() async throws {
+        try await withTemporaryDirectory { directory in
+            let config = BalanceFixture.config()
+            let clock = TestClock(BalanceFixture.epoch)
+            let store = GameStore(
+                config: config,
+                saves: SaveStore(containerDirectory: directory),
+                now: clock.provider
+            )
+
+            for _ in 0..<10 { store.sellManually() }
+            store.hireStaff()
+            store.handleWillResignActive()
+
+            // Seviye 0 deposu bir saat tutar; iki gün uzakta kal.
+            clock.date = BalanceFixture.epoch.addingTimeInterval(48 * 3_600)
+            store.handleBecameActive()
+
+            XCTAssertEqual(store.state.money, 3_600, accuracy: 1e-6)
+            XCTAssertTrue(store.offlineReport?.didFillWarehouse == true)
+
+            store.handleWillResignActive()
+        }
+    }
+
+    func testStartOverClearsEverything() async throws {
+        try await withTemporaryDirectory { directory in
+            let store = GameStore(
+                config: BalanceFixture.config(),
+                saves: SaveStore(containerDirectory: directory),
+                now: { BalanceFixture.epoch }
+            )
+
+            for _ in 0..<10 { store.sellManually() }
+            store.hireStaff()
+            store.startOver()
+
+            XCTAssertEqual(store.state.money, 0, accuracy: 1e-9)
+            XCTAssertTrue(store.state.staff.isEmpty)
+            XCTAssertEqual(store.state.stats.manualSales, 0)
+
+            store.handleWillResignActive()
+        }
+    }
+
+    // MARK: - Yardımcı
+
+    private func withTemporaryDirectory(_ body: (URL) throws -> Void) async throws {
+        let directory = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appending(path: "nomsstore-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try body(directory)
+    }
+}
+
+/// Testlerde saati elle ileri almak için. Üretimde `Date()` kullanılıyor.
+private final class TestClock: @unchecked Sendable {
+
+    private let lock = NSLock()
+    private var storedDate: Date
+
+    init(_ date: Date) {
+        storedDate = date
+    }
+
+    var date: Date {
+        get { lock.withLock { storedDate } }
+        set { lock.withLock { storedDate = newValue } }
+    }
+
+    var provider: @Sendable () -> Date {
+        { [self] in date }
+    }
+}
