@@ -40,8 +40,8 @@ scan "Motor UI bilmemeli"                        '^import (SwiftUI|UIKit)'    No
 
 echo
 echo "Denge sayıları koda gömülmemeli (Views içinde çıplak sayı arıyoruz)"
-hardcoded=$(grep -nE '(cost|price|rate|capacity|seconds|revenue)[A-Za-z]*[[:space:]]*=[[:space:]]*[0-9]' \
-  NotOnMyShift/Views/*.swift 2>/dev/null || true)
+hardcoded=$(find NotOnMyShift/Views -name '*.swift' -exec \
+  grep -nE '(cost|price|rate|capacity|seconds|revenue)[A-Za-z]*[[:space:]]*=[[:space:]]*[0-9]' {} + 2>/dev/null || true)
 if [ -n "$hardcoded" ]; then
   echo "IHLAL — View içinde denge sayısı:"; echo "$hardcoded" | sed 's/^/  /'; fail=1
 else

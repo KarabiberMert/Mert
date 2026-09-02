@@ -4,37 +4,49 @@
 
 /* Kasa */
 "cash.label" = "Kasa";
-"cash.perSecond" = "saniyede";
 "cash.byHand" = "Şimdilik her kahveyi sen yapıyorsun.";
+"cash.perSecond" = "saniyede %@";
 
 /* Eylemler */
 "action.sell" = "Kahve sat";
 "action.hire" = "Eleman tut";
 "action.upgradeWarehouse" = "Depoyu büyüt";
-"action.staffFull" = "Arabaya daha fazla eleman sığmıyor";
-"action.warehouseMaxed" = "Depo son seviyede";
+"action.staffFull" = "Arabaya daha fazla eleman sığmıyor.";
+"action.warehouseMaxed" = "Depo son seviyede.";
+"action.coffeesToGo" = "%lld kahve daha";
+
+/* Dükkân */
+"shop.open" = "AÇIK";
+"shop.tapHint" = "Tezgâha dokun, kahveyi sat.";
+"shop.a11y" = "Dükkân. Dokununca bir kahve satarsın.";
 
 /* Kadro */
 "crew.title" = "Kadro";
-"crew.empty" = "Henüz kimse yok. İlk elemanı tuttuğunda iş sensiz de yürümeye başlar.";
 
 /* Depo */
 "warehouse.title" = "Depo";
-"warehouse.explainer" = "Sen yokken bu kadar süre üretim birikir.";
+"warehouse.holds" = "Sen yokken %@lik üretim birikir.";
+
+/* Çağ 1 anı */
+"firstHire.title" = "%@ işe başladı";
+"firstHire.body" = "Artık sen yokken de kahve satılıyor. Uygulamayı kapatsan bile depo dolmaya devam eder.";
+"firstHire.action" = "Güzel";
 
 /* Çevrimdışı dönüş */
 "offline.title" = "Dönmüşsün";
+"offline.away" = "%@ uzaktaydın.";
 "offline.full" = "Depo doldu, ürünler bekliyor. Büyütürsen daha uzun süre çalışır.";
 "offline.continue" = "Devam";
-
-/* Motor / tanılama */
-"engine.title" = "Motor";
-"engine.played" = "İşlenen süre";
-"engine.manualSales" = "Elle satış";
-"engine.lifetime" = "Toplam kazanç";
 
 /* Uyarılar */
 "error.funds" = "Para yetmiyor";
 "save.recovered" = "Kayıt bozulmuştu, yedekten geri alındı.";
 "save.failed" = "Kayıt yazılamadı. Cihazda yer olduğundan emin ol.";
 "boot.failed" = "Oyun açılamadı";
+
+/* Geliştirme */
+"engine.title" = "Motor";
+"engine.played" = "İşlenen süre";
+"engine.manualSales" = "Elle satış";
+"engine.lifetime" = "Toplam kazanç";
+"engine.startOver" = "Baştan başla";

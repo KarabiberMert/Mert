@@ -17,6 +17,7 @@ enum BalanceFixture {
     ) -> BalanceConfig {
         BalanceConfig(
             version: 1,
+            sector: .init(id: "test_sektor", shopName: "Test Kahve", unit: "kahve"),
             manual: .init(revenuePerSale: revenuePerSale),
             staff: .init(
                 ratePerSecond: ratePerSecond,

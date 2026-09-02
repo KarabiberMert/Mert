@@ -279,6 +279,8 @@ final class GameEngineTests: XCTestCase {
     func testShippedBalanceParsesAndIsSane() throws {
         let config = try loadShippedConfig()
 
+        XCTAssertFalse(config.sector.shopName.isEmpty, "Tabelada yazacak bir ad lazım")
+        XCTAssertFalse(config.sector.unit.isEmpty)
         XCTAssertGreaterThan(config.manual.revenuePerSale, 0)
         XCTAssertGreaterThan(config.staff.ratePerSecond, 0)
         XCTAssertGreaterThan(config.staff.baseCost, 0)

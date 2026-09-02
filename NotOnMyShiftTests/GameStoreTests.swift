@@ -85,6 +85,54 @@ final class GameStoreTests: XCTestCase {
         }
     }
 
+    func testFirstHireCelebrationFiresOnceAndOnlyOnce() async throws {
+        try await withTemporaryDirectory { directory in
+            let config = BalanceFixture.config()
+            let saves = SaveStore(containerDirectory: directory)
+            let store = GameStore(config: config, saves: saves, now: { BalanceFixture.epoch })
+
+            XCTAssertNil(store.firstHireCelebration)
+
+            for _ in 0..<10 { store.sellManually() }        // 100 ₺
+            store.hireStaff()
+
+            XCTAssertEqual(store.firstHireCelebration?.name, "Bir")
+            XCTAssertTrue(store.state.hasCelebratedFirstHire)
+            store.dismissFirstHireCelebration()
+
+            for _ in 0..<20 { store.sellManually() }        // ikinci eleman 200 ₺
+            store.hireStaff()
+
+            XCTAssertEqual(store.state.staff.count, 2)
+            XCTAssertNil(store.firstHireCelebration, "Çağ 1 anı ikinci kez oynatılmamalı")
+
+            // Uygulama yeniden açıldığında da tekrar etmemeli.
+            let relaunched = GameStore(config: config, saves: saves, now: { BalanceFixture.epoch })
+            XCTAssertNil(relaunched.firstHireCelebration)
+            XCTAssertTrue(relaunched.state.hasCelebratedFirstHire)
+        }
+    }
+
+    func testManualSalesUntilHireCountsDownAndStopsAfterAutomation() async throws {
+        try await withTemporaryDirectory { directory in
+            let store = GameStore(
+                config: BalanceFixture.config(),        // 10 ₺/dokunuş, ilk eleman 100 ₺
+                saves: SaveStore(containerDirectory: directory),
+                now: { BalanceFixture.epoch }
+            )
+
+            XCTAssertEqual(store.manualSalesUntilHire, 10)
+            for _ in 0..<3 { store.sellManually() }
+            XCTAssertEqual(store.manualSalesUntilHire, 7)
+
+            for _ in 0..<7 { store.sellManually() }
+            XCTAssertNil(store.manualSalesUntilHire, "Para yettiğinde geri sayım biter")
+
+            store.hireStaff()
+            XCTAssertNil(store.manualSalesUntilHire, "Çağ 1'de elle satış artık hedef değil")
+        }
+    }
+
     func testStartOverClearsEverything() async throws {
         try await withTemporaryDirectory { directory in
             let store = GameStore(

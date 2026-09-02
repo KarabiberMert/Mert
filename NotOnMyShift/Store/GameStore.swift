@@ -21,6 +21,9 @@ final class GameStore {
     /// Çevrimdışı dönüş özeti. Doluysa ekranda gösterilir.
     var offlineReport: OfflineReport?
 
+    /// Çağ 0 → Çağ 1 anı. İlk eleman tutulduğunda bir kez dolar.
+    var firstHireCelebration: StaffMember?
+
     /// Son başarısız eylemin sebebi. Kullanıcı bir şey yapınca temizlenir.
     private(set) var lastActionError: GameEngine.ActionError?
 
@@ -36,6 +39,19 @@ final class GameStore {
     var hireCost: Double? { GameEngine.hireCost(for: state, config: config) }
     var warehouseUpgradeCost: Double? { GameEngine.warehouseUpgradeCost(for: state, config: config) }
     var offlineCapacitySeconds: TimeInterval { GameEngine.offlineCapacitySeconds(for: state, config: config) }
+
+    var shopName: String { config.sector.shopName }
+
+    /// Sonraki eleman için kaç kahve daha satmak gerekiyor?
+    /// Çağ 0'da hedefi somutlaştırır: "38 kahve daha".
+    var manualSalesUntilHire: Int? {
+        guard let cost = hireCost, !state.isAutomated else { return nil }
+        let revenue = config.manual.revenuePerSale
+        guard revenue > 0 else { return nil }
+        let remaining = cost - state.money
+        guard remaining > 0 else { return nil }
+        return Int((remaining / revenue).rounded(.up))
+    }
 
     /// Sıradaki elemanın şablonu — "kimi tutuyorum" bilgisini butonda gösterebilmek için.
     var nextStaffTemplate: BalanceConfig.StaffTemplate? {
@@ -144,9 +160,18 @@ final class GameStore {
     func hireStaff() {
         switch GameEngine.hireStaff(state, config: config) {
         case .success(let next):
+            let isFirstEver = !state.hasCelebratedFirstHire
             state = next
             lastActionError = nil
-            Haptics.play(.medium)
+
+            if isFirstEver, let hired = next.staff.last {
+                // Oyunun ilk büyük ödül anı: iş artık sensiz de yürüyor.
+                state.hasCelebratedFirstHire = true
+                firstHireCelebration = hired
+                Haptics.play(.success)
+            } else {
+                Haptics.play(.medium)
+            }
             persist()
         case .failure(let error):
             lastActionError = error
@@ -171,12 +196,17 @@ final class GameStore {
         offlineReport = nil
     }
 
+    func dismissFirstHireCelebration() {
+        firstHireCelebration = nil
+    }
+
     /// Sıfırdan başla. Faz 0'da geliştirme kolaylığı; ilerideki "yeni oyun" da bunu kullanacak.
     func startOver() {
         stopTicking()
         saves.deleteAll()
         state = GameState.newGame(characterID: "kahveci", now: now())
         offlineReport = nil
+        firstHireCelebration = nil
         lastActionError = nil
         didRecoverFromBackup = false
         didFailToSave = false

@@ -106,6 +106,36 @@ final class PersistenceTests: XCTestCase {
         XCTAssertTrue(state.staff.isEmpty)
         XCTAssertEqual(state.warehouseLevel, 0)
         XCTAssertEqual(state.stats.manualSales, 0)
+        XCTAssertFalse(state.hasCelebratedFirstHire)
+    }
+
+    func testSchemaOneSaveWithStaffDoesNotReplayTheFirstHireMoment() throws {
+        // Şema 1'de `hasCelebratedFirstHire` yoktu. Kadrosu olan eski bir kayıt
+        // açıldığında Çağ 1 kutlaması yeniden oynatılmamalı — o an bir kez yaşanır.
+        let json = """
+        {
+          "schemaVersion": 1,
+          "money": 40.0,
+          "lastSeenAt": 1700000000.0,
+          "staff": [
+            {
+              "id": "sevim",
+              "name": "Sevim Abla",
+              "trait": "Hızlıdır",
+              "rateMultiplier": 1.15,
+              "hiredAtGameSeconds": 12.0
+            }
+          ]
+        }
+        """
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .secondsSince1970
+
+        let state = try decoder.decode(GameState.self, from: Data(json.utf8))
+
+        XCTAssertEqual(state.staff.count, 1)
+        XCTAssertTrue(state.hasCelebratedFirstHire)
+        XCTAssertTrue(state.isAutomated)
     }
 
     // MARK: - Yardımcı
@@ -122,6 +152,7 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(actual.lifetimeEarnings, expected.lifetimeEarnings, accuracy: 1e-6, file: file, line: line)
         XCTAssertEqual(actual.elapsedGameSeconds, expected.elapsedGameSeconds, accuracy: 1e-6, file: file, line: line)
         XCTAssertEqual(actual.warehouseLevel, expected.warehouseLevel, file: file, line: line)
+        XCTAssertEqual(actual.hasCelebratedFirstHire, expected.hasCelebratedFirstHire, file: file, line: line)
         XCTAssertEqual(actual.staff.map(\.id), expected.staff.map(\.id), file: file, line: line)
         XCTAssertEqual(actual.stats, expected.stats, file: file, line: line)
         XCTAssertEqual(

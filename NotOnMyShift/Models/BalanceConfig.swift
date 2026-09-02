@@ -6,6 +6,7 @@ import Foundation
 struct BalanceConfig: Codable, Sendable, Equatable {
 
     var version: Int
+    var sector: Sector
     var manual: Manual
     var staff: Staff
     var warehouse: Warehouse
@@ -13,6 +14,15 @@ struct BalanceConfig: Codable, Sendable, Equatable {
     var staffPool: [StaffTemplate]
 
     // MARK: - Alt bölümler
+
+    /// Faz 1'de tek sektör var: kahve arabası. Kat açma geldiğinde bu bir dizi olacak.
+    struct Sector: Codable, Sendable, Equatable {
+        var id: String
+        /// Emaye tabelada yazan ad.
+        var shopName: String
+        /// Satılan şeyin adı — "38 kahve daha" gibi cümlelerde kullanılır.
+        var unit: String
+    }
 
     /// Çağ 0: elle üretip satma.
     struct Manual: Codable, Sendable, Equatable {

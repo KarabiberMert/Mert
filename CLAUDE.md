@@ -36,11 +36,16 @@ kurumsal katman. Hardal vurgusu iki palette de aynı — para hep aynı renk.
 - Animasyon sadece oyuncunun eylemine cevap versin. Her animasyonda
   `accessibilityReduceMotion` kontrol edilir.
 - Metin Türkçe, sen-dili, sade fiiller. Büyük harfli minik etiket kullanma.
-- Yeni font eklerken `ığüşöçİĞÜŞÖÇ` ile test et.
+- Tipografi: başlık ve rakam `Typography.display/money` (Archivo Condensed),
+  gövde sistem fontu. Rakamlarda tabular figür şart.
+- Yeni font eklerken `ığüşöçİĞÜŞÖÇ` ile test et — `scripts/build_fonts.py`
+  bunu otomatik doğruluyor. Archivo OFL 1.1; `Resources/Fonts/OFL.txt` silinmez.
+- Bina ölçüleri `ShopGeometry` içinde 0..1 normalize sabitlerdir. View'a
+  piksel gömme; yeni parça eklerken oraya sabit ekle ve testini yaz.
 
 ## Fazlar
 
-Faz 0 (bitti) → 1: Çağ 0→1 geçişi ve görsel kimlik → 2: ekipman ve şubeler →
+Faz 0 (bitti) → 1 (bitti): Çağ 0→1 geçişi ve görsel kimlik → 2: ekipman ve şubeler →
 3: ikinci sektör ve kat açma → 4: olaylar ve rakipler → 5: süreç katmanı →
 6: yumuşak prestij ve final → 7: monetizasyon ve App Store.
 

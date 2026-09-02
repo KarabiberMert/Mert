@@ -1,6 +1,12 @@
 {
   "version": 1,
 
+  "sector": {
+    "id": "kahve_arabasi",
+    "shopName": "Dede Kahve",
+    "unit": "kahve"
+  },
+
   "manual": {
     "revenuePerSale": 4.0
   },

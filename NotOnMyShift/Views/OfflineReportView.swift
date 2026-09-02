@@ -7,38 +7,42 @@ struct OfflineReportView: View {
     let onDismiss: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 16) {
             Text(L.welcomeBack)
-                .font(.title2.weight(.semibold))
+                .font(Typography.display(30))
                 .foregroundStyle(Palette.ink)
 
-            Text("\(DurationText.text(report.awaySeconds)) uzaktaydın.")
-                .font(.body)
+            Text(L.youWereAway(DurationText.text(report.awaySeconds)))
+                .font(Typography.label(16))
                 .foregroundStyle(Palette.inkSoft)
 
             Text(Money.text(report.earned))
-                .font(.system(size: 40, weight: .semibold))
-                .monospacedDigit()
-                .foregroundStyle(Palette.mustard)
+                .font(Typography.money(52))
+                .foregroundStyle(Palette.mustardDeep)
+                .padding(.vertical, 2)
 
             if report.didFillWarehouse {
-                Text(L.warehouseFull)
-                    .font(.subheadline)
+                Text(L.warehouseFilled)
+                    .font(.system(.subheadline))
                     .foregroundStyle(Palette.enamel)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
-            Spacer()
+            Spacer(minLength: 8)
 
-            Button(L.continueAction) {
-                onDismiss()
+            Button(action: onDismiss) {
+                Text(L.continueAction)
+                    .font(Typography.display(18))
+                    .foregroundStyle(Palette.plaster)
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .background(Palette.enamel, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
-            .buttonStyle(.borderedProminent)
-            .frame(maxWidth: .infinity)
+            .buttonStyle(.plain)
         }
         .padding(24)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Palette.wall.ignoresSafeArea())
-        .tint(Palette.enamel)
         .presentationDetents([.medium])
+        .presentationDragIndicator(.hidden)
     }
 }

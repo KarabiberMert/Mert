@@ -10,7 +10,7 @@ import Foundation
 /// eklenen bir alan, o alanı tanımayan eski kaydı çöpe atmaz.
 struct GameState: Codable, Sendable, Equatable {
 
-    static let currentSchemaVersion = 1
+    static let currentSchemaVersion = 2
 
     /// Kaydın hangi şema sürümüyle yazıldığı.
     var schemaVersion: Int
@@ -41,6 +41,9 @@ struct GameState: Codable, Sendable, Equatable {
     /// Depo (çevrimdışı kapasite) seviyesi. `balance.json` içindeki dizinin indeksi.
     var warehouseLevel: Int
 
+    /// Çağ 0 → Çağ 1 geçişi kutlandı mı? Bu an bir kez yaşanır. (şema 2)
+    var hasCelebratedFirstHire: Bool
+
     var stats: Stats
 
     // MARK: - Yeni oyun
@@ -57,6 +60,7 @@ struct GameState: Codable, Sendable, Equatable {
             startedAt: now,
             staff: [],
             warehouseLevel: 0,
+            hasCelebratedFirstHire: false,
             stats: Stats()
         )
     }
@@ -71,6 +75,7 @@ struct GameState: Codable, Sendable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case schemaVersion, characterID, money, lifetimeEarnings
         case elapsedGameSeconds, lastSeenAt, startedAt, staff, warehouseLevel, stats
+        case hasCelebratedFirstHire
     }
 
     init(
@@ -83,6 +88,7 @@ struct GameState: Codable, Sendable, Equatable {
         startedAt: Date,
         staff: [StaffMember],
         warehouseLevel: Int,
+        hasCelebratedFirstHire: Bool,
         stats: Stats
     ) {
         self.schemaVersion = schemaVersion
@@ -94,6 +100,7 @@ struct GameState: Codable, Sendable, Equatable {
         self.startedAt = startedAt
         self.staff = staff
         self.warehouseLevel = warehouseLevel
+        self.hasCelebratedFirstHire = hasCelebratedFirstHire
         self.stats = stats
     }
 
@@ -110,6 +117,10 @@ struct GameState: Codable, Sendable, Equatable {
         startedAt = try container.decodeIfPresent(Date.self, forKey: .startedAt) ?? now
         staff = try container.decodeIfPresent([StaffMember].self, forKey: .staff) ?? []
         warehouseLevel = try container.decodeIfPresent(Int.self, forKey: .warehouseLevel) ?? 0
+        // Şema 1 kayıtlarında bu alan yok. Zaten eleman tutmuşsa kutlamayı
+        // tekrar göstermeyelim — o an bir kez yaşanır.
+        hasCelebratedFirstHire = try container.decodeIfPresent(Bool.self, forKey: .hasCelebratedFirstHire)
+            ?? !staff.isEmpty
         stats = try container.decodeIfPresent(Stats.self, forKey: .stats) ?? Stats()
     }
 }

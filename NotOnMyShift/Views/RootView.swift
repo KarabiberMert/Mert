@@ -1,227 +1,177 @@
 import SwiftUI
 
-/// Faz 0 ekranı: çıplak. Tasarım Faz 1'de gelecek — şimdilik motorun döndüğünü
-/// gözle görebilmek istiyoruz. Renk olarak sadece arka planı ve vurguyu
-/// kullanıyoruz ki açılışta beyaz flaş olmasın.
+/// Faz 1 ekranı: üstte sakin kasa, ortada bina, altta disiplinli eylem şeridi.
+///
+/// Cesaret tek yere harcandı — bina. Sayaç ve butonlar onu bastırmıyor.
 struct RootView: View {
 
     @Bindable var store: GameStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    @State private var cashBump = false
+    @State private var cashBumped = false
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                cashHeader
-                sellSection
-                hireSection
-                warehouseSection
-                crewSection
-                engineSection
-                footer
+        ZStack {
+            Palette.wall.ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                CashHeaderView(
+                    money: store.state.money,
+                    productionRate: store.productionRate,
+                    isAutomated: store.state.isAutomated,
+                    bumped: cashBumped
+                )
+                .padding(.horizontal, 22)
+                .padding(.top, 6)
+
+                if !store.state.isAutomated {
+                    Text(L.tapToSell)
+                        .font(Typography.label(13))
+                        .foregroundStyle(Palette.inkFaint)
+                        .padding(.horizontal, 22)
+                        .padding(.top, 6)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                ShopSceneView(
+                    staff: store.state.staff,
+                    shopName: store.shopName,
+                    gainText: "+\(Money.text(store.config.manual.revenuePerSale))",
+                    onSell: { sell() }
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+
+                crewLine
+                    .padding(.horizontal, 22)
+                    .padding(.bottom, 8)
+
+                actionPanel
+                    .padding(.horizontal, 22)
+                    .padding(.bottom, 4)
+
+                notices
+                    .padding(.horizontal, 22)
+
+                #if DEBUG
+                diagnostics
+                    .padding(.horizontal, 22)
+                    .padding(.top, 6)
+                #endif
             }
-            .padding(20)
+        }
+        .sheet(item: $store.offlineReport) { report in
+            OfflineReportView(report: report) { store.dismissOfflineReport() }
+        }
+        .overlay {
+            if let member = store.firstHireCelebration {
+                FirstHireBannerView(member: member) {
+                    store.dismissFirstHireCelebration()
+                }
+                .transition(.opacity)
+            }
+        }
+        .animation(
+            reduceMotion ? nil : .easeOut(duration: 0.2),
+            value: store.firstHireCelebration?.id
+        )
+    }
+
+    /// Kadro tek satırda. Elemanların isimleri oyunun tonunu taşıyor;
+    /// listeye çevirmeden görünür kalsınlar.
+    @ViewBuilder
+    private var crewLine: some View {
+        if !store.state.staff.isEmpty {
+            HStack(spacing: 6) {
+                Text(L.crew)
+                    .foregroundStyle(Palette.inkFaint)
+                Text(store.state.staff.map(\.name).joined(separator: ", "))
+                    .foregroundStyle(Palette.inkSoft)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            .font(Typography.label(13))
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .background(Palette.wall.ignoresSafeArea())
-        .tint(Palette.enamel)
-        .sheet(item: $store.offlineReport) { report in
-            OfflineReportView(report: report) {
-                store.dismissOfflineReport()
-            }
-        }
     }
 
-    // MARK: - Kasa
+    // MARK: - Alt şerit
 
-    private var cashHeader: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(L.cash)
-                .font(.subheadline)
-                .foregroundStyle(Palette.inkSoft)
-
-            Text(Money.text(store.state.money))
-                .font(.system(size: 44, weight: .semibold))
-                .monospacedDigit()
-                .foregroundStyle(Palette.ink)
-                .scaleEffect(cashBump ? 1.05 : 1)
-                .accessibilityLabel("\(L.cash): \(Money.text(store.state.money))")
-
-            if store.state.isAutomated {
-                Text("\(L.perSecond) \(Money.preciseText(store.productionRate))")
-                    .font(.callout)
-                    .monospacedDigit()
-                    .foregroundStyle(Palette.pistachio)
-            } else {
-                Text(L.workingByHand)
-                    .font(.callout)
-                    .foregroundStyle(Palette.inkSoft)
-            }
-
-            if store.didRecoverFromBackup {
-                notice(L.saveRecovered)
-            }
-            if store.didFailToSave {
-                notice(L.saveFailed)
-            }
-        }
+    private var actionPanel: some View {
+        ActionPanelView(
+            sellTitle: L.sellCoffee,
+            gainText: "+\(Money.text(store.config.manual.revenuePerSale))",
+            isAutomated: store.state.isAutomated,
+            hireCost: store.hireCost,
+            nextStaff: store.nextStaffTemplate,
+            canAffordHire: store.hireCost.map { store.state.money >= $0 } ?? false,
+            manualSalesUntilHire: store.manualSalesUntilHire,
+            warehouseCapacity: store.offlineCapacitySeconds,
+            warehouseCost: store.warehouseUpgradeCost,
+            canAffordWarehouse: store.warehouseUpgradeCost.map { store.state.money >= $0 } ?? false,
+            showsFundsWarning: store.lastActionError == .insufficientFunds,
+            onSell: { sell() },
+            onHire: { store.hireStaff() },
+            onUpgradeWarehouse: { store.upgradeWarehouse() }
+        )
     }
 
-    // MARK: - Elle satış
-
-    private var sellSection: some View {
-        Button {
-            store.sellManually()
-            bumpCash()
-        } label: {
-            Text("\(L.sellCoffee)  +\(Money.text(store.config.manual.revenuePerSale))")
-                .font(.headline)
-                .monospacedDigit()
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
+    @ViewBuilder
+    private var notices: some View {
+        if store.didRecoverFromBackup {
+            notice(L.saveRecovered)
         }
-        .buttonStyle(.borderedProminent)
-    }
-
-    // MARK: - Eleman
-
-    private var hireSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if let cost = store.hireCost, let next = store.nextStaffTemplate {
-                Button {
-                    store.hireStaff()
-                } label: {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("\(L.hireStaff) — \(Money.text(cost))")
-                            .font(.headline)
-                            .monospacedDigit()
-                        Text(next.name)
-                            .font(.subheadline)
-                            .foregroundStyle(Palette.inkSoft)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 12)
-                }
-                .buttonStyle(.bordered)
-                .disabled(store.state.money < cost)
-            } else {
-                Text(L.staffFull)
-                    .font(.subheadline)
-                    .foregroundStyle(Palette.inkSoft)
-            }
-
-            if store.lastActionError == .insufficientFunds {
-                notice(L.notEnoughMoney)
-            }
+        if store.didFailToSave {
+            notice(L.saveFailed)
         }
-    }
-
-    // MARK: - Depo
-
-    private var warehouseSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(L.warehouse)
-                .font(.headline)
-                .foregroundStyle(Palette.ink)
-
-            Text("\(L.warehouseExplainer) \(DurationText.text(store.offlineCapacitySeconds))")
-                .font(.subheadline)
-                .foregroundStyle(Palette.inkSoft)
-
-            if let cost = store.warehouseUpgradeCost {
-                Button {
-                    store.upgradeWarehouse()
-                } label: {
-                    Text("\(L.upgradeWarehouse) — \(Money.text(cost))")
-                        .monospacedDigit()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 10)
-                }
-                .buttonStyle(.bordered)
-                .disabled(store.state.money < cost)
-            } else {
-                Text(L.warehouseMaxed)
-                    .font(.subheadline)
-                    .foregroundStyle(Palette.inkSoft)
-            }
-        }
-    }
-
-    // MARK: - Kadro
-
-    private var crewSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(L.crew)
-                .font(.headline)
-                .foregroundStyle(Palette.ink)
-
-            if store.state.staff.isEmpty {
-                Text(L.crewEmpty)
-                    .font(.subheadline)
-                    .foregroundStyle(Palette.inkSoft)
-            } else {
-                ForEach(store.state.staff) { member in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(member.name)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Palette.ink)
-                        Text(member.trait)
-                            .font(.footnote)
-                            .foregroundStyle(Palette.inkSoft)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
-        }
-    }
-
-    // MARK: - Motor (Faz 0 tanılama)
-
-    private var engineSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(L.engine)
-                .font(.headline)
-                .foregroundStyle(Palette.ink)
-
-            row(L.totalPlayed, DurationText.text(store.state.elapsedGameSeconds))
-            row(L.manualSales, "\(store.state.stats.manualSales)")
-            row(L.lifetime, Money.text(store.state.lifetimeEarnings))
-        }
-    }
-
-    private var footer: some View {
-        Button("Baştan başla", role: .destructive) {
-            store.startOver()
-        }
-        .font(.footnote)
-    }
-
-    // MARK: - Küçük parçalar
-
-    private func row(_ title: String, _ value: String) -> some View {
-        HStack {
-            Text(title)
-                .foregroundStyle(Palette.inkSoft)
-            Spacer(minLength: 12)
-            Text(value)
-                .monospacedDigit()
-                .foregroundStyle(Palette.ink)
-        }
-        .font(.subheadline)
     }
 
     private func notice(_ text: String) -> some View {
         Text(text)
-            .font(.footnote)
-            .foregroundStyle(Palette.mustard)
+            .font(Typography.label(13))
+            .foregroundStyle(Palette.mustardDeep)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 4)
     }
 
-    /// Tek animasyon: kasa sayacının kısa bir nefes alması. Oyuncunun eylemine
-    /// cevaptır, kendiliğinden dönmez. Hareket azaltma açıksa hiç olmaz.
-    private func bumpCash() {
+    // MARK: - Eylem
+
+    private func sell() {
+        store.sellManually()
         guard !reduceMotion else { return }
-        withAnimation(.spring(duration: 0.18)) { cashBump = true }
-        withAnimation(.spring(duration: 0.18).delay(0.09)) { cashBump = false }
+        withAnimation(.spring(duration: 0.16)) { cashBumped = true }
+        withAnimation(.spring(duration: 0.16).delay(0.08)) { cashBumped = false }
     }
+
+    // MARK: - Geliştirme
+
+    #if DEBUG
+    private var diagnostics: some View {
+        DisclosureGroup(L.engine) {
+            VStack(spacing: 4) {
+                row(L.totalPlayed, DurationText.text(store.state.elapsedGameSeconds))
+                row(L.manualSales, "\(store.state.stats.manualSales)")
+                row(L.lifetime, Money.text(store.state.lifetimeEarnings))
+                Button(L.startOver, role: .destructive) { store.startOver() }
+                    .font(Typography.label(13))
+                    .padding(.top, 4)
+            }
+            .padding(.top, 6)
+        }
+        .font(Typography.label(13))
+        .tint(Palette.inkSoft)
+        .foregroundStyle(Palette.inkSoft)
+    }
+
+    private func row(_ title: String, _ value: String) -> some View {
+        HStack {
+            Text(title)
+            Spacer(minLength: 12)
+            Text(value)
+        }
+        .font(Typography.label(13))
+        .foregroundStyle(Palette.inkSoft)
+    }
+    #endif
 }

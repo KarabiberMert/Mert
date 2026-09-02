@@ -7,12 +7,12 @@ struct BootFailureView: View {
     let message: String
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             Text(L.bootFailed)
-                .font(.title3.weight(.semibold))
+                .font(Typography.display(24))
                 .foregroundStyle(Palette.ink)
             Text(message)
-                .font(.footnote)
+                .font(.system(.footnote))
                 .multilineTextAlignment(.center)
                 .foregroundStyle(Palette.inkSoft)
         }
