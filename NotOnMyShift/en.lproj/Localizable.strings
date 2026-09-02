@@ -23,7 +23,6 @@
 "shop.a11y" = "The shop. Tap to sell a coffee.";
 
 /* Crew */
-"crew.title" = "Crew";
 "staff.quick.name" = "Rosie";
 "staff.quick.trait" = "Fast, but mixes up the orders.";
 "staff.opener.name" = "Danny";
@@ -49,11 +48,9 @@
 "action.hire" = "Hire someone";
 "action.upgradeWarehouse" = "Grow the store room";
 "action.staffFull" = "No room behind the counter for anyone else.";
-"action.warehouseMaxed" = "The store room is at its largest.";
 "action.coffeesToGo" = "%lld more to go";
 
 /* Store room */
-"warehouse.title" = "Store room";
 "warehouse.holds" = "While you are away it collects up to %@ of production.";
 
 /* The Age 1 moment */
@@ -79,3 +76,31 @@
 "engine.manualSales" = "Hand sales";
 "engine.lifetime" = "Earned in total";
 "engine.startOver" = "Start over";
+
+/* Panel tabs */
+"tab.crew" = "Crew";
+"tab.equipment" = "Equipment";
+"tab.branches" = "Branches";
+
+/* Equipment */
+"equipment.grinder.name" = "Grinder";
+"equipment.grinder.note" = "Fresher grounds, faster shots.";
+"equipment.machine.name" = "Espresso machine";
+"equipment.machine.note" = "Two groups instead of one.";
+"equipment.milk.name" = "Milk station";
+"equipment.milk.note" = "No more queueing for the steam wand.";
+"equipment.unknown.name" = "New kit";
+"equipment.unknown.note" = "Does its job quietly.";
+"equipment.level" = "Level %lld";
+"equipment.maxed" = "Fully upgraded";
+"equipment.output" = "Output ×%@";
+
+/* Branches */
+"branch.open" = "Open a branch";
+"branch.count" = "%lld open";
+"branch.inherits" = "A new branch copies your crew and your kit. Nothing to set up twice.";
+"branch.maxed" = "Every unit on this floor is yours.";
+
+/* Gross and wages */
+"cash.gross" = "%@ gross";
+"cash.wages" = "%@ wages";

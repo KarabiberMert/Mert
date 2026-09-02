@@ -10,10 +10,15 @@ import CoreGraphics
 /// oranlanır ki dairesel şeyler yüksekliğe göre yamulmasın.
 struct ShopGeometry {
 
+    /// Tek hücrenin boyu.
     let size: CGSize
 
-    /// Kompozisyonun tasarlandığı en/boy oranı. Sahne bu oranda tutulur;
-    /// yoksa uzun ekranlarda bina dikey olarak gerilir.
+    /// Hücrenin kapsayıcı içindeki sol üst köşesi. Şubeler yan yana dizilirken
+    /// her hücre aynı çizim koduna farklı bir başlangıç noktasıyla girer.
+    var origin: CGPoint = .zero
+
+    /// Kompozisyonun tasarlandığı en/boy oranı. Hücre bu oranda tutulur;
+    /// asla gerilmez, gerekirse küçülür.
     static let designAspectRatio: CGFloat = 390.0 / 430.0
 
     // MARK: - Dikey katmanlar
@@ -72,10 +77,14 @@ struct ShopGeometry {
 
     // MARK: - Dönüşümler
 
-    func x(_ value: Double) -> CGFloat { size.width * value }
-    func y(_ value: Double) -> CGFloat { size.height * value }
-    /// Yarıçap ve kalınlıklar genişliğe oranlanır.
+    func x(_ value: Double) -> CGFloat { origin.x + size.width * value }
+    func y(_ value: Double) -> CGFloat { origin.y + size.height * value }
+    /// Yarıçap ve yatay kalınlıklar genişliğe oranlanır. Uzunluk olduğu için
+    /// başlangıç noktası katılmaz.
     func span(_ value: Double) -> CGFloat { size.width * value }
+
+    /// Dikey uzunluk. Konum değil uzunluk olduğu için başlangıç noktası katılmaz.
+    func height(_ value: Double) -> CGFloat { size.height * value }
 
     func point(_ px: Double, _ py: Double) -> CGPoint {
         CGPoint(x: x(px), y: y(py))
@@ -101,5 +110,55 @@ struct ShopGeometry {
         case 4...5: 0.90
         default: 0.82
         }
+    }
+}
+
+/// Kat içindeki hücrelerin yerleşimi. Şubeler yan yana dizilir.
+///
+/// Hücre **asla gerilmez**: tasarım oranını korur, sığmıyorsa küçülür. Şerit
+/// yatayda ortalanır ve zemine yaslanır; üstünde kalan boşluk binanın devamıdır
+/// ve Faz 3'te kat olacak.
+struct BranchStrip {
+
+    let count: Int
+    let available: CGSize
+
+    /// Hücre bu genişlikten darsa ince ayrıntılar çizilmez.
+    /// İki şubede hücre ~183pt olur ve tam detay hâlâ okunur; üçten sonra değil.
+    static let compactWidth: CGFloat = 170
+    /// Bir hücrede kaç figüre yer var — genişliğe göre.
+    static let pointsPerFigure: CGFloat = 34
+
+    var cellSize: CGSize {
+        guard count > 0, available.width > 0, available.height > 0 else { return .zero }
+        var width = available.width / CGFloat(count)
+        var height = width / ShopGeometry.designAspectRatio
+        if height > available.height {
+            height = available.height
+            width = height * ShopGeometry.designAspectRatio
+        }
+        return CGSize(width: width, height: height)
+    }
+
+    func origin(of index: Int) -> CGPoint {
+        let cell = cellSize
+        let stripWidth = cell.width * CGFloat(count)
+        return CGPoint(
+            x: (available.width - stripWidth) / 2 + cell.width * CGFloat(index),
+            y: available.height - cell.height
+        )
+    }
+
+    func geometry(of index: Int) -> ShopGeometry {
+        ShopGeometry(size: cellSize, origin: origin(of: index))
+    }
+
+    var detail: ShopScene.Detail {
+        cellSize.width >= Self.compactWidth ? .full : .compact
+    }
+
+    /// Dar hücrede altı figür lapaya döner; görünen sayıyı genişlik belirler.
+    var visibleFigures: Int {
+        max(1, Int(cellSize.width / Self.pointsPerFigure))
     }
 }

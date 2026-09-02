@@ -294,6 +294,31 @@ final class GameEngineTests: XCTestCase {
             XCTAssertGreaterThan(next.cost, previous.cost)
         }
 
+        XCTAssertGreaterThanOrEqual(config.staff.wagePerSecond, 0)
+        XCTAssertLessThan(
+            config.staff.wagePerSecond, config.staff.ratePerSecond,
+            "Maaş taban üretimi geçerse ilk eleman zarar ettirir"
+        )
+
+        XCTAssertFalse(config.equipment.isEmpty)
+        for spec in config.equipment {
+            XCTAssertGreaterThanOrEqual(spec.levels.count, 2, "'\(spec.id)' yükseltilemiyor")
+            XCTAssertEqual(spec.levels.first?.cost, 0, "'\(spec.id)' ilk seviyesi bedava olmalı")
+            XCTAssertEqual(spec.levels.first?.multiplier, 1, "'\(spec.id)' ilk seviyesi nötr olmalı")
+            for (previous, next) in zip(spec.levels, spec.levels.dropFirst()) {
+                XCTAssertGreaterThan(next.cost, previous.cost)
+                XCTAssertGreaterThan(next.multiplier, previous.multiplier)
+            }
+            XCTAssertNotEqual(
+                L.equipmentName(spec.id), L.equipmentName("__yok__"),
+                "'\(spec.id)' için dil dosyasında isim yok"
+            )
+        }
+
+        XCTAssertGreaterThan(config.branches.maxCount, 1)
+        XCTAssertGreaterThan(config.branches.baseCost, 0)
+        XCTAssertGreaterThan(config.branches.costGrowth, 1)
+
         // Havuz, kadro sınırını doldurmaya yetmeli — isimsiz eleman olmayacak.
         XCTAssertGreaterThanOrEqual(config.staffPool.count, config.staff.maxCount)
         XCTAssertEqual(Set(config.staffPool.map(\.id)).count, config.staffPool.count, "Eleman kimlikleri benzersiz olmalı")

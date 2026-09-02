@@ -25,7 +25,6 @@
 "shop.a11y" = "Dükkân. Dokununca bir kahve satarsın.";
 
 /* Kadro */
-"crew.title" = "Kadro";
 "staff.quick.name" = "Sevim Abla";
 "staff.quick.trait" = "Hızlıdır, ama siparişleri karıştırır.";
 "staff.opener.name" = "Kadir";
@@ -51,11 +50,9 @@
 "action.hire" = "Eleman tut";
 "action.upgradeWarehouse" = "Depoyu büyüt";
 "action.staffFull" = "Tezgâhın arkasına başka kimse sığmıyor.";
-"action.warehouseMaxed" = "Depo son seviyede.";
 "action.coffeesToGo" = "%lld kahve daha";
 
 /* Depo */
-"warehouse.title" = "Depo";
 "warehouse.holds" = "Sen yokken %@ kadar üretim birikir.";
 
 /* Çağ 1 anı */
@@ -81,3 +78,31 @@
 "engine.manualSales" = "Elle satış";
 "engine.lifetime" = "Toplam kazanç";
 "engine.startOver" = "Baştan başla";
+
+/* Şeritler */
+"tab.crew" = "Kadro";
+"tab.equipment" = "Ekipman";
+"tab.branches" = "Şubeler";
+
+/* Ekipman */
+"equipment.grinder.name" = "Öğütücü";
+"equipment.grinder.note" = "Taze çekilmiş kahve, daha hızlı akan shot.";
+"equipment.machine.name" = "Espresso makinesi";
+"equipment.machine.note" = "Tek grup yerine iki grup.";
+"equipment.milk.name" = "Süt istasyonu";
+"equipment.milk.note" = "Buhar kolu için sıra beklemek yok.";
+"equipment.unknown.name" = "Yeni ekipman";
+"equipment.unknown.note" = "İşini sessizce yapıyor.";
+"equipment.level" = "Seviye %lld";
+"equipment.maxed" = "Tam yükseltilmiş";
+"equipment.output" = "Üretim ×%@";
+
+/* Şubeler */
+"branch.open" = "Şube aç";
+"branch.count" = "%lld şube açık";
+"branch.inherits" = "Yeni şube kadronu ve ekipmanını devralır. Aynı ayarı iki kez yapmazsın.";
+"branch.maxed" = "Bu kattaki bütün hücreler senin.";
+
+/* Brüt ve maaş */
+"cash.gross" = "brüt %@";
+"cash.wages" = "maaş %@";

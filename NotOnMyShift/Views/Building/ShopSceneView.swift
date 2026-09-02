@@ -2,15 +2,17 @@ import SwiftUI
 
 /// Ekranın kahramanı: zemin katın kesiti.
 ///
-/// Cesaret buraya harcanıyor; kasa sayacı ve alt panel sakin duruyor.
-/// Katmanlar: arka mimari → kadro → tezgâh ve makine.
+/// Şubeler açıldıkça kat hücrelere bölünür — aynı çizim kodu, yan yana daha
+/// küçük kutulara giriyor. Hücre asla gerilmez; sığmıyorsa küçülür ve şerit
+/// zemine yaslanır. Üstünde kalan boşluk binanın devamıdır.
 ///
 /// Hareket kuralı: sahne kendiliğinden kıpırdamaz. Sadece oyuncunun eylemine
-/// cevap verir — dokununca süzülen rakam, eleman gelince kata yerleşme.
+/// cevap verir — dokununca süzülen rakam, eleman ya da şube gelince yerleşme.
 struct ShopSceneView: View {
 
     let staff: [StaffMember]
-    /// Dokunma başına yazılan miktarın hazır metni ("+4 ₺").
+    let branchCount: Int
+    /// Dokunma başına yazılan miktarın hazır metni ("+$4").
     let gainText: String
     let onSell: () -> Void
 
@@ -24,30 +26,39 @@ struct ShopSceneView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let geometry = ShopGeometry(size: proxy.size)
+            let strip = BranchStrip(count: max(1, branchCount), available: proxy.size)
 
             ZStack(alignment: .topLeading) {
                 Canvas { context, size in
-                    ShopScene.drawBack(in: &context, geometry: ShopGeometry(size: size))
+                    let strip = BranchStrip(count: max(1, branchCount), available: size)
+                    for index in 0..<strip.count {
+                        ShopScene.drawBack(
+                            in: &context,
+                            geometry: strip.geometry(of: index),
+                            detail: strip.detail
+                        )
+                    }
                 }
 
-                crew(in: geometry)
+                crew(in: strip)
 
                 Canvas { context, size in
-                    ShopScene.drawFront(in: &context, geometry: ShopGeometry(size: size))
+                    let strip = BranchStrip(count: max(1, branchCount), available: size)
+                    for index in 0..<strip.count {
+                        ShopScene.drawFront(in: &context, geometry: strip.geometry(of: index))
+                    }
                 }
                 .allowsHitTesting(false)
 
                 ForEach(gains) { gain in
-                    FloatingGainView(text: gain.text, fontSize: geometry.span(0.058))
-                        .position(geometry.point(0.163, 0.600))
+                    FloatingGainView(text: gain.text, fontSize: strip.geometry(of: 0).span(0.058))
+                        .position(strip.geometry(of: 0).point(0.163, 0.600))
                 }
                 .allowsHitTesting(false)
             }
             .contentShape(Rectangle())
             .onTapGesture { sell() }
         }
-        .aspectRatio(ShopGeometry.designAspectRatio, contentMode: .fit)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(L.shopAccessibility)
         .accessibilityAddTraits(.isButton)
@@ -56,40 +67,48 @@ struct ShopSceneView: View {
 
     // MARK: - Kadro
 
+    /// Her şube aynı kadroyla çalışır — şube açmak kopyalamaktır. Patron ise
+    /// bir tane: sadece ilk hücrede durur.
     @ViewBuilder
-    private func crew(in geometry: ShopGeometry) -> some View {
-        let count = staff.count
-        let scale = ShopGeometry.slotScale(count: count)
+    private func crew(in strip: BranchStrip) -> some View {
+        let visible = min(staff.count, strip.visibleFigures)
+        let scale = ShopGeometry.slotScale(count: max(1, visible))
 
         ZStack(alignment: .topLeading) {
-            ForEach(Array(staff.enumerated()), id: \.element.id) { entry in
-                figure(
-                    in: geometry,
-                    centerX: ShopGeometry.slotCenter(index: entry.offset, count: count),
-                    scale: scale,
-                    apron: entry.offset.isMultiple(of: 2) ? Palette.pistachio : Palette.pistachioDeep,
-                    skin: Palette.skinTones[entry.offset % Palette.skinTones.count],
-                    standing: false
-                )
-                .transition(
-                    .asymmetric(
-                        insertion: .offset(y: -geometry.y(0.05)).combined(with: .opacity),
-                        removal: .opacity
-                    )
-                )
-            }
+            ForEach(Array(0..<strip.count), id: \.self) { branch in
+                let geometry = strip.geometry(of: branch)
 
-            // Patron: tek başınayken tezgâhta, kadro varken salonda gözlüyor.
-            figure(
-                in: geometry,
-                centerX: staff.isEmpty ? ShopGeometry.ownerWorkingX : ShopGeometry.ownerStandingX,
-                scale: staff.isEmpty ? 1.0 : 0.92,
-                apron: Palette.mustard,
-                skin: Palette.skinTones[0],
-                standing: !staff.isEmpty
-            )
+                ForEach(Array(staff.prefix(visible).enumerated()), id: \.element.id) { entry in
+                    figure(
+                        in: geometry,
+                        centerX: ShopGeometry.slotCenter(index: entry.offset, count: visible),
+                        scale: scale,
+                        apron: entry.offset.isMultiple(of: 2) ? Palette.pistachio : Palette.pistachioDeep,
+                        skin: Palette.skinTones[entry.offset % Palette.skinTones.count],
+                        standing: false
+                    )
+                    .transition(
+                        .asymmetric(
+                            insertion: .offset(y: -geometry.height(0.05)).combined(with: .opacity),
+                            removal: .opacity
+                        )
+                    )
+                }
+
+                if branch == 0 {
+                    figure(
+                        in: geometry,
+                        centerX: staff.isEmpty ? ShopGeometry.ownerWorkingX : ShopGeometry.ownerStandingX,
+                        scale: staff.isEmpty ? 1.0 : 0.92,
+                        apron: Palette.mustard,
+                        skin: Palette.skinTones[0],
+                        standing: !staff.isEmpty
+                    )
+                }
+            }
         }
-        .animation(reduceMotion ? nil : .spring(response: 0.48, dampingFraction: 0.72), value: count)
+        .animation(reduceMotion ? nil : .spring(response: 0.48, dampingFraction: 0.72), value: staff.count)
+        .animation(reduceMotion ? nil : .spring(response: 0.52, dampingFraction: 0.78), value: strip.count)
     }
 
     private func figure(
@@ -101,7 +120,7 @@ struct ShopSceneView: View {
         standing: Bool
     ) -> some View {
         let width = geometry.span(ShopGeometry.figureWidth * scale)
-        let bodyHeight = geometry.y(ShopGeometry.figureHeight * scale)
+        let bodyHeight = geometry.height(ShopGeometry.figureHeight * scale)
         let headRadius = geometry.span(ShopGeometry.figureHeadRadius * scale)
         let totalHeight = bodyHeight + headRadius * 2.2
 

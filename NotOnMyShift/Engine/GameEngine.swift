@@ -15,17 +15,62 @@ enum GameEngine {
         case insufficientFunds
         /// Kahve arabasına daha fazla eleman sığmıyor.
         case staffLimitReached
-        /// Depo son seviyede.
+        /// Depo ya da ekipman son seviyede.
         case maxLevelReached
+        /// Dengede böyle bir ekipman yok.
+        case unknownEquipment
+        /// Kata sığacak hücre kalmadı.
+        case branchLimitReached
     }
 
     // MARK: - Türetilmiş değerler
 
-    /// Saniyelik pasif getiri. Kadro boşsa 0 — yani Çağ 0'da çevrimdışı kazanç
-    /// da kendiliğinden yoktur, ayrı bir bayrağa gerek kalmaz.
-    static func productionRate(for state: GameState, config: BalanceConfig) -> Double {
+    /// Ekipmanın toplam üretim çarpanı. Her parçanın seviye çarpanı çarpılır.
+    static func equipmentMultiplier(for state: GameState, config: BalanceConfig) -> Double {
+        config.equipment.reduce(1.0) { product, spec in
+            let level = min(state.equipmentLevel(spec.id), spec.levels.count - 1)
+            guard spec.levels.indices.contains(level) else { return product }
+            return product * max(0, spec.levels[level].multiplier)
+        }
+    }
+
+    /// Maaş kesilmeden önceki saniyelik üretim. Kadro boşsa 0 — yani Çağ 0'da
+    /// çevrimdışı kazanç da kendiliğinden yoktur, ayrı bir bayrağa gerek kalmaz.
+    ///
+    /// Her şube aynı kadro ve ekipmanla çalışır (tek tuş kopyalama), dolayısıyla
+    /// üretim şube sayısıyla doğrusal çarpılır.
+    static func grossRate(for state: GameState, config: BalanceConfig) -> Double {
         let multiplierSum = state.staff.reduce(0.0) { $0 + $1.rateMultiplier }
-        return config.staff.ratePerSecond * multiplierSum
+        return config.staff.ratePerSecond
+            * multiplierSum
+            * equipmentMultiplier(for: state, config: config)
+            * Double(branchCount(for: state, config: config))
+    }
+
+    /// Saniyelik maaş gideri. Her şube kendi kadrosunu tutar.
+    ///
+    /// Ekipman maaş ödemez; tasarım raporundaki "eleman maaşı ile makine
+    /// yatırımı arasında gerçek bir seçim" buradan doğuyor.
+    static func wageRate(for state: GameState, config: BalanceConfig) -> Double {
+        max(0, config.staff.wagePerSecond)
+            * Double(state.staff.count)
+            * Double(branchCount(for: state, config: config))
+    }
+
+    /// Kasaya giren saniyelik net. Maaş brütü geçerse üretim durur ama borç
+    /// birikmez — oyuncuyu geri götüren mekanik istemiyoruz.
+    static func productionRate(for state: GameState, config: BalanceConfig) -> Double {
+        max(0, grossRate(for: state, config: config) - wageRate(for: state, config: config))
+    }
+
+    /// Elle bir satışın getirisi. Ekipman Çağ 0'da da işe yarar.
+    static func manualRevenue(for state: GameState, config: BalanceConfig) -> Double {
+        max(0, config.manual.revenuePerSale) * equipmentMultiplier(for: state, config: config)
+    }
+
+    /// Açık şube sayısı — kayıttaki değer dengedeki sınıra kırpılır.
+    static func branchCount(for state: GameState, config: BalanceConfig) -> Int {
+        min(max(1, state.branchCount), max(1, config.branches.maxCount))
     }
 
     /// Deponun tuttuğu çevrimdışı süre. Bunun ötesindeki süre yanar.
@@ -48,6 +93,23 @@ enum GameEngine {
         let next = state.warehouseLevel + 1
         guard config.warehouse.levels.indices.contains(next) else { return nil }
         return max(0, config.warehouse.levels[next].cost)
+    }
+
+    /// Bir ekipmanın sonraki seviyesinin ücreti. Son seviyedeyse ya da kimlik
+    /// tanınmıyorsa `nil`.
+    static func equipmentUpgradeCost(_ id: String, for state: GameState, config: BalanceConfig) -> Double? {
+        guard let spec = config.equipment.first(where: { $0.id == id }) else { return nil }
+        let next = state.equipmentLevel(id) + 1
+        guard spec.levels.indices.contains(next) else { return nil }
+        return max(0, spec.levels[next].cost)
+    }
+
+    /// Bir sonraki şubenin ücreti. Kat doluysa `nil`.
+    /// `cost(n) = baseCost * costGrowth^(n-1)` — n açılacak şubenin sırası.
+    static func branchCost(for state: GameState, config: BalanceConfig) -> Double? {
+        let current = branchCount(for: state, config: config)
+        guard current < max(1, config.branches.maxCount) else { return nil }
+        return max(0, config.branches.baseCost * pow(max(1, config.branches.costGrowth), Double(current - 1)))
     }
 
     /// Kadro üst sınırı: dengedeki sınır ile havuzdaki şablon sayısının küçüğü.
@@ -165,7 +227,7 @@ enum GameEngine {
 
     /// Çağ 0: elle bir kahve sat.
     static func sellManually(_ state: GameState, config: BalanceConfig) -> GameState {
-        let revenue = max(0, config.manual.revenuePerSale)
+        let revenue = manualRevenue(for: state, config: config)
         var next = state
         next.money += revenue
         next.lifetimeEarnings += revenue
@@ -192,6 +254,41 @@ enum GameEngine {
                 hiredAtGameSeconds: state.elapsedGameSeconds
             )
         )
+        return .success(next)
+    }
+
+    /// Çağ 2: bir ekipmanı bir seviye yükselt.
+    static func upgradeEquipment(
+        _ id: String,
+        _ state: GameState,
+        config: BalanceConfig
+    ) -> Result<GameState, ActionError> {
+        guard config.equipment.contains(where: { $0.id == id }) else {
+            return .failure(.unknownEquipment)
+        }
+        guard let cost = equipmentUpgradeCost(id, for: state, config: config) else {
+            return .failure(.maxLevelReached)
+        }
+        guard state.money >= cost else {
+            return .failure(.insufficientFunds)
+        }
+        var next = state
+        next.money -= cost
+        next.equipmentLevels[id] = state.equipmentLevel(id) + 1
+        return .success(next)
+    }
+
+    /// Yeni bir şube aç. Şube mevcut kadro ve ekipmanı devralır; ayrı ayarı yok.
+    static func openBranch(_ state: GameState, config: BalanceConfig) -> Result<GameState, ActionError> {
+        guard let cost = branchCost(for: state, config: config) else {
+            return .failure(.branchLimitReached)
+        }
+        guard state.money >= cost else {
+            return .failure(.insufficientFunds)
+        }
+        var next = state
+        next.money -= cost
+        next.branchCount = branchCount(for: state, config: config) + 1
         return .success(next)
     }
 

@@ -13,7 +13,44 @@
     "ratePerSecond": 1.2,
     "baseCost": 150.0,
     "costGrowth": 3.2,
-    "maxCount": 6
+    "maxCount": 6,
+    "wagePerSecond": 0.30
+  },
+
+  "equipment": [
+    {
+      "id": "grinder",
+      "levels": [
+        { "cost": 0,     "multiplier": 1.00 },
+        { "cost": 900,   "multiplier": 1.20 },
+        { "cost": 4500,  "multiplier": 1.45 },
+        { "cost": 22000, "multiplier": 1.75 }
+      ]
+    },
+    {
+      "id": "machine",
+      "levels": [
+        { "cost": 0,     "multiplier": 1.00 },
+        { "cost": 3000,  "multiplier": 1.30 },
+        { "cost": 18000, "multiplier": 1.65 },
+        { "cost": 95000, "multiplier": 2.10 }
+      ]
+    },
+    {
+      "id": "milk",
+      "levels": [
+        { "cost": 0,      "multiplier": 1.00 },
+        { "cost": 12000,  "multiplier": 1.25 },
+        { "cost": 60000,  "multiplier": 1.55 },
+        { "cost": 300000, "multiplier": 2.00 }
+      ]
+    }
+  ],
+
+  "branches": {
+    "baseCost": 6000,
+    "costGrowth": 5.0,
+    "maxCount": 4
   },
 
   "warehouse": {

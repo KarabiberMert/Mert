@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Faz 1 ekranı: üstte sakin kasa, ortada bina, altta disiplinli eylem şeridi.
+/// Faz 2 ekranı: üstte sakin kasa, ortada bina, altta sekmeli eylem şeridi.
 ///
 /// Cesaret tek yere harcandı — bina. Sayaç ve butonlar onu bastırmıyor.
 struct RootView: View {
@@ -9,6 +9,7 @@ struct RootView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var cashBumped = false
+    @State private var tab: ActionPanelView.Tab = .crew
 
     var body: some View {
         ZStack {
@@ -17,7 +18,9 @@ struct RootView: View {
             VStack(spacing: 0) {
                 CashHeaderView(
                     money: store.state.money,
-                    productionRate: store.productionRate,
+                    netRate: store.productionRate,
+                    grossRate: store.grossRate,
+                    wageRate: store.wageRate,
                     isAutomated: store.state.isAutomated,
                     bumped: cashBumped
                 )
@@ -35,18 +38,15 @@ struct RootView: View {
 
                 ShopSceneView(
                     staff: store.state.staff,
-                    gainText: "+\(Money.text(store.config.manual.revenuePerSale))",
+                    branchCount: store.branchCount,
+                    gainText: "+\(Money.text(store.manualRevenue))",
                     onSell: { sell() }
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
 
-                crewLine
-                    .padding(.horizontal, 22)
-                    .padding(.bottom, 8)
-
-                actionPanel
+                ActionPanelView(store: store, tab: $tab, onSell: { sell() })
                     .padding(.horizontal, 22)
                     .padding(.bottom, 4)
 
@@ -56,7 +56,7 @@ struct RootView: View {
                 #if DEBUG
                 diagnostics
                     .padding(.horizontal, 22)
-                    .padding(.top, 6)
+                    .padding(.top, 4)
                 #endif
             }
         }
@@ -77,44 +77,7 @@ struct RootView: View {
         )
     }
 
-    /// Kadro tek satırda. Elemanların isimleri oyunun tonunu taşıyor;
-    /// listeye çevirmeden görünür kalsınlar.
-    @ViewBuilder
-    private var crewLine: some View {
-        if !store.state.staff.isEmpty {
-            HStack(spacing: 6) {
-                Text(L.crew)
-                    .foregroundStyle(Palette.inkFaint)
-                Text(store.state.staff.map { L.staffName($0.id) }.joined(separator: ", "))
-                    .foregroundStyle(Palette.inkSoft)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
-            .font(Typography.label(13))
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
-    // MARK: - Alt şerit
-
-    private var actionPanel: some View {
-        ActionPanelView(
-            sellTitle: L.sellCoffee,
-            gainText: "+\(Money.text(store.config.manual.revenuePerSale))",
-            isAutomated: store.state.isAutomated,
-            hireCost: store.hireCost,
-            nextStaff: store.nextStaffTemplate,
-            canAffordHire: store.hireCost.map { store.state.money >= $0 } ?? false,
-            manualSalesUntilHire: store.manualSalesUntilHire,
-            warehouseCapacity: store.offlineCapacitySeconds,
-            warehouseCost: store.warehouseUpgradeCost,
-            canAffordWarehouse: store.warehouseUpgradeCost.map { store.state.money >= $0 } ?? false,
-            showsFundsWarning: store.lastActionError == .insufficientFunds,
-            onSell: { sell() },
-            onHire: { store.hireStaff() },
-            onUpgradeWarehouse: { store.upgradeWarehouse() }
-        )
-    }
+    // MARK: - Uyarılar
 
     @ViewBuilder
     private var notices: some View {

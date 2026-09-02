@@ -9,6 +9,8 @@ struct BalanceConfig: Codable, Sendable, Equatable {
     var sector: Sector
     var manual: Manual
     var staff: Staff
+    var equipment: [EquipmentSpec]
+    var branches: Branches
     var warehouse: Warehouse
     var offline: Offline
     var staffPool: [StaffTemplate]
@@ -38,6 +40,38 @@ struct BalanceConfig: Codable, Sendable, Equatable {
         /// Her elemanda ücretin çarpanı. `cost(n) = baseCost * costGrowth^n`
         var costGrowth: Double
         /// Kahve arabasına sığan eleman sayısı.
+        var maxCount: Int
+        /// Elemanın saniyelik maaşı. Brüt üretimden düşer ve ekipman yatırımını
+        /// gerçek bir seçim hâline getirir: makine bir kez ödenir, maaş her saniye.
+        var wagePerSecond: Double
+    }
+
+    /// Çağ 2: ekipman. Her parça kendi seviye izini yürütür; seviyelerin
+    /// çarpanları birbiriyle çarpılarak toplam üretim çarpanını verir.
+    ///
+    /// Ekipman maaş ödemez — eleman ödediği için, ekipman yatırımı zamanla
+    /// eleman almaya baskın gelir. Tasarım raporundaki seçim buradan doğuyor.
+    struct EquipmentSpec: Codable, Sendable, Equatable {
+        /// Adı ve açıklaması dil dosyalarında (`equipment.<id>.name`).
+        var id: String
+        var levels: [Level]
+
+        struct Level: Codable, Sendable, Equatable {
+            /// Bu seviyeye çıkmanın ücreti. İlk seviyede 0 (baştan sahipsin).
+            var cost: Double
+            /// Toplam üretim çarpanına katkısı.
+            var multiplier: Double
+        }
+    }
+
+    /// Şubeler: kat içindeki hücreler. Yeni şube mevcut kadro ve ekipmanı
+    /// devralır — tek tuş kopyalama, ayrı ayrı ayar değil.
+    struct Branches: Codable, Sendable, Equatable {
+        /// İkinci şubenin ücreti.
+        var baseCost: Double
+        /// `cost(n) = baseCost * costGrowth^(n-1)` — n açılacak şubenin sırası.
+        var costGrowth: Double
+        /// Zemin kata sığan hücre sayısı.
         var maxCount: Int
     }
 

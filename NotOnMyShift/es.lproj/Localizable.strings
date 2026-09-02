@@ -22,7 +22,6 @@
 "shop.a11y" = "La cafetería. Toca para vender un café.";
 
 /* Plantilla */
-"crew.title" = "Plantilla";
 "staff.quick.name" = "Rosa";
 "staff.quick.trait" = "Rápida, pero confunde los pedidos.";
 "staff.opener.name" = "Dani";
@@ -48,11 +47,9 @@
 "action.hire" = "Contratar a alguien";
 "action.upgradeWarehouse" = "Ampliar el almacén";
 "action.staffFull" = "Detrás del mostrador ya no cabe nadie más.";
-"action.warehouseMaxed" = "El almacén está al máximo.";
 "action.coffeesToGo" = "faltan %lld";
 
 /* Almacén */
-"warehouse.title" = "Almacén";
 "warehouse.holds" = "Mientras no estás acumula hasta %@ de producción.";
 
 /* El momento de la Era 1 */
@@ -78,3 +75,31 @@
 "engine.manualSales" = "Ventas a mano";
 "engine.lifetime" = "Ganado en total";
 "engine.startOver" = "Empezar de cero";
+
+/* Pestañas */
+"tab.crew" = "Plantilla";
+"tab.equipment" = "Equipo";
+"tab.branches" = "Locales";
+
+/* Equipo */
+"equipment.grinder.name" = "Molinillo";
+"equipment.grinder.note" = "Café recién molido, extracción más rápida.";
+"equipment.machine.name" = "Máquina de espresso";
+"equipment.machine.note" = "Dos grupos en lugar de uno.";
+"equipment.milk.name" = "Estación de leche";
+"equipment.milk.note" = "Se acabó esperar a la lanza de vapor.";
+"equipment.unknown.name" = "Equipo nuevo";
+"equipment.unknown.note" = "Hace su trabajo sin ruido.";
+"equipment.level" = "Nivel %lld";
+"equipment.maxed" = "Mejorado al máximo";
+"equipment.output" = "Producción ×%@";
+
+/* Locales */
+"branch.open" = "Abrir un local";
+"branch.count" = "en marcha: %lld";
+"branch.inherits" = "Un local nuevo copia tu plantilla y tu equipo. No hay que configurar nada dos veces.";
+"branch.maxed" = "Todas las unidades de esta planta son tuyas.";
+
+/* Bruto y sueldos */
+"cash.gross" = "%@ bruto";
+"cash.wages" = "%@ sueldos";

@@ -10,7 +10,7 @@ import Foundation
 /// eklenen bir alan, o alanı tanımayan eski kaydı çöpe atmaz.
 struct GameState: Codable, Sendable, Equatable {
 
-    static let currentSchemaVersion = 2
+    static let currentSchemaVersion = 3
 
     /// Kaydın hangi şema sürümüyle yazıldığı.
     var schemaVersion: Int
@@ -44,6 +44,13 @@ struct GameState: Codable, Sendable, Equatable {
     /// Çağ 0 → Çağ 1 geçişi kutlandı mı? Bu an bir kez yaşanır. (şema 2)
     var hasCelebratedFirstHire: Bool
 
+    /// Ekipman kimliği → sahip olunan seviye. Eksik kimlik 0 sayılır,
+    /// böylece dengeye yeni bir parça eklemek eski kaydı bozmaz. (şema 3)
+    var equipmentLevels: [String: Int]
+
+    /// Açık şube sayısı. En az 1 — ana dükkân da bir şubedir. (şema 3)
+    var branchCount: Int
+
     var stats: Stats
 
     // MARK: - Yeni oyun
@@ -61,6 +68,8 @@ struct GameState: Codable, Sendable, Equatable {
             staff: [],
             warehouseLevel: 0,
             hasCelebratedFirstHire: false,
+            equipmentLevels: [:],
+            branchCount: 1,
             stats: Stats()
         )
     }
@@ -70,12 +79,17 @@ struct GameState: Codable, Sendable, Equatable {
     /// İş kendi kendine yürüyor mu? (Çağ 0 → Çağ 1 geçişi)
     var isAutomated: Bool { !staff.isEmpty }
 
+    /// Bir ekipmanın sahip olunan seviyesi. Tanımadığımız kimlik 0'dır.
+    func equipmentLevel(_ id: String) -> Int {
+        max(0, equipmentLevels[id] ?? 0)
+    }
+
     // MARK: - Codable
 
     private enum CodingKeys: String, CodingKey {
         case schemaVersion, characterID, money, lifetimeEarnings
         case elapsedGameSeconds, lastSeenAt, startedAt, staff, warehouseLevel, stats
-        case hasCelebratedFirstHire
+        case hasCelebratedFirstHire, equipmentLevels, branchCount
     }
 
     init(
@@ -89,6 +103,8 @@ struct GameState: Codable, Sendable, Equatable {
         staff: [StaffMember],
         warehouseLevel: Int,
         hasCelebratedFirstHire: Bool,
+        equipmentLevels: [String: Int],
+        branchCount: Int,
         stats: Stats
     ) {
         self.schemaVersion = schemaVersion
@@ -101,6 +117,8 @@ struct GameState: Codable, Sendable, Equatable {
         self.staff = staff
         self.warehouseLevel = warehouseLevel
         self.hasCelebratedFirstHire = hasCelebratedFirstHire
+        self.equipmentLevels = equipmentLevels
+        self.branchCount = branchCount
         self.stats = stats
     }
 
@@ -121,6 +139,9 @@ struct GameState: Codable, Sendable, Equatable {
         // tekrar göstermeyelim — o an bir kez yaşanır.
         hasCelebratedFirstHire = try container.decodeIfPresent(Bool.self, forKey: .hasCelebratedFirstHire)
             ?? !staff.isEmpty
+        equipmentLevels = try container.decodeIfPresent([String: Int].self, forKey: .equipmentLevels) ?? [:]
+        // Şema 2 ve öncesinde şube yoktu; eldeki dükkân birinci şubedir.
+        branchCount = max(1, try container.decodeIfPresent(Int.self, forKey: .branchCount) ?? 1)
         stats = try container.decodeIfPresent(Stats.self, forKey: .stats) ?? Stats()
     }
 }

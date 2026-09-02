@@ -8,9 +8,9 @@ kat yükseliyor.
 Tam tasarım dokümanı: [`docs/oyun-tasarim-raporu.md`](docs/oyun-tasarim-raporu.md)
 Geliştirme yönergesi: [`docs/claude-code-prompt.md`](docs/claude-code-prompt.md)
 
-**Durum: Faz 1 — Çağ 0→1 geçişi ve görsel kimlik.**
-Zemin kat kesiti çizildi, elle üretimden ilk elemana geçiş ve çevrimdışı
-kazancın açılması yerinde.
+**Durum: Faz 2 — ekipman katmanı ve şubeler.**
+Zemin kat kesiti çizildi; elle üretimden ilk elemana geçiş, ekipman
+yükseltmeleri, maaşlar ve şube açma yerinde.
 
 ---
 
@@ -61,7 +61,11 @@ Xcode içinden ⌘U.
 5. Cihaz saatini ileri al: kazanç depo kapasitesinde durur (başlangıçta 2 saat).
    Saati geri al: para artmaz, azalmaz.
 6. Uygulamayı tamamen kapatıp yeniden aç: ilerleme yerinde, kutlama tekrar etmiyor.
-7. Ayarlar → Erişilebilirlik → **Hareketi Azalt**'ı aç: süzülen rakam ve
+7. **Ekipman** şeridine geç, öğütücüyü yükselt: hem saniyelik gelir hem de
+   elle satışın getirisi büyür. Kasa satırında `brüt · maaş` görünür.
+8. **Şube** şeridinden ikinci şubeyi aç: binada ikinci bir hücre belirir,
+   aynı kadro ve ekipmanla. Üretim de maaş da ikiye katlanır.
+9. Ayarlar → Erişilebilirlik → **Hareketi Azalt**'ı aç: süzülen rakam ve
    yerleşme animasyonu susar, oyun aynı çalışır.
 
 ### Dil kontrolü
@@ -138,6 +142,30 @@ kısaltmaları `format.*` anahtarlarından gelir.
 
 Elemanın kayıtta saklanan şeyi kimliğidir (`quick`, `veteran`), ismi değil —
 oyuncu dili değiştirince mevcut kadro da yeni dilde görünür.
+
+### Ekonomi
+
+`net = max(0, brüt − maaş)`. Motor hep neti işler; oyuncu asla geri gitmez.
+
+| | Nasıl hesaplanır |
+|---|---|
+| Brüt | kadro çarpanları × taban oran × ekipman çarpanı × şube sayısı |
+| Maaş | eleman sayısı × saniyelik maaş × şube sayısı |
+| Elle satış | taban getiri × ekipman çarpanı |
+
+Ekipman maaş ödemez, eleman öder — tasarım raporunun istediği seçim buradan
+doğar: makine bir kez ödenir ve her şeyi çarpar. Şube ise kopyadır; kadroyu ve
+ekipmanı devralır, ayrı ayarı yoktur.
+
+`python3 scripts/balance_report.py` bu tablonun sayısal karşılığını yazar.
+
+### Bina ve şubeler
+
+Kat, şube sayısı kadar hücreye bölünür. Aynı çizim kodu yan yana daha küçük
+kutulara girer; hücre **asla gerilmez**, sığmıyorsa küçülür. Şerit yatayda
+ortalanır ve zemine yaslanır — üstünde kalan boşluk binanın devamıdır ve
+Faz 3'te kat olacak. Dar hücrede ince ayrıntılar (fayans motifi, tebeşir
+satırları, fincanlar) çizilmez.
 
 ### Motorun sözleşmesi
 

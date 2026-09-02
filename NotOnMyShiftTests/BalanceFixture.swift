@@ -13,6 +13,8 @@ enum BalanceFixture {
         baseCost: Double = 100,
         costGrowth: Double = 2,
         maxStaff: Int = 3,
+        // Varsayılan 0: maaşla ilgilenmeyen testler Faz 1'deki gibi ölçer.
+        wagePerSecond: Double = 0,
         minimumReportSeconds: TimeInterval = 60
     ) -> BalanceConfig {
         BalanceConfig(
@@ -23,8 +25,18 @@ enum BalanceFixture {
                 ratePerSecond: ratePerSecond,
                 baseCost: baseCost,
                 costGrowth: costGrowth,
-                maxCount: maxStaff
+                maxCount: maxStaff,
+                wagePerSecond: wagePerSecond
             ),
+            // Tek parça, yuvarlak çarpanlar: 1 → 2 → 4.
+            equipment: [
+                .init(id: "grinder", levels: [
+                    .init(cost: 0, multiplier: 1),
+                    .init(cost: 50, multiplier: 2),
+                    .init(cost: 200, multiplier: 4)
+                ])
+            ],
+            branches: .init(baseCost: 500, costGrowth: 10, maxCount: 3),
             warehouse: .init(levels: [
                 .init(capacitySeconds: 3_600, cost: 0),        // 1 saat
                 .init(capacitySeconds: 28_800, cost: 500),     // 8 saat
@@ -48,12 +60,16 @@ enum BalanceFixture {
         money: Double = 0,
         staffCount: Int = 0,
         warehouseLevel: Int = 0,
+        equipmentLevels: [String: Int] = [:],
+        branchCount: Int = 1,
         lastSeenAt: Date = epoch,
         config: BalanceConfig = BalanceFixture.config()
     ) -> GameState {
         var state = GameState.newGame(characterID: "kahveci", now: lastSeenAt)
         state.money = money
         state.warehouseLevel = warehouseLevel
+        state.equipmentLevels = equipmentLevels
+        state.branchCount = branchCount
         for index in 0..<staffCount {
             let template = config.staffPool[index]
             state.staff.append(

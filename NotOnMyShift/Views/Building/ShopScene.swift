@@ -7,6 +7,15 @@ import SwiftUI
 /// oranın kendisi (motif payı, çıta sayısı gibi).
 enum ShopScene {
 
+    /// Şubeler açıldıkça hücre daralır. Dar hücrede ince ayrıntılar (fayans
+    /// motifi, tebeşir satırları, fincanlar) lapaya döner; onları atlıyoruz.
+    enum Detail: Sendable, Equatable {
+        case full
+        case compact
+
+        var showsFineDetail: Bool { self == .full }
+    }
+
     // Köşe yuvarlaklıkları — 390pt genişliğe göre oranlandı.
     private static let radiusShell = 0.018
     private static let radiusSign = 0.023
@@ -17,17 +26,17 @@ enum ShopScene {
 
     // MARK: - Arka katman
 
-    static func drawBack(in context: inout GraphicsContext, geometry g: ShopGeometry) {
+    static func drawBack(in context: inout GraphicsContext, geometry g: ShopGeometry, detail: Detail = .full) {
         drawShell(in: &context, g: g)
-        drawSign(in: &context, g: g)
+        drawSign(in: &context, g: g, detail: detail)
         drawAwning(in: &context, g: g)
         drawInterior(in: &context, g: g)
-        drawTiles(in: &context, g: g)
-        drawShelf(in: &context, g: g)
-        drawChalkboard(in: &context, g: g)
+        drawTiles(in: &context, g: g, detail: detail)
+        drawShelf(in: &context, g: g, detail: detail)
+        drawChalkboard(in: &context, g: g, detail: detail)
         drawLamp(in: &context, g: g)
         drawFloor(in: &context, g: g)
-        drawDoor(in: &context, g: g)
+        drawDoor(in: &context, g: g, detail: detail)
         drawPlant(in: &context, g: g)
     }
 
@@ -51,10 +60,11 @@ enum ShopScene {
              ShopGeometry.interiorRight + 0.008, ShopGeometry.interiorBottom + 0.008, Palette.plaster, radiusSmall)
     }
 
-    private static func drawSign(in context: inout GraphicsContext, g: ShopGeometry) {
+    private static func drawSign(in context: inout GraphicsContext, g: ShopGeometry, detail: Detail) {
         fill(&context, g, 0.120, ShopGeometry.signTop, 0.880, ShopGeometry.signBottom, Palette.enamel, radiusSign)
 
         let keyline = g.rect(0.134, ShopGeometry.signTop + 0.010, 0.866, ShopGeometry.signBottom - 0.010)
+        guard detail.showsFineDetail else { return }
         context.stroke(
             Path(roundedRect: keyline, cornerRadius: g.span(radiusPanel)),
             with: .color(Palette.plaster),
@@ -120,10 +130,15 @@ enum ShopScene {
     }
 
     /// Çini lambri. Karanfil motifinin sadeleştirilmiş hâli: elmas + göbek.
-    private static func drawTiles(in context: inout GraphicsContext, g: ShopGeometry) {
+    private static func drawTiles(in context: inout GraphicsContext, g: ShopGeometry, detail: Detail) {
         let left = ShopGeometry.interiorLeft
         let right = ShopGeometry.interiorRight
         fill(&context, g, left, ShopGeometry.tileTop, right, ShopGeometry.tileBottom, Palette.tileField, 0)
+
+        guard detail.showsFineDetail else {
+            drawTileEdges(in: &context, g: g)
+            return
+        }
 
         let tileWidth = (right - left) / Double(ShopGeometry.tileColumns)
         let tileHeight = (ShopGeometry.tileBottom - ShopGeometry.tileTop) / Double(ShopGeometry.tileRows)
@@ -159,14 +174,22 @@ enum ShopScene {
             }
         }
 
+        drawTileEdges(in: &context, g: g)
+    }
+
+    /// Fayans şeridinin üst ve alt kenarı — dar hücrede de kalır, kuşak okunur.
+    private static func drawTileEdges(in context: inout GraphicsContext, g: ShopGeometry) {
+        let left = ShopGeometry.interiorLeft
+        let right = ShopGeometry.interiorRight
         fill(&context, g, left, ShopGeometry.tileTop, right, ShopGeometry.tileTop + 0.006, Palette.pistachio, 0)
         fill(&context, g, left, ShopGeometry.tileBottom - 0.008, right, ShopGeometry.tileBottom, Palette.pistachio, 0)
     }
 
-    private static func drawShelf(in context: inout GraphicsContext, g: ShopGeometry) {
+    private static func drawShelf(in context: inout GraphicsContext, g: ShopGeometry, detail: Detail) {
         let shelf = ShopGeometry.shelfY
         fill(&context, g, 0.100, shelf, 0.392, shelf + 0.012, Palette.mustardDeep, radiusTiny)
 
+        guard detail.showsFineDetail else { return }
         for index in 0..<4 {
             let originX = 0.118 + Double(index) * 0.068
             fill(&context, g, originX + 0.048, shelf - 0.042, originX + 0.060, shelf - 0.016, Palette.enamel, radiusChip)
@@ -175,10 +198,11 @@ enum ShopScene {
         }
     }
 
-    private static func drawChalkboard(in context: inout GraphicsContext, g: ShopGeometry) {
+    private static func drawChalkboard(in context: inout GraphicsContext, g: ShopGeometry, detail: Detail) {
         fill(&context, g, 0.446, ShopGeometry.boardTop, 0.594, ShopGeometry.boardBottom, Palette.mustardDeep, radiusSmall)
         fill(&context, g, 0.456, ShopGeometry.boardTop + 0.010, 0.584, ShopGeometry.boardBottom - 0.010, Palette.slate, radiusTiny)
 
+        guard detail.showsFineDetail else { return }
         for (index, width) in [0.070, 0.090, 0.056].enumerated() {
             let top = 0.326 + Double(index) * 0.030
             fill(&context, g, 0.468, top, 0.468 + width, top + 0.005, Palette.chalk, radiusTiny)
@@ -214,7 +238,7 @@ enum ShopScene {
         line(&context, g, ShopGeometry.interiorLeft, ShopGeometry.floorY, ShopGeometry.interiorRight)
     }
 
-    private static func drawDoor(in context: inout GraphicsContext, g: ShopGeometry) {
+    private static func drawDoor(in context: inout GraphicsContext, g: ShopGeometry, detail: Detail) {
         fill(&context, g, ShopGeometry.doorLeft, ShopGeometry.doorTop,
              ShopGeometry.doorRight, ShopGeometry.interiorBottom, Palette.stone, radiusSmall)
         fill(&context, g, ShopGeometry.doorLeft + 0.016, 0.452,
@@ -231,6 +255,7 @@ enum ShopScene {
 
         let plaque = g.rect(ShopGeometry.doorLeft + 0.028, 0.468, ShopGeometry.doorRight - 0.028, 0.492)
         context.fill(Path(roundedRect: plaque, cornerRadius: g.span(radiusSmall)), with: .color(Palette.enamel))
+        guard detail.showsFineDetail else { return }
         context.draw(
             Text(L.open).font(Typography.signage(g.span(0.028))).foregroundColor(Palette.plaster),
             at: CGPoint(x: plaque.midX, y: plaque.midY),

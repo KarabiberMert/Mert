@@ -35,7 +35,32 @@ final class GameStore {
 
     // MARK: - Türetilmiş
 
+    /// Kasaya giren net. Maaş düşülmüş hâli.
     var productionRate: Double { GameEngine.productionRate(for: state, config: config) }
+    /// Maaş kesilmeden önceki üretim.
+    var grossRate: Double { GameEngine.grossRate(for: state, config: config) }
+    /// Saniyelik maaş gideri.
+    var wageRate: Double { GameEngine.wageRate(for: state, config: config) }
+    /// Elle bir satışın getirisi — ekipmanla birlikte büyür.
+    var manualRevenue: Double { GameEngine.manualRevenue(for: state, config: config) }
+    var equipmentMultiplier: Double { GameEngine.equipmentMultiplier(for: state, config: config) }
+    var branchCount: Int { GameEngine.branchCount(for: state, config: config) }
+    var branchCost: Double? { GameEngine.branchCost(for: state, config: config) }
+    var maxBranches: Int { max(1, config.branches.maxCount) }
+
+    /// Ekipman şeridinin satırları. Sıra `balance.json`'daki sıradır.
+    var equipmentRows: [EquipmentRow] {
+        config.equipment.map { spec in
+            let level = min(state.equipmentLevel(spec.id), max(0, spec.levels.count - 1))
+            return EquipmentRow(
+                id: spec.id,
+                level: level,
+                maxLevel: max(0, spec.levels.count - 1),
+                multiplier: spec.levels.indices.contains(level) ? spec.levels[level].multiplier : 1,
+                upgradeCost: GameEngine.equipmentUpgradeCost(spec.id, for: state, config: config)
+            )
+        }
+    }
     var hireCost: Double? { GameEngine.hireCost(for: state, config: config) }
     var warehouseUpgradeCost: Double? { GameEngine.warehouseUpgradeCost(for: state, config: config) }
     var offlineCapacitySeconds: TimeInterval { GameEngine.offlineCapacitySeconds(for: state, config: config) }
@@ -44,7 +69,7 @@ final class GameStore {
     /// Çağ 0'da hedefi somutlaştırır: "38 kahve daha".
     var manualSalesUntilHire: Int? {
         guard let cost = hireCost, !state.isAutomated else { return nil }
-        let revenue = config.manual.revenuePerSale
+        let revenue = manualRevenue
         guard revenue > 0 else { return nil }
         let remaining = cost - state.money
         guard remaining > 0 else { return nil }
@@ -178,16 +203,33 @@ final class GameStore {
     }
 
     func upgradeWarehouse() {
-        switch GameEngine.upgradeWarehouse(state, config: config) {
+        apply(GameEngine.upgradeWarehouse(state, config: config))
+    }
+
+    /// Satın alma sonuçlarının ortak yolu: durumu yaz, dokunsal geri bildirimi
+    /// ver, kaydet. Başarısızlıkta sebebi ekrana taşı.
+    private func apply(
+        _ result: Result<GameState, GameEngine.ActionError>,
+        success feedback: Haptics.Kind = .medium
+    ) {
+        switch result {
         case .success(let next):
             state = next
             lastActionError = nil
-            Haptics.play(.medium)
+            Haptics.play(feedback)
             persist()
         case .failure(let error):
             lastActionError = error
             Haptics.play(.warning)
         }
+    }
+
+    func upgradeEquipment(_ id: String) {
+        apply(GameEngine.upgradeEquipment(id, state, config: config))
+    }
+
+    func openBranch() {
+        apply(GameEngine.openBranch(state, config: config), success: .success)
     }
 
     func dismissOfflineReport() {
@@ -223,6 +265,19 @@ final class GameStore {
             didFailToSave = true
         }
     }
+}
+
+/// Ekipman şeridinin bir satırı.
+struct EquipmentRow: Identifiable, Equatable, Sendable {
+    let id: String
+    var level: Int
+    var maxLevel: Int
+    /// Bu seviyenin üretim çarpanı.
+    var multiplier: Double
+    /// Sonraki seviyenin ücreti; son seviyedeyse `nil`.
+    var upgradeCost: Double?
+
+    var isMaxed: Bool { upgradeCost == nil }
 }
 
 /// Çevrimdışı dönüş özeti — ekranda gösterilen hâli.

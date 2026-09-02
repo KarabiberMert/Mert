@@ -59,6 +59,88 @@ final class ShopGeometryTests: XCTestCase {
         XCTAssertLessThan(ShopGeometry.ownerStandingX + halfWidth, ShopGeometry.doorLeft)
     }
 
+    // MARK: - Şube şeridi
+
+    private let phone = CGSize(width: 366, height: 330)
+
+    func testCellsNeverDistort() {
+        // Hücre gerilirse dükkân yamulur. Sığmıyorsa küçülmeli, esnememeli.
+        for count in 1...4 {
+            let strip = BranchStrip(count: count, available: phone)
+            let cell = strip.cellSize
+            XCTAssertEqual(
+                cell.width / cell.height, ShopGeometry.designAspectRatio, accuracy: 1e-6,
+                "\(count) şubede hücre oranı bozuldu"
+            )
+        }
+    }
+
+    func testStripFitsInsideTheAvailableBox() {
+        for count in 1...4 {
+            let strip = BranchStrip(count: count, available: phone)
+            let cell = strip.cellSize
+            XCTAssertLessThanOrEqual(cell.width * CGFloat(count), phone.width + 0.001)
+            XCTAssertLessThanOrEqual(cell.height, phone.height + 0.001)
+
+            let first = strip.origin(of: 0)
+            let last = strip.origin(of: count - 1)
+            XCTAssertGreaterThanOrEqual(first.x, -0.001)
+            XCTAssertLessThanOrEqual(last.x + cell.width, phone.width + 0.001)
+        }
+    }
+
+    func testStripIsCentredAndSitsOnTheGround() {
+        let strip = BranchStrip(count: 2, available: phone)
+        let cell = strip.cellSize
+
+        // Zemine yaslı: üstünde kalan boşluk binanın devamı, Faz 3'te kat olacak.
+        XCTAssertEqual(strip.origin(of: 0).y, phone.height - cell.height, accuracy: 1e-6)
+        XCTAssertEqual(strip.origin(of: 1).y, strip.origin(of: 0).y, accuracy: 1e-6)
+
+        let leftGap = strip.origin(of: 0).x
+        let rightGap = phone.width - (strip.origin(of: 1).x + cell.width)
+        XCTAssertEqual(leftGap, rightGap, accuracy: 1e-6, "Şerit yatayda ortalanmalı")
+    }
+
+    func testCellsSitSideBySideWithoutOverlap() {
+        let strip = BranchStrip(count: 4, available: phone)
+        let cell = strip.cellSize
+        for index in 1..<4 {
+            XCTAssertEqual(
+                strip.origin(of: index).x - strip.origin(of: index - 1).x,
+                cell.width, accuracy: 1e-6
+            )
+        }
+    }
+
+    func testNarrowCellsDropFineDetailAndCrowd() {
+        XCTAssertEqual(BranchStrip(count: 1, available: phone).detail, .full)
+        XCTAssertEqual(BranchStrip(count: 4, available: phone).detail, .compact)
+
+        let single = BranchStrip(count: 1, available: phone)
+        let crowded = BranchStrip(count: 4, available: phone)
+        XCTAssertGreaterThan(single.visibleFigures, crowded.visibleFigures)
+        XCTAssertGreaterThanOrEqual(crowded.visibleFigures, 1, "Her hücrede en az bir kişi görünmeli")
+    }
+
+    func testDegenerateSizesDoNotCrash() {
+        XCTAssertEqual(BranchStrip(count: 0, available: phone).cellSize, .zero)
+        XCTAssertEqual(BranchStrip(count: 2, available: .zero).cellSize, .zero)
+        XCTAssertGreaterThanOrEqual(BranchStrip(count: 2, available: .zero).visibleFigures, 1)
+    }
+
+    func testGeometryOfACellIsOffsetButKeepsItsScale() {
+        let strip = BranchStrip(count: 2, available: phone)
+        let first = strip.geometry(of: 0)
+        let second = strip.geometry(of: 1)
+
+        // Konumlar kayar…
+        XCTAssertEqual(second.x(0.5) - first.x(0.5), strip.cellSize.width, accuracy: 1e-6)
+        // …ama uzunluklar aynı kalır.
+        XCTAssertEqual(first.span(0.1), second.span(0.1), accuracy: 1e-9)
+        XCTAssertEqual(first.height(0.1), second.height(0.1), accuracy: 1e-9)
+    }
+
     func testLayersAreStackedInTheRightOrder() {
         XCTAssertLessThan(ShopGeometry.signBottom, ShopGeometry.awningTop, "Tente tabelanın yazısını kesmemeli")
         XCTAssertLessThan(ShopGeometry.awningBottom, ShopGeometry.interiorTop)

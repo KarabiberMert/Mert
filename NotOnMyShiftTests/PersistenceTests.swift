@@ -25,7 +25,14 @@ final class PersistenceTests: XCTestCase {
 
     func testSaveThenLoadReturnsTheSameState() throws {
         let config = BalanceFixture.config()
-        var original = BalanceFixture.state(money: 1_234.5, staffCount: 2, warehouseLevel: 1, config: config)
+        var original = BalanceFixture.state(
+            money: 1_234.5,
+            staffCount: 2,
+            warehouseLevel: 1,
+            equipmentLevels: ["grinder": 2],
+            branchCount: 3,
+            config: config
+        )
         original = GameEngine.advance(original, by: 90, config: config)
         original.stats.manualSales = 17
 
@@ -107,6 +114,32 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(state.warehouseLevel, 0)
         XCTAssertEqual(state.stats.manualSales, 0)
         XCTAssertFalse(state.hasCelebratedFirstHire)
+        XCTAssertTrue(state.equipmentLevels.isEmpty)
+        XCTAssertEqual(state.branchCount, 1, "Eldeki dükkân birinci şubedir")
+    }
+
+    func testSchemaTwoSaveGetsOneBranchAndNoEquipment() throws {
+        // Faz 1 kaydında şube ve ekipman alanları yok. Açılışta oyuncu tek
+        // şubeyle ve ekipmansız devam etmeli, kayıt çöpe gitmemeli.
+        let json = """
+        {
+          "schemaVersion": 2,
+          "money": 900.0,
+          "warehouseLevel": 2,
+          "hasCelebratedFirstHire": true,
+          "lastSeenAt": 1700000000.0
+        }
+        """
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .secondsSince1970
+
+        let state = try decoder.decode(GameState.self, from: Data(json.utf8))
+
+        XCTAssertEqual(state.money, 900, accuracy: 1e-9)
+        XCTAssertEqual(state.warehouseLevel, 2)
+        XCTAssertTrue(state.hasCelebratedFirstHire)
+        XCTAssertEqual(state.branchCount, 1)
+        XCTAssertEqual(state.equipmentLevel("grinder"), 0)
     }
 
     func testSchemaOneSaveWithStaffDoesNotReplayTheFirstHireMoment() throws {
@@ -155,6 +188,8 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(actual.elapsedGameSeconds, expected.elapsedGameSeconds, accuracy: 1e-6, file: file, line: line)
         XCTAssertEqual(actual.warehouseLevel, expected.warehouseLevel, file: file, line: line)
         XCTAssertEqual(actual.hasCelebratedFirstHire, expected.hasCelebratedFirstHire, file: file, line: line)
+        XCTAssertEqual(actual.equipmentLevels, expected.equipmentLevels, file: file, line: line)
+        XCTAssertEqual(actual.branchCount, expected.branchCount, file: file, line: line)
         XCTAssertEqual(actual.staff.map(\.id), expected.staff.map(\.id), file: file, line: line)
         XCTAssertEqual(actual.stats, expected.stats, file: file, line: line)
         XCTAssertEqual(

@@ -1,37 +1,53 @@
 import SwiftUI
 
-/// Binanın altındaki disiplinli şerit: sat, tut, büyüt.
+/// Binanın altındaki disiplinli şerit.
 ///
-/// Kart estetiğinden kaçınıyoruz — gri gölge yok, her şey aynı yuvarlaklıkta
-/// değil. Ayrım emaye ince çizgiyle yapılıyor, tabelanın diliyle aynı.
+/// Faz 2'de üç katman birden var (kadro, ekipman, şube) — hepsini alt alta
+/// dizmek binayı ezerdi. Üç şeride ayırdık: satış butonu hep görünür, altında
+/// sekmeler. Kart estetiğinden kaçınıyoruz; ayrım emaye ince çizgiyle yapılıyor,
+/// tabelanın diliyle aynı.
 struct ActionPanelView: View {
 
-    let sellTitle: String
-    let gainText: String
-    let isAutomated: Bool
+    enum Tab: String, CaseIterable, Identifiable {
+        case crew, equipment, branches
 
-    let hireCost: Double?
-    let nextStaff: BalanceConfig.StaffTemplate?
-    let canAffordHire: Bool
-    let manualSalesUntilHire: Int?
+        var id: String { rawValue }
 
-    let warehouseCapacity: TimeInterval
-    let warehouseCost: Double?
-    let canAffordWarehouse: Bool
+        var title: String {
+            switch self {
+            case .crew: L.tabCrew
+            case .equipment: L.tabEquipment
+            case .branches: L.tabBranches
+            }
+        }
+    }
 
-    let showsFundsWarning: Bool
-
+    @Bindable var store: GameStore
+    @Binding var tab: Tab
     let onSell: () -> Void
-    let onHire: () -> Void
-    let onUpgradeWarehouse: () -> Void
+
+    /// Şerit içeriğinin yüksekliği. Bina kalan yeri alır.
+    private let contentHeight: CGFloat = 196
 
     var body: some View {
         VStack(spacing: 10) {
             sellButton
-            hireRow
-            warehouseRow
+            tabBar
 
-            if showsFundsWarning {
+            ScrollView {
+                VStack(spacing: 8) {
+                    switch tab {
+                    case .crew: crewTab
+                    case .equipment: equipmentTab
+                    case .branches: branchesTab
+                    }
+                }
+                .padding(.bottom, 4)
+            }
+            .frame(height: contentHeight)
+            .scrollBounceBehavior(.basedOnSize)
+
+            if store.lastActionError == .insufficientFunds {
                 Text(L.notEnoughMoney)
                     .font(Typography.label(13))
                     .foregroundStyle(Palette.mustardDeep)
@@ -45,113 +61,191 @@ struct ActionPanelView: View {
     private var sellButton: some View {
         Button(action: onSell) {
             HStack {
-                Text(sellTitle)
+                Text(L.sellCoffee)
                 Spacer(minLength: 12)
-                Text(gainText)
+                Text("+\(Money.text(store.manualRevenue))")
                     .foregroundStyle(Palette.mustard)
             }
-            .font(Typography.display(isAutomated ? 18 : 21))
+            .font(Typography.display(store.state.isAutomated ? 18 : 21))
             .foregroundStyle(Palette.plaster)
             .padding(.horizontal, 18)
             // Çağ 0'da bu ekranın tek işi. Eleman gelince küçülür —
             // kimse söylemeden "artık asıl iş sende değil" der.
-            .frame(maxWidth: .infinity, minHeight: isAutomated ? 50 : 64)
+            .frame(maxWidth: .infinity, minHeight: store.state.isAutomated ? 50 : 64)
             .background(Palette.enamel, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
     }
 
-    // MARK: - Eleman tut
+    // MARK: - Sekmeler
+
+    private var tabBar: some View {
+        HStack(spacing: 0) {
+            ForEach(Tab.allCases) { item in
+                Button {
+                    tab = item
+                } label: {
+                    VStack(spacing: 6) {
+                        Text(item.title)
+                            .font(Typography.display(15))
+                            .foregroundStyle(tab == item ? Palette.ink : Palette.inkFaint)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                        Rectangle()
+                            .fill(tab == item ? Palette.enamel : Color.clear)
+                            .frame(height: 2)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(tab == item ? [.isButton, .isSelected] : .isButton)
+            }
+        }
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Palette.enamel.opacity(0.12))
+                .frame(height: 1)
+        }
+    }
+
+    // MARK: - Kadro
 
     @ViewBuilder
-    private var hireRow: some View {
-        if let cost = hireCost, let next = nextStaff {
-            Button(action: onHire) {
-                HStack(alignment: .firstTextBaseline, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(L.hireStaff)
-                            .font(Typography.display(17))
-                            .foregroundStyle(Palette.ink)
-                        Text(canAffordHire ? L.staffName(next.id) : hireHint(fallback: L.staffName(next.id)))
-                            .font(Typography.label(14))
-                            .foregroundStyle(Palette.inkSoft)
-                    }
-                    Spacer(minLength: 8)
-                    Text(Money.text(cost))
-                        .font(Typography.money(17))
-                        .foregroundStyle(canAffordHire ? Palette.mustardDeep : Palette.inkFaint)
-                }
-                .padding(.horizontal, 16)
-                .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
-                .background(Palette.plaster, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Palette.enamel.opacity(canAffordHire ? 0.55 : 0.16), lineWidth: 1.5)
-                }
-            }
-            .buttonStyle(.plain)
-            .disabled(!canAffordHire)
+    private var crewTab: some View {
+        if let cost = store.hireCost, let next = store.nextStaffTemplate {
+            row(
+                title: L.hireStaff,
+                subtitle: store.state.money >= cost ? L.staffName(next.id) : hireHint(fallback: L.staffName(next.id)),
+                trailing: Money.text(cost),
+                enabled: store.state.money >= cost,
+                action: { store.hireStaff() }
+            )
         } else {
             note(L.staffFull)
         }
+
+        ForEach(store.state.staff) { member in
+            VStack(alignment: .leading, spacing: 1) {
+                Text(L.staffName(member.id))
+                    .font(Typography.display(15))
+                    .foregroundStyle(Palette.ink)
+                Text(L.staffTrait(member.id))
+                    .font(.system(.footnote))
+                    .foregroundStyle(Palette.inkSoft)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 3)
+        }
     }
 
-    /// Para yetmiyorsa hedefi somutlaştır: "38 kahve daha".
+    /// Para yetmiyorsa hedefi somutlaştır: "38 more to go".
     /// Çağ 1'de elle satış artık hedef değil, sadece kimi tuttuğumuzu yazarız.
     private func hireHint(fallback: String) -> String {
-        guard let remaining = manualSalesUntilHire else { return fallback }
+        guard let remaining = store.manualSalesUntilHire else { return fallback }
         return L.coffeesToGo(remaining)
     }
 
-    // MARK: - Depo
+    // MARK: - Ekipman
 
     @ViewBuilder
-    private var warehouseRow: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(L.warehouse)
-                    .font(Typography.display(17))
-                    .foregroundStyle(Palette.ink)
-                Text(L.warehouseHolds(DurationText.text(warehouseCapacity)))
-                    .font(Typography.label(14))
-                    .foregroundStyle(Palette.inkSoft)
-            }
-            Spacer(minLength: 8)
+    private var equipmentTab: some View {
+        row(
+            title: L.upgradeWarehouse,
+            subtitle: L.warehouseHolds(DurationText.text(store.offlineCapacitySeconds)),
+            trailing: store.warehouseUpgradeCost.map(Money.text) ?? L.equipmentMaxed,
+            enabled: store.warehouseUpgradeCost.map { store.state.money >= $0 } ?? false,
+            action: { store.upgradeWarehouse() }
+        )
 
-            if let cost = warehouseCost {
-                Button(action: onUpgradeWarehouse) {
-                    Text(Money.text(cost))
-                        .font(Typography.money(16))
-                        .foregroundStyle(canAffordWarehouse ? Palette.plaster : Palette.inkFaint)
-                        .padding(.horizontal, 14)
-                        .frame(minHeight: 36)
-                        .background(
-                            canAffordWarehouse ? Palette.pistachio : Palette.stone,
-                            in: RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        )
+        ForEach(store.equipmentRows) { item in
+            row(
+                title: L.equipmentName(item.id),
+                // Yeni parça kendini anlatsın; sahip olunan parça sayısını göstersin.
+                subtitle: item.level == 0
+                    ? L.equipmentNote(item.id)
+                    : "\(L.equipmentLevel(item.level)) · \(L.equipmentOutput(multiplierText(item.multiplier)))",
+                trailing: item.upgradeCost.map(Money.text) ?? L.equipmentMaxed,
+                enabled: item.upgradeCost.map { store.state.money >= $0 } ?? false,
+                action: { store.upgradeEquipment(item.id) }
+            )
+        }
+    }
+
+    /// Çarpan para değil: kısaltma yok, iki haneye kadar ondalık var.
+    private func multiplierText(_ value: Double) -> String {
+        value.formatted(
+            .number.locale(Money.current.numberLocale).precision(.fractionLength(0...2))
+        )
+    }
+
+    // MARK: - Şubeler
+
+    @ViewBuilder
+    private var branchesTab: some View {
+        if let cost = store.branchCost {
+            row(
+                title: L.branchOpen,
+                subtitle: L.branchesRunning(store.branchCount),
+                trailing: Money.text(cost),
+                enabled: store.state.money >= cost,
+                action: { store.openBranch() }
+            )
+            note(L.branchInherits)
+        } else {
+            note(L.branchesFull)
+            note(L.branchesRunning(store.branchCount))
+        }
+    }
+
+    // MARK: - Ortak satır
+
+    private func row(
+        title: String,
+        subtitle: String,
+        trailing: String,
+        enabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(Typography.display(17))
+                        .foregroundStyle(Palette.ink)
+                    Text(subtitle)
+                        .font(Typography.label(14))
+                        .foregroundStyle(Palette.inkSoft)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
                 }
-                .buttonStyle(.plain)
-                .disabled(!canAffordWarehouse)
-                .accessibilityLabel("\(L.upgradeWarehouse), \(Money.text(cost))")
-            } else {
-                Text(L.warehouseMaxed)
-                    .font(Typography.label(14))
-                    .foregroundStyle(Palette.inkFaint)
+                Spacer(minLength: 8)
+                Text(trailing)
+                    .font(Typography.money(16))
+                    .foregroundStyle(enabled ? Palette.mustardDeep : Palette.inkFaint)
+            }
+            .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity, minHeight: 54, alignment: .leading)
+            .background(Palette.plaster, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(Palette.enamel.opacity(enabled ? 0.55 : 0.16), lineWidth: 1.5)
             }
         }
-        .padding(.horizontal, 16)
-        .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
-        .background(Palette.plaster, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(Palette.enamel.opacity(0.16), lineWidth: 1.5)
-        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .accessibilityLabel("\(title), \(trailing)")
     }
 
     private func note(_ text: String) -> some View {
         Text(text)
             .font(Typography.label(14))
             .foregroundStyle(Palette.inkSoft)
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 4)
     }
 }

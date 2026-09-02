@@ -90,10 +90,6 @@ enum L {
         }
     }
 
-    static var crew: String {
-        String(localized: "crew.title", defaultValue: "Crew", comment: "Crew list heading")
-    }
-
     // MARK: - Kasa
 
     static var cash: String {
@@ -102,9 +98,16 @@ enum L {
     static var workingByHand: String {
         String(localized: "cash.byHand", defaultValue: "For now you make every coffee yourself.", comment: "Age 0 explanation")
     }
-    /// "$1.4 per second"
+    /// "$1.4 per second" — maaş düşülmüş net.
     static func perSecond(_ amount: String) -> String {
-        String(localized: "cash.perSecond", defaultValue: "\(amount) per second", comment: "Passive income line")
+        String(localized: "cash.perSecond", defaultValue: "\(amount) per second", comment: "Passive income line, after wages")
+    }
+    /// Tek yer tutucu: sözcük sırası dile kalsın diye brüt ve maaş ayrı anahtarlar.
+    static func grossAmount(_ amount: String) -> String {
+        String(localized: "cash.gross", defaultValue: "\(amount) gross", comment: "Production before wages")
+    }
+    static func wagesAmount(_ amount: String) -> String {
+        String(localized: "cash.wages", defaultValue: "\(amount) wages", comment: "Wage cost per second")
     }
 
     // MARK: - Eylemler
@@ -121,20 +124,74 @@ enum L {
     static var staffFull: String {
         String(localized: "action.staffFull", defaultValue: "No room behind the counter for anyone else.", comment: "Crew is full")
     }
-    static var warehouseMaxed: String {
-        String(localized: "action.warehouseMaxed", defaultValue: "The store room is at its largest.", comment: "Warehouse maxed")
-    }
     /// Çoğul eki yok: 1 ve 38 için aynı çalışır.
     static func coffeesToGo(_ count: Int) -> String {
         String(localized: "action.coffeesToGo", defaultValue: "\(count) more to go",
                comment: "Manual sales still needed. Must read correctly for 1 as well as 38.")
     }
 
+    // MARK: - Şeritler
+
+    static var tabCrew: String {
+        String(localized: "tab.crew", defaultValue: "Crew", comment: "Panel tab")
+    }
+    static var tabEquipment: String {
+        String(localized: "tab.equipment", defaultValue: "Equipment", comment: "Panel tab")
+    }
+    static var tabBranches: String {
+        String(localized: "tab.branches", defaultValue: "Branches", comment: "Panel tab")
+    }
+
+    // MARK: - Ekipman
+
+    static func equipmentName(_ id: String) -> String {
+        switch id {
+        case "grinder": String(localized: "equipment.grinder.name", defaultValue: "Grinder", comment: "Equipment name")
+        case "machine": String(localized: "equipment.machine.name", defaultValue: "Espresso machine", comment: "Equipment name")
+        case "milk": String(localized: "equipment.milk.name", defaultValue: "Milk station", comment: "Equipment name")
+        default: String(localized: "equipment.unknown.name", defaultValue: "New kit", comment: "Fallback equipment name")
+        }
+    }
+
+    static func equipmentNote(_ id: String) -> String {
+        switch id {
+        case "grinder": String(localized: "equipment.grinder.note", defaultValue: "Fresher grounds, faster shots.", comment: "What the equipment does")
+        case "machine": String(localized: "equipment.machine.note", defaultValue: "Two groups instead of one.", comment: "What the equipment does")
+        case "milk": String(localized: "equipment.milk.note", defaultValue: "No more queueing for the steam wand.", comment: "What the equipment does")
+        default: String(localized: "equipment.unknown.note", defaultValue: "Does its job quietly.", comment: "Fallback equipment note")
+        }
+    }
+
+    /// Çoğul eki yok.
+    static func equipmentLevel(_ level: Int) -> String {
+        String(localized: "equipment.level", defaultValue: "Level \(level)", comment: "Owned equipment level")
+    }
+    static var equipmentMaxed: String {
+        String(localized: "equipment.maxed", defaultValue: "Fully upgraded", comment: "Equipment at last level")
+    }
+    /// "Output ×1.45"
+    static func equipmentOutput(_ multiplier: String) -> String {
+        String(localized: "equipment.output", defaultValue: "Output ×\(multiplier)", comment: "Production multiplier from equipment")
+    }
+
+    // MARK: - Şubeler
+
+    static var branchOpen: String {
+        String(localized: "branch.open", defaultValue: "Open a branch", comment: "Open a new branch")
+    }
+    /// Çoğul eki yok: 1 ve 4 için aynı çalışmalı.
+    static func branchesRunning(_ count: Int) -> String {
+        String(localized: "branch.count", defaultValue: "\(count) open", comment: "How many branches are running. Must read correctly for 1 as well.")
+    }
+    static var branchInherits: String {
+        String(localized: "branch.inherits", defaultValue: "A new branch copies your crew and your kit. Nothing to set up twice.", comment: "One-tap copy explanation")
+    }
+    static var branchesFull: String {
+        String(localized: "branch.maxed", defaultValue: "Every unit on this floor is yours.", comment: "Floor is full")
+    }
+
     // MARK: - Depo
 
-    static var warehouse: String {
-        String(localized: "warehouse.title", defaultValue: "Store room", comment: "Warehouse section heading")
-    }
     /// Ek yok: süre ayrı bir sözcük olarak durur.
     static func warehouseHolds(_ duration: String) -> String {
         String(localized: "warehouse.holds", defaultValue: "While you are away it collects up to \(duration) of production.",

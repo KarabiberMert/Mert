@@ -28,6 +28,18 @@ göre karar verme.
 - Kayıt `.atomic` yazılır ve yedeklenir. `GameState`'e alan eklerken
   `decodeIfPresent` kalıbını koru — eski kayıt açılmaya devam etmeli.
 
+## Ekonomi modeli
+
+`net = max(0, brüt − maaş)`. Motor hep neti işler; oyuncu asla geri gitmez.
+
+- **Brüt** = kadro çarpanları × taban oran × ekipman çarpanı × şube sayısı.
+- **Maaş** = eleman sayısı × saniyelik maaş × şube sayısı. Ekipman maaş ödemez;
+  raporun istediği "eleman maaşı ile makine yatırımı arasında seçim" buradan
+  doğar. Maaşı taban üretimin üstüne çıkarma — ilk eleman zarar ettirmemeli.
+- **Şube** kopyadır: kadro ve ekipmanı devralır, ayrı ayarı yoktur
+  (rapor §9C, tek tuş kopyalama). Üretimi de maaşı da doğrusal çarpar.
+- Ekipman elle satışı da çarpar; Çağ 0'daki oyuncu da makineden fayda görür.
+
 ## Diller
 
 Kaynak dil İngilizce; `tr` ve `es` çeviri. Yeni dil eklemek bir `.lproj`
@@ -69,7 +81,7 @@ kurumsal katman. Hardal vurgusu iki palette de aynı — para hep aynı renk.
 
 ## Fazlar
 
-Faz 0 (bitti) → 1 (bitti): Çağ 0→1 geçişi ve görsel kimlik → 2: ekipman ve şubeler →
+Faz 0 (bitti) → 1 (bitti) → 2 (bitti): ekipman, maaş ve şubeler →
 3: ikinci sektör ve kat açma → 4: olaylar ve rakipler → 5: süreç katmanı →
 6: yumuşak prestij ve final → 7: monetizasyon ve App Store.
 
