@@ -119,9 +119,9 @@ final class PersistenceTests: XCTestCase {
           "lastSeenAt": 1700000000.0,
           "staff": [
             {
-              "id": "sevim",
-              "name": "Sevim Abla",
-              "trait": "Hızlıdır",
+              "id": "quick",
+              "name": "Rosa",
+              "trait": "eski sürümden kalma alan",
               "rateMultiplier": 1.15,
               "hiredAtGameSeconds": 12.0
             }
@@ -134,6 +134,8 @@ final class PersistenceTests: XCTestCase {
         let state = try decoder.decode(GameState.self, from: Data(json.utf8))
 
         XCTAssertEqual(state.staff.count, 1)
+        XCTAssertEqual(state.staff[0].id, "quick")
+        XCTAssertEqual(state.staff[0].rateMultiplier, 1.15, accuracy: 1e-9)
         XCTAssertTrue(state.hasCelebratedFirstHire)
         XCTAssertTrue(state.isAutomated)
     }

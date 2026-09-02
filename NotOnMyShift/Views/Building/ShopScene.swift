@@ -17,9 +17,9 @@ enum ShopScene {
 
     // MARK: - Arka katman
 
-    static func drawBack(in context: inout GraphicsContext, geometry g: ShopGeometry, shopName: String) {
+    static func drawBack(in context: inout GraphicsContext, geometry g: ShopGeometry) {
         drawShell(in: &context, g: g)
-        drawSign(in: &context, g: g, shopName: shopName)
+        drawSign(in: &context, g: g)
         drawAwning(in: &context, g: g)
         drawInterior(in: &context, g: g)
         drawTiles(in: &context, g: g)
@@ -51,7 +51,7 @@ enum ShopScene {
              ShopGeometry.interiorRight + 0.008, ShopGeometry.interiorBottom + 0.008, Palette.plaster, radiusSmall)
     }
 
-    private static func drawSign(in context: inout GraphicsContext, g: ShopGeometry, shopName: String) {
+    private static func drawSign(in context: inout GraphicsContext, g: ShopGeometry) {
         fill(&context, g, 0.120, ShopGeometry.signTop, 0.880, ShopGeometry.signBottom, Palette.enamel, radiusSign)
 
         let keyline = g.rect(0.134, ShopGeometry.signTop + 0.010, 0.866, ShopGeometry.signBottom - 0.010)
@@ -64,17 +64,21 @@ enum ShopScene {
         // Tabela adı sığmıyorsa küçült — dükkân adı balance.json'dan geliyor.
         let available = keyline.width * 0.88
         var pointSize = g.span(0.074)
-        var resolved = context.resolve(signText(shopName, size: pointSize))
+        let name = L.shopName
+        var resolved = context.resolve(signText(name, size: pointSize))
         let measured = resolved.measure(in: CGSize(width: 10_000, height: 10_000)).width
         if measured > available {
             pointSize *= available / measured
-            resolved = context.resolve(signText(shopName, size: pointSize))
+            resolved = context.resolve(signText(name, size: pointSize))
         }
         context.draw(resolved, at: CGPoint(x: keyline.midX, y: keyline.midY), anchor: .center)
     }
 
+    /// Tabela adı `balance.json`'dan görüneceği hâliyle geliyor; burada büyük
+    /// harfe çevirmiyoruz. Yerel ayara bağlı çevirme İngilizce adları bozardı
+    /// (Türkçe kurallarla "Willie" → "WİLLİE").
     private static func signText(_ value: String, size: CGFloat) -> Text {
-        Text(value.uppercased(with: Locale(identifier: "tr_TR")))
+        Text(value)
             .font(Typography.signage(size))
             .foregroundColor(Palette.plaster)
     }

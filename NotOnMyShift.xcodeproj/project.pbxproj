@@ -148,11 +148,12 @@
 				};
 			};
 			buildConfigurationList = 1A2B3C4D0000000000000012 /* Build configuration list for PBXProject "NotOnMyShift" */;
-			developmentRegion = tr;
+			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
-				tr,
 				en,
+				tr,
+				es,
 				Base,
 			);
 			mainGroup = 1A2B3C4D0000000000000004;

@@ -10,7 +10,6 @@ import SwiftUI
 struct ShopSceneView: View {
 
     let staff: [StaffMember]
-    let shopName: String
     /// Dokunma başına yazılan miktarın hazır metni ("+4 ₺").
     let gainText: String
     let onSell: () -> Void
@@ -29,11 +28,7 @@ struct ShopSceneView: View {
 
             ZStack(alignment: .topLeading) {
                 Canvas { context, size in
-                    ShopScene.drawBack(
-                        in: &context,
-                        geometry: ShopGeometry(size: size),
-                        shopName: shopName
-                    )
+                    ShopScene.drawBack(in: &context, geometry: ShopGeometry(size: size))
                 }
 
                 crew(in: geometry)

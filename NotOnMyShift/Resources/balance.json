@@ -2,9 +2,7 @@
   "version": 1,
 
   "sector": {
-    "id": "kahve_arabasi",
-    "shopName": "Dede Kahve",
-    "unit": "kahve"
+    "id": "kahve_arabasi"
   },
 
   "manual": {
@@ -36,41 +34,11 @@
   },
 
   "staffPool": [
-    {
-      "id": "sevim",
-      "name": "Sevim Abla",
-      "trait": "Hızlıdır, ama siparişleri karıştırır.",
-      "rateMultiplier": 1.15
-    },
-    {
-      "id": "kadir",
-      "name": "Kadir",
-      "trait": "Sabah altıda açar, altıda uyanamaz.",
-      "rateMultiplier": 1.0
-    },
-    {
-      "id": "elif",
-      "name": "Elif",
-      "trait": "Her müşteriyle sohbeti uzatır.",
-      "rateMultiplier": 0.95
-    },
-    {
-      "id": "nihat",
-      "name": "Nihat Amca",
-      "trait": "Yavaştır, ama otuz yıldır hiç şaşırmadı.",
-      "rateMultiplier": 0.9
-    },
-    {
-      "id": "berk",
-      "name": "Berk",
-      "trait": "Telefonu elinden düşmez, yine de yetiştirir.",
-      "rateMultiplier": 1.05
-    },
-    {
-      "id": "zeynep",
-      "name": "Zeynep",
-      "trait": "Süte kalp çizmeye çalışıyor. Şimdilik böbrek oluyor.",
-      "rateMultiplier": 1.1
-    }
+    { "id": "quick",   "rateMultiplier": 1.15 },
+    { "id": "opener",  "rateMultiplier": 1.0 },
+    { "id": "chatty",  "rateMultiplier": 0.95 },
+    { "id": "veteran", "rateMultiplier": 0.9 },
+    { "id": "phone",   "rateMultiplier": 1.05 },
+    { "id": "artist",  "rateMultiplier": 1.1 }
   ]
 }

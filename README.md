@@ -1,6 +1,6 @@
 # Not On My Shift
 
-Türkçe, çevrimdışı çalışan bir mobil iş simülasyonu. Küçük bir kahve arabasıyla
+Çevrimdışı çalışan bir mobil iş simülasyonu. İngilizce, Türkçe ve İspanyolca. Küçük bir kahve arabasıyla
 başlıyorsun; eleman tutup ekipman alıp süreç kurdukça iş sensiz de yürümeye
 başlıyor. Olgunlaşan işi satıp bir üst kata çıkıyorsun — ve ekrandaki bina kat
 kat yükseliyor.
@@ -64,6 +64,14 @@ Xcode içinden ⌘U.
 7. Ayarlar → Erişilebilirlik → **Hareketi Azalt**'ı aç: süzülen rakam ve
    yerleşme animasyonu susar, oyun aynı çalışır.
 
+### Dil kontrolü
+
+Ayarlar → Genel → Dil ve Bölge'den uygulama dilini değiştir. Değişmesi
+gerekenler: arayüz metni, **kadronun isimleri**, dükkânın tabelası ve
+**para birimi** — İngilizce'de `$1.2K`, Türkçe'de `1,2 B ₺`, İspanyolca'da
+`1,2 K €`. Mevcut kadro da yeni dilde görünmeli; kayıtta isim değil kimlik
+saklanıyor.
+
 ### Tipografi kontrolü
 
 Ekranda `ığüşöçİĞÜŞÖÇ` ve `₺` doğru görünüyor mu? Rakamlar sayaç artarken
@@ -97,7 +105,9 @@ GameState (Codable) + BalanceConfig (balance.json'dan)
 | `NotOnMyShift/Views/Panels/` | Kasa sayacı ve eylem şeridi |
 | `NotOnMyShift/Support/` | Palet, tipografi, biçimlendirme, haptics, metinler |
 | `NotOnMyShift/Resources/` | `balance.json`, fontlar, varlık kataloğu, gizlilik bildirimi |
-| `NotOnMyShift/tr.lproj/` | Türkçe metinler |
+| `NotOnMyShift/en.lproj/` | İngilizce metinler (kaynak dil) |
+| `NotOnMyShift/tr.lproj/` | Türkçe çeviri |
+| `NotOnMyShift/es.lproj/` | İspanyolca çeviri |
 | `NotOnMyShiftTests/` | Motor, kalıcılık ve store testleri |
 | `Config/Info.plist` | Info.plist (uygulama hedefinin dışında tutuldu) |
 | `scripts/` | İkon üretici, pbxproj doğrulayıcı |
@@ -106,6 +116,28 @@ GameState (Codable) + BalanceConfig (balance.json'dan)
 
 Hepsi [`NotOnMyShift/Resources/balance.json`](NotOnMyShift/Resources/balance.json)
 içinde. Bir fiyatı değiştirmek için Swift dosyası açman gerekiyorsa yanlış yerdesin.
+
+Bu dosya **sadece sayı ve kimlik** tutar. Ekranda görünen hiçbir metin burada
+değil: eleman isimleri, huylar ve dükkânın adı dile göre değiştiği için dil
+dosyalarında durur.
+
+### Diller
+
+Kaynak dil İngilizce; `tr` ve `es` çeviri. Yeni dil eklemek bir `.lproj`
+klasörü eklemekten ibaret.
+
+Para birimi de dile bağlı: simge, simgenin yeri, ondalık ayracı ve büyüklük
+kısaltmaları `format.*` anahtarlarından gelir.
+
+| | `en` | `tr` | `es` |
+|---|---|---|---|
+| Kalıp | `${amount}` | `{amount} ₺` | `{amount} €` |
+| Sayı yereli | `en_US` | `tr_TR` | `es_ES` |
+| 10^3 · 10^6 · 10^9 | K · M · B | B · Mn · Mr | K · M · MM |
+| Örnek | `$1.2K` | `1,2 B ₺` | `1,2 K €` |
+
+Elemanın kayıtta saklanan şeyi kimliğidir (`quick`, `veteran`), ismi değil —
+oyuncu dili değiştirince mevcut kadro da yeni dilde görünür.
 
 ### Motorun sözleşmesi
 
@@ -125,6 +157,7 @@ parametre olarak alır. Depo tavanı ile geriye alınmış saat koruması oradad
 
 ```bash
 python3 scripts/balance_report.py    # balance.json'ın ilerleme eğrisini tablo olarak yazar
+python3 scripts/check_localization.py # dil dosyalarında anahtar ve yer tutucu eşleşmesi
 python3 scripts/build_fonts.py       # Archivo kesitlerini yeniden üretir (fonttools gerekir)
 ./scripts/check_rules.sh             # pazarlığa kapalı kuralları tarar
 python3 scripts/make_app_icon.py     # 1024×1024 ikonu yeniden üretir

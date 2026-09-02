@@ -16,12 +16,11 @@ struct BalanceConfig: Codable, Sendable, Equatable {
     // MARK: - Alt bölümler
 
     /// Faz 1'de tek sektör var: kahve arabası. Kat açma geldiğinde bu bir dizi olacak.
+    ///
+    /// Dükkânın adı burada değil: tabelada yazan metin dile göre değişir,
+    /// dolayısıyla `Localizable.strings` içinde (`shop.name`).
     struct Sector: Codable, Sendable, Equatable {
         var id: String
-        /// Emaye tabelada yazan ad.
-        var shopName: String
-        /// Satılan şeyin adı — "38 kahve daha" gibi cümlelerde kullanılır.
-        var unit: String
     }
 
     /// Çağ 0: elle üretip satma.
@@ -62,10 +61,12 @@ struct BalanceConfig: Codable, Sendable, Equatable {
 
     /// Havuzdaki eleman şablonu. İşe alım sırası bu dizinin sırasıdır —
     /// rastgelelik yok, böylece motor saf ve testler deterministik kalır.
+    ///
+    /// Kimlik huyu anlatır (`quick`, `veteran`), isim değil: isim ve huy metni
+    /// dile göre değiştiği için `Localizable.strings` içinde durur. Kayıtta
+    /// kimlik saklandığından oyuncu dili değiştirince kadro da yeni dilde görünür.
     struct StaffTemplate: Codable, Sendable, Equatable {
         var id: String
-        var name: String
-        var trait: String
         var rateMultiplier: Double
     }
 

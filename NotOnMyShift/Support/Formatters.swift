@@ -1,95 +1,113 @@
 import Foundation
 
-/// Para ve süre biçimlendirme.
+/// Para biçimlendirme.
+///
+/// Para birimi **dile bağlı**: oyun İngilizce'de dolar, Türkçe'de lira,
+/// İspanyolca'da euro kullanır. Simge, simgenin yeri, ondalık ayracı ve
+/// büyüklük kısaltmaları da dilden gelir — hepsi `Localizable.strings`
+/// içindeki `format.*` anahtarlarında.
 ///
 /// `FormatStyle` değer tipidir ve `Sendable`'dır; `static let` olarak bir kez
-/// kurulur, her çağrıda yeniden yaratılmaz. (Kural: formatter'ı her çağrıda
-/// yaratma. `NumberFormatter` yerine `FormatStyle` seçildi çünkü sınıf değil,
-/// dolayısıyla Swift 6 strict concurrency altında paylaşımı sorunsuz.)
+/// kurulur, her çağrıda yeniden yaratılmaz.
 enum Money {
 
-    /// Oyun Türkçe; sayı biçimi cihaz diline değil oyuna bağlı.
-    static let locale = Locale(identifier: "tr_TR")
+    /// Bir dilin para gösterimi. Testler kendi biçimini verebilsin diye
+    /// katalogdan ayrı bir değer tipi.
+    struct Style: Sendable, Equatable {
 
-    static let symbol = "₺"
+        /// Ondalık ve binlik ayracı bu yerelden gelir.
+        var numberLocale: Locale
 
-    private static let oneFraction = FloatingPointFormatStyle<Double>()
-        .locale(locale)
-        .precision(.fractionLength(1))
-        .grouping(.never)
+        /// `{amount}` yer tutucusunu içeren kalıp: `${amount}` · `{amount} ₺`
+        /// Simgeyi, yerini ve aradaki boşluğu tek başına belirler.
+        var pattern: String
 
-    private static let noFraction = FloatingPointFormatStyle<Double>()
-        .locale(locale)
-        .precision(.fractionLength(0))
-        .grouping(.never)
+        /// Büyükten küçüğe: 10^15, 10^12, 10^9, 10^6, 10^3 kısaltmaları.
+        var suffixes: [String]
 
-    private struct Scale: Sendable {
-        var threshold: Double
-        var suffix: String
+        func render(_ body: String) -> String {
+            pattern.replacingOccurrences(of: "{amount}", with: body)
+        }
+
+        static let placeholder = "{amount}"
     }
 
-    /// Büyükten küçüğe. İlk eşiği geçen kısaltma kullanılır.
-    private static let scales: [Scale] = [
-        Scale(threshold: 1e15, suffix: "Kt"),   // katrilyon
-        Scale(threshold: 1e12, suffix: "Tn"),   // trilyon
-        Scale(threshold: 1e9,  suffix: "Mr"),   // milyar
-        Scale(threshold: 1e6,  suffix: "Mn"),   // milyon
-        Scale(threshold: 1e3,  suffix: "B")     // bin
-    ]
+    /// Uygulamanın çalıştığı dilin para biçimi.
+    static let current = Style(
+        numberLocale: Locale(identifier: L.numberLocaleIdentifier),
+        pattern: L.currencyPattern,
+        suffixes: [L.scaleE15, L.scaleE12, L.scaleE9, L.scaleE6, L.scaleE3]
+    )
 
-    /// `1,2 B ₺` · `3,4 Mn ₺` · `847 ₺`
-    static func text(_ value: Double) -> String {
-        "\(number(value)) \(symbol)"
+    private static let thresholds: [Double] = [1e15, 1e12, 1e9, 1e6, 1e3]
+
+    // MARK: - Dışarıya açık
+
+    /// `$1.2K` · `1,2 B ₺` · `1,2 K €`
+    static func text(_ value: Double, style: Style = current) -> String {
+        guard value.isFinite else { return emptyValue }
+        let body = number(abs(value), style: style)
+        // İşaret kalıbın da dışına çıkar: `-$5`, `-5 ₺`.
+        return (value < 0 ? "-" : "") + style.render(body)
     }
 
     /// Küçük ve ondalıklı değerler için: saniyelik gelir gibi.
     /// `text` 100'ün altını tam sayıya yuvarlar; oranda bu bilgi kaybı can sıkar
-    /// (1,2 ₺/sn "1 ₺/sn" görünür).
-    static func preciseText(_ value: Double) -> String {
-        guard value.isFinite else { return "—" }
-        guard abs(value) < 100 else { return text(value) }
-        return "\(oneFraction.format(value)) \(symbol)"
+    /// (1,2/sn "1/sn" görünür).
+    static func preciseText(_ value: Double, style: Style = current) -> String {
+        guard value.isFinite else { return emptyValue }
+        let magnitude = abs(value)
+        guard magnitude < 100 else { return text(value, style: style) }
+        let body = fraction(1, magnitude, locale: style.numberLocale)
+        return (value < 0 ? "-" : "") + style.render(body)
     }
 
-    /// Simgesiz hâli. Rozet, sayaç gibi yerlerde simge ayrı çiziliyorsa.
-    static func number(_ value: Double) -> String {
-        guard value.isFinite else { return "—" }
+    /// Simgesiz, işaretsiz gövde. Simgeyi ayrı çizen yerler için.
+    static func number(_ value: Double, style: Style = current) -> String {
+        guard value.isFinite else { return emptyValue }
         let magnitude = abs(value)
 
-        guard let scale = scales.first(where: { magnitude >= $0.threshold }) else {
-            return noFraction.format(value.rounded(.towardZero))
+        guard let index = thresholds.firstIndex(where: { magnitude >= $0 }) else {
+            return fraction(0, magnitude.rounded(.towardZero), locale: style.numberLocale)
         }
 
-        let scaled = value / scale.threshold
+        let scaled = magnitude / thresholds[index]
+        let suffix = style.suffixes.indices.contains(index) ? style.suffixes[index] : ""
         // 100'ün altında bir hane ondalık; üstünde tam sayı. Genişlik böylece
         // sabit kalır, sayaç zıplamaz.
-        let body = abs(scaled) < 100
-            ? oneFraction.format(scaled)
-            : noFraction.format(scaled.rounded(.towardZero))
-        return "\(body) \(scale.suffix)"
+        let body = scaled < 100
+            ? fraction(1, scaled, locale: style.numberLocale)
+            : fraction(0, scaled.rounded(.towardZero), locale: style.numberLocale)
+        return body + suffix
+    }
+
+    static let emptyValue = "—"
+
+    // MARK: - İç
+
+    private static func fraction(_ digits: Int, _ value: Double, locale: Locale) -> String {
+        FloatingPointFormatStyle<Double>()
+            .locale(locale)
+            .precision(.fractionLength(digits))
+            .grouping(.never)
+            .format(value)
     }
 }
 
-/// Süreyi Türkçe, konuşma diliyle yazar: `3 saat 12 dakika`.
+/// Süre metni. Çoğul ekleri ve birim adları dile göre `Duration.UnitsFormatStyle`
+/// tarafından çözülür — "2 hours", "2 saat", "2 horas" elle yazılmaz.
 enum DurationText {
 
-    static func text(_ seconds: TimeInterval) -> String {
-        guard seconds.isFinite, seconds > 0 else { return "0 dakika" }
+    private static let base = Duration.UnitsFormatStyle(
+        allowedUnits: [.days, .hours, .minutes, .seconds],
+        width: .wide,
+        maximumUnitCount: 2,
+        zeroValueUnits: .hide,
+        fractionalPart: .hide
+    )
 
-        let total = Int(seconds.rounded())
-        let days = total / 86_400
-        let hours = (total % 86_400) / 3_600
-        let minutes = (total % 3_600) / 60
-
-        if days > 0 {
-            return hours > 0 ? "\(days) gün \(hours) saat" : "\(days) gün"
-        }
-        if hours > 0 {
-            return minutes > 0 ? "\(hours) saat \(minutes) dakika" : "\(hours) saat"
-        }
-        if minutes > 0 {
-            return "\(minutes) dakika"
-        }
-        return "\(total) saniye"
+    static func text(_ seconds: TimeInterval, locale: Locale = Money.current.numberLocale) -> String {
+        guard seconds.isFinite, seconds >= 1 else { return L.durationNone }
+        return Duration.seconds(seconds).formatted(base.locale(locale))
     }
 }

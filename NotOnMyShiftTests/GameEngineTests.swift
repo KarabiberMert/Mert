@@ -191,7 +191,7 @@ final class GameEngineTests: XCTestCase {
 
         XCTAssertEqual(state.money, 900, accuracy: 1e-9)              // taban ücret 100
         XCTAssertEqual(state.staff.count, 1)
-        XCTAssertEqual(state.staff[0].name, "Bir")
+        XCTAssertEqual(state.staff[0].id, "quick")
         XCTAssertEqual(GameEngine.productionRate(for: state, config: config), 1.0, accuracy: 1e-9)
         XCTAssertTrue(state.isAutomated)
 
@@ -279,8 +279,7 @@ final class GameEngineTests: XCTestCase {
     func testShippedBalanceParsesAndIsSane() throws {
         let config = try loadShippedConfig()
 
-        XCTAssertFalse(config.sector.shopName.isEmpty, "Tabelada yazacak bir ad lazım")
-        XCTAssertFalse(config.sector.unit.isEmpty)
+        XCTAssertFalse(config.sector.id.isEmpty)
         XCTAssertGreaterThan(config.manual.revenuePerSale, 0)
         XCTAssertGreaterThan(config.staff.ratePerSecond, 0)
         XCTAssertGreaterThan(config.staff.baseCost, 0)
@@ -300,8 +299,15 @@ final class GameEngineTests: XCTestCase {
         XCTAssertEqual(Set(config.staffPool.map(\.id)).count, config.staffPool.count, "Eleman kimlikleri benzersiz olmalı")
         for template in config.staffPool {
             XCTAssertGreaterThan(template.rateMultiplier, 0)
-            XCTAssertFalse(template.name.isEmpty)
-            XCTAssertFalse(template.trait.isEmpty)
+            // İsim ve huy dil dosyalarından geliyor; kimliğin karşılığı olmalı.
+            XCTAssertNotEqual(
+                L.staffName(template.id), L.staffName("__yok__"),
+                "'\(template.id)' için dil dosyasında isim yok"
+            )
+            XCTAssertNotEqual(
+                L.staffTrait(template.id), L.staffTrait("__yok__"),
+                "'\(template.id)' için dil dosyasında huy yok"
+            )
         }
     }
 

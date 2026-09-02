@@ -96,7 +96,7 @@ final class GameStoreTests: XCTestCase {
             for _ in 0..<10 { store.sellManually() }        // 100 ₺
             store.hireStaff()
 
-            XCTAssertEqual(store.firstHireCelebration?.name, "Bir")
+            XCTAssertEqual(store.firstHireCelebration?.id, "quick")
             XCTAssertTrue(store.state.hasCelebratedFirstHire)
             store.dismissFirstHireCelebration()
 

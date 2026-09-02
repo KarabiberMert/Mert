@@ -1,0 +1,81 @@
+/* Not On My Shift — English (source language)
+   Keys match Support/Strings.swift.
+
+   Two rules for every language:
+   - No plural agreement. Pick wording that reads correctly for 1 and for 38.
+   - Never glue a suffix onto a placeholder. Turkish vowel harmony breaks
+     ("2 saatlik" is right, "3 günlik" is not). Keep it a separate word. */
+
+/* Formatting — currency and numbers follow the language */
+"format.numberLocale" = "en_US";
+"format.currencyPattern" = "${amount}";
+"format.scale.e3" = "K";
+"format.scale.e6" = "M";
+"format.scale.e9" = "B";
+"format.scale.e12" = "T";
+"format.scale.e15" = "Q";
+"duration.none" = "no time at all";
+
+/* Shop */
+"shop.name" = "POP'S COFFEE";
+"shop.open" = "OPEN";
+"shop.tapHint" = "Tap the counter to sell a coffee.";
+"shop.a11y" = "The shop. Tap to sell a coffee.";
+
+/* Crew */
+"crew.title" = "Crew";
+"staff.quick.name" = "Rosie";
+"staff.quick.trait" = "Fast, but mixes up the orders.";
+"staff.opener.name" = "Danny";
+"staff.opener.trait" = "Opens at six. Cannot wake up at six.";
+"staff.chatty.name" = "Maggie";
+"staff.chatty.trait" = "Turns every order into a conversation.";
+"staff.veteran.name" = "Walter";
+"staff.veteran.trait" = "Slow, but has not got one wrong in thirty years.";
+"staff.phone.name" = "Theo";
+"staff.phone.trait" = "Never off the phone, somehow never behind.";
+"staff.artist.name" = "Priya";
+"staff.artist.trait" = "Working on latte art. Currently drawing kidneys.";
+"staff.unknown.name" = "New hire";
+"staff.unknown.trait" = "Keeps to themselves.";
+
+/* Cash */
+"cash.label" = "Cash";
+"cash.byHand" = "For now you make every coffee yourself.";
+"cash.perSecond" = "%@ per second";
+
+/* Actions */
+"action.sell" = "Sell a coffee";
+"action.hire" = "Hire someone";
+"action.upgradeWarehouse" = "Grow the store room";
+"action.staffFull" = "No room behind the counter for anyone else.";
+"action.warehouseMaxed" = "The store room is at its largest.";
+"action.coffeesToGo" = "%lld more to go";
+
+/* Store room */
+"warehouse.title" = "Store room";
+"warehouse.holds" = "While you are away it collects up to %@ of production.";
+
+/* The Age 1 moment */
+"firstHire.title" = "%@ started work";
+"firstHire.body" = "Coffee sells now even when you are not here. Close the app and the store room keeps filling.";
+"firstHire.action" = "Good";
+
+/* Coming back */
+"offline.title" = "You are back";
+"offline.away" = "You were away for %@.";
+"offline.full" = "The store room filled up and the rest went to waste. A bigger one runs longer.";
+"offline.continue" = "Carry on";
+
+/* Warnings */
+"error.funds" = "Not enough money";
+"save.recovered" = "The save file was damaged and was restored from the backup.";
+"save.failed" = "Could not write the save file. Check there is space on the device.";
+"boot.failed" = "The game could not start";
+
+/* Development */
+"engine.title" = "Engine";
+"engine.played" = "Time processed";
+"engine.manualSales" = "Hand sales";
+"engine.lifetime" = "Earned in total";
+"engine.startOver" = "Start over";

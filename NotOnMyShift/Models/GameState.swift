@@ -133,12 +133,11 @@ struct StaffMember: Codable, Sendable, Equatable, Identifiable {
 
     /// Havuzdaki şablonun kimliği. İşe alım sırası deterministik olduğu için
     /// rastgele bir kimliğe gerek yok — motor saf kalır.
+    ///
+    /// İsim ve huy metni burada saklanmaz: dile göre değişirler ve kimlikten
+    /// çözülürler (`L.staffName`, `L.staffTrait`). Böylece oyuncu dili
+    /// değiştirdiğinde mevcut kadro da yeni dilde görünür.
     let id: String
-
-    var name: String
-
-    /// Kısa huy metni. "Sevim abla hızlı ama sipariş karıştırıyor" tadında.
-    var trait: String
 
     /// Bu elemanın taban üretim hızına uyguladığı çarpan.
     var rateMultiplier: Double
@@ -148,22 +147,20 @@ struct StaffMember: Codable, Sendable, Equatable, Identifiable {
     var hiredAtGameSeconds: TimeInterval
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, trait, rateMultiplier, hiredAtGameSeconds
+        case id, rateMultiplier, hiredAtGameSeconds
     }
 
-    init(id: String, name: String, trait: String, rateMultiplier: Double, hiredAtGameSeconds: TimeInterval) {
+    init(id: String, rateMultiplier: Double, hiredAtGameSeconds: TimeInterval) {
         self.id = id
-        self.name = name
-        self.trait = trait
         self.rateMultiplier = rateMultiplier
         self.hiredAtGameSeconds = hiredAtGameSeconds
     }
 
+    /// Eski kayıtlarda `name` ve `trait` alanları da vardı; artık okunmuyorlar
+    /// ve JSONDecoder fazladan anahtarları görmezden geliyor.
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString
-        name = try container.decodeIfPresent(String.self, forKey: .name) ?? "Eleman"
-        trait = try container.decodeIfPresent(String.self, forKey: .trait) ?? ""
+        id = try container.decodeIfPresent(String.self, forKey: .id) ?? "unknown"
         rateMultiplier = try container.decodeIfPresent(Double.self, forKey: .rateMultiplier) ?? 1
         hiredAtGameSeconds = try container.decodeIfPresent(TimeInterval.self, forKey: .hiredAtGameSeconds) ?? 0
     }

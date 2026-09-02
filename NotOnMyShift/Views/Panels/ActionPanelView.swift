@@ -72,7 +72,7 @@ struct ActionPanelView: View {
                         Text(L.hireStaff)
                             .font(Typography.display(17))
                             .foregroundStyle(Palette.ink)
-                        Text(canAffordHire ? next.name : hireHint(fallback: next.name))
+                        Text(canAffordHire ? L.staffName(next.id) : hireHint(fallback: L.staffName(next.id)))
                             .font(Typography.label(14))
                             .foregroundStyle(Palette.inkSoft)
                     }

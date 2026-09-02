@@ -1,0 +1,80 @@
+/* Not On My Shift — Español
+   Tono: cercano, de barrio, con humor discreto. Tuteo.
+
+   Dos reglas:
+   - Nada de concordancia de plural; debe funcionar igual para 1 y para 38.
+   - No pegues sufijos al marcador de posición. */
+
+/* Formato — la moneda y los números dependen del idioma */
+"format.numberLocale" = "es_ES";
+"format.currencyPattern" = "{amount} €";
+"format.scale.e3" = "K";
+"format.scale.e6" = "M";
+"format.scale.e9" = "MM";
+"format.scale.e12" = "B";
+"format.scale.e15" = "MB";
+"duration.none" = "nada de tiempo";
+
+/* La tienda */
+"shop.name" = "CAFÉ DEL ABUELO";
+"shop.open" = "ABIERTO";
+"shop.tapHint" = "Toca el mostrador y vende un café.";
+"shop.a11y" = "La cafetería. Toca para vender un café.";
+
+/* Plantilla */
+"crew.title" = "Plantilla";
+"staff.quick.name" = "Rosa";
+"staff.quick.trait" = "Rápida, pero confunde los pedidos.";
+"staff.opener.name" = "Dani";
+"staff.opener.trait" = "Abre a las seis. No consigue despertarse a las seis.";
+"staff.chatty.name" = "Marta";
+"staff.chatty.trait" = "Convierte cada pedido en una charla.";
+"staff.veteran.name" = "Manolo";
+"staff.veteran.trait" = "Lento, pero no se equivoca desde hace treinta años.";
+"staff.phone.name" = "Teo";
+"staff.phone.trait" = "Siempre con el móvil y aun así no se retrasa.";
+"staff.artist.name" = "Lucía";
+"staff.artist.trait" = "Practica arte latte. De momento le salen riñones.";
+"staff.unknown.name" = "Alguien nuevo";
+"staff.unknown.trait" = "Va a lo suyo.";
+
+/* Caja */
+"cash.label" = "Caja";
+"cash.byHand" = "De momento haces cada café con tus manos.";
+"cash.perSecond" = "%@ por segundo";
+
+/* Acciones */
+"action.sell" = "Vender un café";
+"action.hire" = "Contratar a alguien";
+"action.upgradeWarehouse" = "Ampliar el almacén";
+"action.staffFull" = "Detrás del mostrador ya no cabe nadie más.";
+"action.warehouseMaxed" = "El almacén está al máximo.";
+"action.coffeesToGo" = "faltan %lld";
+
+/* Almacén */
+"warehouse.title" = "Almacén";
+"warehouse.holds" = "Mientras no estás acumula hasta %@ de producción.";
+
+/* El momento de la Era 1 */
+"firstHire.title" = "%@ ha empezado a trabajar";
+"firstHire.body" = "Ahora se vende café aunque tú no estés. Cierra la app y el almacén sigue llenándose.";
+"firstHire.action" = "Bien";
+
+/* Al volver */
+"offline.title" = "Ya estás de vuelta";
+"offline.away" = "Has estado fuera %@.";
+"offline.full" = "El almacén se llenó y el resto se perdió. Uno más grande aguanta más tiempo.";
+"offline.continue" = "Seguir";
+
+/* Avisos */
+"error.funds" = "No llega el dinero";
+"save.recovered" = "La partida estaba dañada y se ha recuperado de la copia de seguridad.";
+"save.failed" = "No se ha podido guardar. Comprueba que queda espacio en el dispositivo.";
+"boot.failed" = "El juego no ha podido arrancar";
+
+/* Desarrollo */
+"engine.title" = "Motor";
+"engine.played" = "Tiempo procesado";
+"engine.manualSales" = "Ventas a mano";
+"engine.lifetime" = "Ganado en total";
+"engine.startOver" = "Empezar de cero";

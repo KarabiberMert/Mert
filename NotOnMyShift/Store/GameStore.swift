@@ -40,8 +40,6 @@ final class GameStore {
     var warehouseUpgradeCost: Double? { GameEngine.warehouseUpgradeCost(for: state, config: config) }
     var offlineCapacitySeconds: TimeInterval { GameEngine.offlineCapacitySeconds(for: state, config: config) }
 
-    var shopName: String { config.sector.shopName }
-
     /// Sonraki eleman için kaç kahve daha satmak gerekiyor?
     /// Çağ 0'da hedefi somutlaştırır: "38 kahve daha".
     var manualSalesUntilHire: Int? {

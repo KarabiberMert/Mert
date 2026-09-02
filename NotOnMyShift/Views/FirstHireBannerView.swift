@@ -18,11 +18,11 @@ struct FirstHireBannerView: View {
                 .onTapGesture(perform: onDismiss)
 
             VStack(alignment: .leading, spacing: 14) {
-                Text(L.startedWork(member.name))
+                Text(L.startedWork(L.staffName(member.id)))
                     .font(Typography.display(28))
                     .foregroundStyle(Palette.ink)
 
-                Text(member.trait)
+                Text(L.staffTrait(member.id))
                     .font(Typography.label(16))
                     .foregroundStyle(Palette.pistachio)
 

@@ -17,7 +17,7 @@ enum BalanceFixture {
     ) -> BalanceConfig {
         BalanceConfig(
             version: 1,
-            sector: .init(id: "test_sektor", shopName: "Test Kahve", unit: "kahve"),
+            sector: .init(id: "test_sektor"),
             manual: .init(revenuePerSale: revenuePerSale),
             staff: .init(
                 ratePerSecond: ratePerSecond,
@@ -31,10 +31,12 @@ enum BalanceFixture {
                 .init(capacitySeconds: 86_400, cost: 1_500)    // 24 saat
             ]),
             offline: .init(minimumReportSeconds: minimumReportSeconds),
+            // Kimlikler katalogdakilerle aynı ki isim çözümü de test edilsin;
+            // çarpanlar bilerek yuvarlak, gönderilen dengeyle ilgisi yok.
             staffPool: [
-                .init(id: "bir", name: "Bir", trait: "Normal", rateMultiplier: 1.0),
-                .init(id: "iki", name: "İki", trait: "Hızlı", rateMultiplier: 2.0),
-                .init(id: "uc", name: "Üç", trait: "Yavaş", rateMultiplier: 0.5)
+                .init(id: "quick", rateMultiplier: 1.0),
+                .init(id: "opener", rateMultiplier: 2.0),
+                .init(id: "chatty", rateMultiplier: 0.5)
             ]
         )
     }
@@ -55,13 +57,7 @@ enum BalanceFixture {
         for index in 0..<staffCount {
             let template = config.staffPool[index]
             state.staff.append(
-                StaffMember(
-                    id: template.id,
-                    name: template.name,
-                    trait: template.trait,
-                    rateMultiplier: template.rateMultiplier,
-                    hiredAtGameSeconds: 0
-                )
+                StaffMember(id: template.id, rateMultiplier: template.rateMultiplier, hiredAtGameSeconds: 0)
             )
         }
         return state

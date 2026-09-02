@@ -1,6 +1,45 @@
-/* Not On My Shift — Türkçe (birincil dil)
-   İngilizce sonra en.lproj olarak eklenecek.
-   Anahtarlar Support/Strings.swift içindeki L ile birebir aynı. */
+/* Not On My Shift — Türkçe
+   Ton: sen-dili, sade fiiller. Buton ne yapacağını söyler.
+   Büyük harfli minik etiket kullanma (tabela ve kapı levhası hariç — onlar
+   arayüz değil, binanın parçası).
+
+   İki kural:
+   - Çoğul eki olan cümle kurma; 1 ve 38 için aynı çalışsın.
+   - Yer tutucuya ek yapıştırma. "%@lik" ünlü uyumunu bozar
+     ("2 saatlik" doğru ama "3 günlik" değil). Ayrı sözcük kullan. */
+
+/* Biçim — para birimi ve sayı dile bağlı */
+"format.numberLocale" = "tr_TR";
+"format.currencyPattern" = "{amount} ₺";
+"format.scale.e3" = "B";
+"format.scale.e6" = "Mn";
+"format.scale.e9" = "Mr";
+"format.scale.e12" = "Tn";
+"format.scale.e15" = "Kt";
+"duration.none" = "hiç";
+
+/* Dükkân */
+"shop.name" = "DEDE KAHVE";
+"shop.open" = "AÇIK";
+"shop.tapHint" = "Tezgâha dokun, kahveyi sat.";
+"shop.a11y" = "Dükkân. Dokununca bir kahve satarsın.";
+
+/* Kadro */
+"crew.title" = "Kadro";
+"staff.quick.name" = "Sevim Abla";
+"staff.quick.trait" = "Hızlıdır, ama siparişleri karıştırır.";
+"staff.opener.name" = "Kadir";
+"staff.opener.trait" = "Sabah altıda açar, altıda uyanamaz.";
+"staff.chatty.name" = "Elif";
+"staff.chatty.trait" = "Her müşteriyle sohbeti uzatır.";
+"staff.veteran.name" = "Nihat Amca";
+"staff.veteran.trait" = "Yavaştır, ama otuz yıldır hiç şaşırmadı.";
+"staff.phone.name" = "Berk";
+"staff.phone.trait" = "Telefonu elinden düşmez, yine de yetiştirir.";
+"staff.artist.name" = "Zeynep";
+"staff.artist.trait" = "Süte kalp çizmeye çalışıyor. Şimdilik böbrek oluyor.";
+"staff.unknown.name" = "Yeni eleman";
+"staff.unknown.trait" = "Kendi halinde.";
 
 /* Kasa */
 "cash.label" = "Kasa";
@@ -11,31 +50,23 @@
 "action.sell" = "Kahve sat";
 "action.hire" = "Eleman tut";
 "action.upgradeWarehouse" = "Depoyu büyüt";
-"action.staffFull" = "Arabaya daha fazla eleman sığmıyor.";
+"action.staffFull" = "Tezgâhın arkasına başka kimse sığmıyor.";
 "action.warehouseMaxed" = "Depo son seviyede.";
 "action.coffeesToGo" = "%lld kahve daha";
 
-/* Dükkân */
-"shop.open" = "AÇIK";
-"shop.tapHint" = "Tezgâha dokun, kahveyi sat.";
-"shop.a11y" = "Dükkân. Dokununca bir kahve satarsın.";
-
-/* Kadro */
-"crew.title" = "Kadro";
-
 /* Depo */
 "warehouse.title" = "Depo";
-"warehouse.holds" = "Sen yokken %@lik üretim birikir.";
+"warehouse.holds" = "Sen yokken %@ kadar üretim birikir.";
 
 /* Çağ 1 anı */
 "firstHire.title" = "%@ işe başladı";
 "firstHire.body" = "Artık sen yokken de kahve satılıyor. Uygulamayı kapatsan bile depo dolmaya devam eder.";
 "firstHire.action" = "Güzel";
 
-/* Çevrimdışı dönüş */
+/* Dönüş */
 "offline.title" = "Dönmüşsün";
 "offline.away" = "%@ uzaktaydın.";
-"offline.full" = "Depo doldu, ürünler bekliyor. Büyütürsen daha uzun süre çalışır.";
+"offline.full" = "Depo doldu, gerisi ziyan oldu. Büyütürsen daha uzun süre çalışır.";
 "offline.continue" = "Devam";
 
 /* Uyarılar */

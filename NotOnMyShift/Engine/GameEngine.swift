@@ -188,8 +188,6 @@ enum GameEngine {
         next.staff.append(
             StaffMember(
                 id: template.id,
-                name: template.name,
-                trait: template.trait,
                 rateMultiplier: template.rateMultiplier,
                 hiredAtGameSeconds: state.elapsedGameSeconds
             )

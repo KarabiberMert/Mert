@@ -35,7 +35,6 @@ struct RootView: View {
 
                 ShopSceneView(
                     staff: store.state.staff,
-                    shopName: store.shopName,
                     gainText: "+\(Money.text(store.config.manual.revenuePerSale))",
                     onSell: { sell() }
                 )
@@ -86,7 +85,7 @@ struct RootView: View {
             HStack(spacing: 6) {
                 Text(L.crew)
                     .foregroundStyle(Palette.inkFaint)
-                Text(store.state.staff.map(\.name).joined(separator: ", "))
+                Text(store.state.staff.map { L.staffName($0.id) }.joined(separator: ", "))
                     .foregroundStyle(Palette.inkSoft)
                     .lineLimit(1)
                     .truncationMode(.tail)
