@@ -30,7 +30,11 @@ göre karar verme.
 
 ## Ekonomi modeli
 
-`net = max(0, brüt − maaş)`. Motor hep neti işler; oyuncu asla geri gitmez.
+Ekonomi **kat kat**: her kat bir sektör, her katın kendi kadrosu, ekipmanı ve
+şubeleri var. Kasa ortaktır, depo (çevrimdışı kapasite) ortaktır.
+
+`kat neti = max(0, brüt − maaş)`, bina neti bunların toplamı. Zarardaki bir kat
+kârdaki katı aşağı çekmez ve oyuncu asla geri gitmez.
 
 - **Brüt** = kadro çarpanları × taban oran × ekipman çarpanı × şube sayısı.
 - **Maaş** = eleman sayısı × saniyelik maaş × şube sayısı. Ekipman maaş ödemez;
@@ -39,6 +43,9 @@ göre karar verme.
 - **Şube** kopyadır: kadro ve ekipmanı devralır, ayrı ayarı yoktur
   (rapor §9C, tek tuş kopyalama). Üretimi de maaşı da doğrusal çarpar.
 - Ekipman elle satışı da çarpar; Çağ 0'daki oyuncu da makineden fayda görür.
+- **Kat açmak sektöre girmektir.** Yeni kat boş gelir: kendi kadrosunu ve
+  ekipmanını sıfırdan kurarsın. Bir sektörün ekipmanı başka katta çalışmaz.
+- Dengeden kalkmış bir sektörün katı sessizce sıfır üretir, çökmez.
 
 ## Diller
 
@@ -76,13 +83,20 @@ kurumsal katman. Hardal vurgusu iki palette de aynı — para hep aynı renk.
   gövde sistem fontu. Rakamlarda tabular figür şart.
 - Yeni font eklerken `ığüşöçİĞÜŞÖÇ` ile test et — `scripts/build_fonts.py`
   bunu otomatik doğruluyor. Archivo OFL 1.1; `Resources/Fonts/OFL.txt` silinmez.
-- Bina ölçüleri `ShopGeometry` içinde 0..1 normalize sabitlerdir. View'a
-  piksel gömme; yeni parça eklerken oraya sabit ekle ve testini yaz.
+- Bina ölçüleri `FloorGeometry` / `UnitGeometry` / `BuildingLayout` içinde 0..1
+  normalize sabitlerdir. View'a piksel gömme; yeni parça eklerken oraya sabit
+  ekle ve testini yaz.
+- Kat geniş ve alçak bir **bant**tır; şubeler bandı dikey bölmelerle hücrelere
+  ayırır. Dikey ölçüler banttan, yatay ölçüler hücreden gelir — hücre daralınca
+  insanlar kısalmaz, incelir.
+- Kat yükseldikçe palet `FloorPalette` ile esnaftan kurumsala karışır. Hardal
+  her katta aynı kalır — para hep aynı renk.
+- Yeni sektör eklemek: `balance.json`'a bir `sectors` girdisi, dil dosyalarına
+  isim/tabela/satış fiili, `SectorFittings`'e iki çizim.
 
 ## Fazlar
 
-Faz 0 (bitti) → 1 (bitti) → 2 (bitti): ekipman, maaş ve şubeler →
-3: ikinci sektör ve kat açma → 4: olaylar ve rakipler → 5: süreç katmanı →
+Faz 0 (bitti) → 1 (bitti) → 2 (bitti) → 3 (bitti): ikinci sektör ve kat açma → 4: olaylar ve rakipler → 5: süreç katmanı →
 6: yumuşak prestij ve final → 7: monetizasyon ve App Store.
 
 Bir fazı bitirmeden sonrakine geçme. Her fazın sonunda proje temiz derlenmeli.

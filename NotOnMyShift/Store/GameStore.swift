@@ -9,6 +9,8 @@ import Observation
 /// Zamanlayıcı **görsel tazeleme** içindir. Ekonomi her zaman `lastSeenAt` ile
 /// `Date()` farkından türetilir; zamanlayıcı sadece "şimdi yeniden hesapla" der.
 /// Bu yüzden zamanlayıcı gecikse, atlansa, arka planda dursa bile para doğru olur.
+///
+/// Faz 3'ten beri panel **seçili kat** üstünde çalışır; kasa ortaktır.
 @MainActor
 @Observable
 final class GameStore {
@@ -24,16 +26,45 @@ final class GameStore {
     /// Çağ 0 → Çağ 1 anı. İlk eleman tutulduğunda bir kez dolar.
     var firstHireCelebration: StaffMember?
 
+    /// Kat açıldığı an. Yeni sektörün kimliğini taşır.
+    var newFloorCelebration: String?
+
     /// Son başarısız eylemin sebebi. Kullanıcı bir şey yapınca temizlenir.
     private(set) var lastActionError: GameEngine.ActionError?
 
-    /// Kayıt ana dosyadan değil yedekten açıldı mı?
+    /// Kayıt ana dosyadan değil yedekten mi açıldı?
     private(set) var didRecoverFromBackup = false
 
     /// Diske yazma başarısız oldu mu?
     private(set) var didFailToSave = false
 
-    // MARK: - Türetilmiş
+    // MARK: - Kat
+
+    var floors: [FloorState] { state.floors }
+    var selectedFloor: Int { state.safeSelectedFloor }
+
+    /// Panelin üstünde çalıştığı kat.
+    var currentFloor: FloorState? { state.currentFloor }
+
+    /// Seçili katın sektör tanımı.
+    var currentSpec: BalanceConfig.SectorSpec? {
+        currentFloor.flatMap { GameEngine.spec(for: $0, config: config) }
+    }
+
+    /// Kat başına hücre (şube) sayısı — bina çizimi bunu ister.
+    var unitCounts: [Int] {
+        floors.map { floor in
+            guard let spec = GameEngine.spec(for: floor, config: config) else { return 1 }
+            return GameEngine.branchCount(for: floor, spec: spec)
+        }
+    }
+
+    /// Bir katın sektör kimliği — tabela ve şerit başlığı için.
+    func sectorID(of index: Int) -> String? {
+        floors.indices.contains(index) ? floors[index].sectorID : nil
+    }
+
+    // MARK: - Türetilmiş oranlar
 
     /// Kasaya giren net. Maaş düşülmüş hâli.
     var productionRate: Double { GameEngine.productionRate(for: state, config: config) }
@@ -41,34 +72,41 @@ final class GameStore {
     var grossRate: Double { GameEngine.grossRate(for: state, config: config) }
     /// Saniyelik maaş gideri.
     var wageRate: Double { GameEngine.wageRate(for: state, config: config) }
-    /// Elle bir satışın getirisi — ekipmanla birlikte büyür.
-    var manualRevenue: Double { GameEngine.manualRevenue(for: state, config: config) }
-    var equipmentMultiplier: Double { GameEngine.equipmentMultiplier(for: state, config: config) }
-    var branchCount: Int { GameEngine.branchCount(for: state, config: config) }
-    var branchCost: Double? { GameEngine.branchCost(for: state, config: config) }
-    var maxBranches: Int { max(1, config.branches.maxCount) }
-
-    /// Ekipman şeridinin satırları. Sıra `balance.json`'daki sıradır.
-    var equipmentRows: [EquipmentRow] {
-        config.equipment.map { spec in
-            let level = min(state.equipmentLevel(spec.id), max(0, spec.levels.count - 1))
-            return EquipmentRow(
-                id: spec.id,
-                level: level,
-                maxLevel: max(0, spec.levels.count - 1),
-                multiplier: spec.levels.indices.contains(level) ? spec.levels[level].multiplier : 1,
-                upgradeCost: GameEngine.equipmentUpgradeCost(spec.id, for: state, config: config)
-            )
-        }
-    }
-    var hireCost: Double? { GameEngine.hireCost(for: state, config: config) }
-    var warehouseUpgradeCost: Double? { GameEngine.warehouseUpgradeCost(for: state, config: config) }
     var offlineCapacitySeconds: TimeInterval { GameEngine.offlineCapacitySeconds(for: state, config: config) }
+    var warehouseUpgradeCost: Double? { GameEngine.warehouseUpgradeCost(for: state, config: config) }
 
-    /// Sonraki eleman için kaç kahve daha satmak gerekiyor?
+    /// Bir katın kendi neti — şerit üstünde gösterilir.
+    func netRate(of index: Int) -> Double {
+        guard floors.indices.contains(index),
+              let spec = GameEngine.spec(for: floors[index], config: config) else { return 0 }
+        return GameEngine.floorNet(floors[index], spec: spec)
+    }
+
+    // MARK: - Seçili kata bağlı
+
+    /// Elle bir satışın getirisi — ekipmanla birlikte büyür.
+    var manualRevenue: Double {
+        guard let floor = currentFloor, let spec = currentSpec else { return 0 }
+        return GameEngine.manualRevenue(for: floor, spec: spec)
+    }
+
+    var hireCost: Double? {
+        guard let floor = currentFloor, let spec = currentSpec else { return nil }
+        return GameEngine.hireCost(for: floor, spec: spec)
+    }
+
+    /// Sıradaki elemanın şablonu — "kimi tutuyorum" bilgisini satırda gösterebilmek için.
+    var nextStaffTemplate: BalanceConfig.StaffTemplate? {
+        guard let floor = currentFloor, let spec = currentSpec else { return nil }
+        let index = floor.staff.count
+        guard index < GameEngine.staffCapacity(spec: spec) else { return nil }
+        return spec.staffPool.indices.contains(index) ? spec.staffPool[index] : nil
+    }
+
+    /// Sonraki eleman için kaç satış daha gerekiyor?
     /// Çağ 0'da hedefi somutlaştırır: "38 kahve daha".
     var manualSalesUntilHire: Int? {
-        guard let cost = hireCost, !state.isAutomated else { return nil }
+        guard let floor = currentFloor, let cost = hireCost, !floor.isAutomated else { return nil }
         let revenue = manualRevenue
         guard revenue > 0 else { return nil }
         let remaining = cost - state.money
@@ -76,12 +114,40 @@ final class GameStore {
         return Int((remaining / revenue).rounded(.up))
     }
 
-    /// Sıradaki elemanın şablonu — "kimi tutuyorum" bilgisini butonda gösterebilmek için.
-    var nextStaffTemplate: BalanceConfig.StaffTemplate? {
-        let index = state.staff.count
-        guard index < GameEngine.staffCapacity(config: config) else { return nil }
-        return config.staffPool.indices.contains(index) ? config.staffPool[index] : nil
+    var branchCount: Int {
+        guard let floor = currentFloor, let spec = currentSpec else { return 1 }
+        return GameEngine.branchCount(for: floor, spec: spec)
     }
+
+    var branchCost: Double? {
+        guard let floor = currentFloor, let spec = currentSpec else { return nil }
+        return GameEngine.branchCost(for: floor, spec: spec)
+    }
+
+    var maxBranches: Int { max(1, currentSpec?.branches.maxCount ?? 1) }
+
+    /// Ekipman şeridinin satırları. Sıra `balance.json`'daki sıradır.
+    var equipmentRows: [EquipmentRow] {
+        guard let floor = currentFloor, let spec = currentSpec else { return [] }
+        return spec.equipment.map { item in
+            let level = min(floor.equipmentLevel(item.id), max(0, item.levels.count - 1))
+            return EquipmentRow(
+                id: item.id,
+                level: level,
+                maxLevel: max(0, item.levels.count - 1),
+                multiplier: item.levels.indices.contains(level) ? item.levels[level].multiplier : 1,
+                upgradeCost: GameEngine.equipmentUpgradeCost(item.id, for: floor, spec: spec)
+            )
+        }
+    }
+
+    // MARK: - Kat açma
+
+    var nextFloorCost: Double? { GameEngine.nextFloorCost(for: state, config: config) }
+    var nextSector: BalanceConfig.SectorSpec? { GameEngine.nextSector(for: state, config: config) }
+
+    /// Bina kaç kata kadar yükselecek — palet geçişi bunun üstünden hesaplanır.
+    var plannedFloors: Int { max(1, config.building.paletteFloors) }
 
     // MARK: - İç durum
 
@@ -102,6 +168,7 @@ final class GameStore {
         self.saves = saves
         self.now = now
 
+        let groundSector = config.sectors.first?.id ?? GameState.groundSectorID
         switch saves.load() {
         case .loaded(let loaded):
             self.state = loaded
@@ -109,7 +176,7 @@ final class GameStore {
             self.state = loaded
             self.didRecoverFromBackup = true
         case .empty:
-            self.state = GameState.newGame(characterID: "kahveci", now: now())
+            self.state = GameState.newGame(characterID: "kahveci", sectorID: groundSector, now: now())
         }
     }
 
@@ -176,23 +243,23 @@ final class GameStore {
 
     func sellManually() {
         lastActionError = nil
-        state = GameEngine.sellManually(state, config: config)
+        state = GameEngine.sellManually(onFloor: selectedFloor, state, config: config)
         Haptics.play(.light)
     }
 
     func hireStaff() {
-        switch GameEngine.hireStaff(state, config: config) {
-        case .success(let next):
-            let isFirstEver = !state.hasCelebratedFirstHire
-            state = next
+        let wasFirstEver = !state.hasCelebratedFirstHire
+        switch GameEngine.hireStaff(onFloor: selectedFloor, state, config: config) {
+        case .success(var next):
             lastActionError = nil
-
-            if isFirstEver, let hired = next.staff.last {
+            if wasFirstEver, let hired = next.floors[safe: selectedFloor]?.staff.last {
                 // Oyunun ilk büyük ödül anı: iş artık sensiz de yürüyor.
-                state.hasCelebratedFirstHire = true
+                next.hasCelebratedFirstHire = true
+                state = next
                 firstHireCelebration = hired
                 Haptics.play(.success)
             } else {
+                state = next
                 Haptics.play(.medium)
             }
             persist()
@@ -202,8 +269,39 @@ final class GameStore {
         }
     }
 
+    func upgradeEquipment(_ id: String) {
+        apply(GameEngine.upgradeEquipment(id, onFloor: selectedFloor, state, config: config))
+    }
+
+    func openBranch() {
+        apply(GameEngine.openBranch(onFloor: selectedFloor, state, config: config), success: .success)
+    }
+
     func upgradeWarehouse() {
         apply(GameEngine.upgradeWarehouse(state, config: config))
+    }
+
+    /// Faz 3: bir üst katı aç — yeni bir sektöre gir.
+    func unlockNextFloor() {
+        let opening = nextSector?.id
+        switch GameEngine.unlockNextFloor(state, config: config) {
+        case .success(let next):
+            state = next
+            lastActionError = nil
+            newFloorCelebration = opening
+            Haptics.play(.success)
+            persist()
+        case .failure(let error):
+            lastActionError = error
+            Haptics.play(.warning)
+        }
+    }
+
+    func selectFloor(_ index: Int) {
+        guard index != state.selectedFloor else { return }
+        state = GameEngine.selectFloor(index, state)
+        lastActionError = nil
+        Haptics.play(.light)
     }
 
     /// Satın alma sonuçlarının ortak yolu: durumu yaz, dokunsal geri bildirimi
@@ -224,14 +322,6 @@ final class GameStore {
         }
     }
 
-    func upgradeEquipment(_ id: String) {
-        apply(GameEngine.upgradeEquipment(id, state, config: config))
-    }
-
-    func openBranch() {
-        apply(GameEngine.openBranch(state, config: config), success: .success)
-    }
-
     func dismissOfflineReport() {
         offlineReport = nil
     }
@@ -240,13 +330,22 @@ final class GameStore {
         firstHireCelebration = nil
     }
 
-    /// Sıfırdan başla. Faz 0'da geliştirme kolaylığı; ilerideki "yeni oyun" da bunu kullanacak.
+    func dismissNewFloorCelebration() {
+        newFloorCelebration = nil
+    }
+
+    /// Sıfırdan başla. Geliştirme kolaylığı; ilerideki "yeni oyun" da bunu kullanacak.
     func startOver() {
         stopTicking()
         saves.deleteAll()
-        state = GameState.newGame(characterID: "kahveci", now: now())
+        state = GameState.newGame(
+            characterID: "kahveci",
+            sectorID: config.sectors.first?.id ?? GameState.groundSectorID,
+            now: now()
+        )
         offlineReport = nil
         firstHireCelebration = nil
+        newFloorCelebration = nil
         lastActionError = nil
         didRecoverFromBackup = false
         didFailToSave = false
@@ -264,6 +363,13 @@ final class GameStore {
         } catch {
             didFailToSave = true
         }
+    }
+}
+
+private extension Array {
+    /// Sınır dışı indeks çökme değil `nil` versin.
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }
 

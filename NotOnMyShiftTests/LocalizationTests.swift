@@ -13,11 +13,26 @@ final class LocalizationTests: XCTestCase {
         let fallbackName = L.staffName("__bilinmeyen__")
         let fallbackTrait = L.staffTrait("__bilinmeyen__")
 
-        for template in config.staffPool {
-            XCTAssertNotEqual(L.staffName(template.id), fallbackName,
-                              "'\(template.id)' dil dosyasında isimsiz")
-            XCTAssertNotEqual(L.staffTrait(template.id), fallbackTrait,
-                              "'\(template.id)' dil dosyasında huysuz")
+        for sector in config.sectors {
+            for template in sector.staffPool {
+                XCTAssertNotEqual(L.staffName(template.id), fallbackName,
+                                  "'\(template.id)' dil dosyasında isimsiz")
+                XCTAssertNotEqual(L.staffTrait(template.id), fallbackTrait,
+                                  "'\(template.id)' dil dosyasında huysuz")
+            }
+        }
+    }
+
+    func testEverySectorHasANameASignAndASellVerb() throws {
+        let config = try loadShippedConfig()
+        let fallbackName = L.sectorName("__bilinmeyen__")
+        let fallbackSign = L.sectorSign("__bilinmeyen__")
+        let fallbackSell = L.sectorSell("__bilinmeyen__")
+
+        for sector in config.sectors {
+            XCTAssertNotEqual(L.sectorName(sector.id), fallbackName, "'\(sector.id)' adsız")
+            XCTAssertNotEqual(L.sectorSign(sector.id), fallbackSign, "'\(sector.id)' tabelasız")
+            XCTAssertNotEqual(L.sectorSell(sector.id), fallbackSell, "'\(sector.id)' satış fiili yok")
         }
     }
 

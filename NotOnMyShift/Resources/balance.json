@@ -1,81 +1,263 @@
 {
-  "version": 1,
-
-  "sector": {
-    "id": "kahve_arabasi"
+  "version": 3,
+  "building": {
+    "paletteFloors": 8
   },
-
-  "manual": {
-    "revenuePerSale": 4.0
-  },
-
-  "staff": {
-    "ratePerSecond": 1.2,
-    "baseCost": 150.0,
-    "costGrowth": 3.2,
-    "maxCount": 6,
-    "wagePerSecond": 0.30
-  },
-
-  "equipment": [
+  "sectors": [
     {
-      "id": "grinder",
-      "levels": [
-        { "cost": 0,     "multiplier": 1.00 },
-        { "cost": 900,   "multiplier": 1.20 },
-        { "cost": 4500,  "multiplier": 1.45 },
-        { "cost": 22000, "multiplier": 1.75 }
+      "id": "coffee",
+      "unlockCost": 0,
+      "manual": {
+        "revenuePerSale": 4.0
+      },
+      "staff": {
+        "ratePerSecond": 1.2,
+        "baseCost": 150.0,
+        "costGrowth": 3.2,
+        "maxCount": 6,
+        "wagePerSecond": 0.3
+      },
+      "equipment": [
+        {
+          "id": "grinder",
+          "levels": [
+            {
+              "cost": 0,
+              "multiplier": 1.0
+            },
+            {
+              "cost": 900,
+              "multiplier": 1.2
+            },
+            {
+              "cost": 4500,
+              "multiplier": 1.45
+            },
+            {
+              "cost": 22000,
+              "multiplier": 1.75
+            }
+          ]
+        },
+        {
+          "id": "machine",
+          "levels": [
+            {
+              "cost": 0,
+              "multiplier": 1.0
+            },
+            {
+              "cost": 3000,
+              "multiplier": 1.3
+            },
+            {
+              "cost": 18000,
+              "multiplier": 1.65
+            },
+            {
+              "cost": 95000,
+              "multiplier": 2.1
+            }
+          ]
+        },
+        {
+          "id": "milk",
+          "levels": [
+            {
+              "cost": 0,
+              "multiplier": 1.0
+            },
+            {
+              "cost": 12000,
+              "multiplier": 1.25
+            },
+            {
+              "cost": 60000,
+              "multiplier": 1.55
+            },
+            {
+              "cost": 300000,
+              "multiplier": 2.0
+            }
+          ]
+        }
+      ],
+      "branches": {
+        "baseCost": 6000,
+        "costGrowth": 5.0,
+        "maxCount": 4
+      },
+      "staffPool": [
+        {
+          "id": "quick",
+          "rateMultiplier": 1.15
+        },
+        {
+          "id": "opener",
+          "rateMultiplier": 1.0
+        },
+        {
+          "id": "chatty",
+          "rateMultiplier": 0.95
+        },
+        {
+          "id": "veteran",
+          "rateMultiplier": 0.9
+        },
+        {
+          "id": "phone",
+          "rateMultiplier": 1.05
+        },
+        {
+          "id": "artist",
+          "rateMultiplier": 1.1
+        }
       ]
     },
     {
-      "id": "machine",
-      "levels": [
-        { "cost": 0,     "multiplier": 1.00 },
-        { "cost": 3000,  "multiplier": 1.30 },
-        { "cost": 18000, "multiplier": 1.65 },
-        { "cost": 95000, "multiplier": 2.10 }
-      ]
-    },
-    {
-      "id": "milk",
-      "levels": [
-        { "cost": 0,      "multiplier": 1.00 },
-        { "cost": 12000,  "multiplier": 1.25 },
-        { "cost": 60000,  "multiplier": 1.55 },
-        { "cost": 300000, "multiplier": 2.00 }
+      "id": "bakery",
+      "unlockCost": 250000,
+      "manual": {
+        "revenuePerSale": 45.0
+      },
+      "staff": {
+        "ratePerSecond": 14.0,
+        "baseCost": 1800.0,
+        "costGrowth": 3.4,
+        "maxCount": 5,
+        "wagePerSecond": 3.5
+      },
+      "equipment": [
+        {
+          "id": "oven",
+          "levels": [
+            {
+              "cost": 0,
+              "multiplier": 1.0
+            },
+            {
+              "cost": 9000,
+              "multiplier": 1.25
+            },
+            {
+              "cost": 48000,
+              "multiplier": 1.55
+            },
+            {
+              "cost": 240000,
+              "multiplier": 1.95
+            }
+          ]
+        },
+        {
+          "id": "mixer",
+          "levels": [
+            {
+              "cost": 0,
+              "multiplier": 1.0
+            },
+            {
+              "cost": 30000,
+              "multiplier": 1.3
+            },
+            {
+              "cost": 170000,
+              "multiplier": 1.7
+            },
+            {
+              "cost": 900000,
+              "multiplier": 2.15
+            }
+          ]
+        },
+        {
+          "id": "case",
+          "levels": [
+            {
+              "cost": 0,
+              "multiplier": 1.0
+            },
+            {
+              "cost": 120000,
+              "multiplier": 1.2
+            },
+            {
+              "cost": 600000,
+              "multiplier": 1.5
+            },
+            {
+              "cost": 3000000,
+              "multiplier": 1.9
+            }
+          ]
+        }
+      ],
+      "branches": {
+        "baseCost": 70000,
+        "costGrowth": 5.0,
+        "maxCount": 4
+      },
+      "staffPool": [
+        {
+          "id": "baker",
+          "rateMultiplier": 1.15
+        },
+        {
+          "id": "kneader",
+          "rateMultiplier": 1.0
+        },
+        {
+          "id": "froster",
+          "rateMultiplier": 0.95
+        },
+        {
+          "id": "night",
+          "rateMultiplier": 1.1
+        },
+        {
+          "id": "apprentice",
+          "rateMultiplier": 0.85
+        }
       ]
     }
   ],
-
-  "branches": {
-    "baseCost": 6000,
-    "costGrowth": 5.0,
-    "maxCount": 4
-  },
-
   "warehouse": {
     "levels": [
-      { "capacitySeconds": 7200,  "cost": 0 },
-      { "capacitySeconds": 10800, "cost": 1200 },
-      { "capacitySeconds": 14400, "cost": 4000 },
-      { "capacitySeconds": 21600, "cost": 12000 },
-      { "capacitySeconds": 28800, "cost": 35000 },
-      { "capacitySeconds": 43200, "cost": 90000 },
-      { "capacitySeconds": 57600, "cost": 220000 },
-      { "capacitySeconds": 86400, "cost": 500000 }
+      {
+        "capacitySeconds": 7200,
+        "cost": 0
+      },
+      {
+        "capacitySeconds": 10800,
+        "cost": 1200
+      },
+      {
+        "capacitySeconds": 14400,
+        "cost": 4000
+      },
+      {
+        "capacitySeconds": 21600,
+        "cost": 12000
+      },
+      {
+        "capacitySeconds": 28800,
+        "cost": 35000
+      },
+      {
+        "capacitySeconds": 43200,
+        "cost": 90000
+      },
+      {
+        "capacitySeconds": 57600,
+        "cost": 220000
+      },
+      {
+        "capacitySeconds": 86400,
+        "cost": 500000
+      }
     ]
   },
-
   "offline": {
     "minimumReportSeconds": 60
-  },
-
-  "staffPool": [
-    { "id": "quick",   "rateMultiplier": 1.15 },
-    { "id": "opener",  "rateMultiplier": 1.0 },
-    { "id": "chatty",  "rateMultiplier": 0.95 },
-    { "id": "veteran", "rateMultiplier": 0.9 },
-    { "id": "phone",   "rateMultiplier": 1.05 },
-    { "id": "artist",  "rateMultiplier": 1.1 }
-  ]
+  }
 }

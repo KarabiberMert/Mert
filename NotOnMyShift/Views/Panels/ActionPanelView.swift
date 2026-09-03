@@ -9,7 +9,7 @@ import SwiftUI
 struct ActionPanelView: View {
 
     enum Tab: String, CaseIterable, Identifiable {
-        case crew, equipment, branches
+        case crew, equipment, branches, building
 
         var id: String { rawValue }
 
@@ -18,6 +18,7 @@ struct ActionPanelView: View {
             case .crew: L.tabCrew
             case .equipment: L.tabEquipment
             case .branches: L.tabBranches
+            case .building: L.tabBuilding
             }
         }
     }
@@ -40,6 +41,7 @@ struct ActionPanelView: View {
                     case .crew: crewTab
                     case .equipment: equipmentTab
                     case .branches: branchesTab
+                    case .building: buildingTab
                     }
                 }
                 .padding(.bottom, 4)
@@ -61,7 +63,7 @@ struct ActionPanelView: View {
     private var sellButton: some View {
         Button(action: onSell) {
             HStack {
-                Text(L.sellCoffee)
+                Text(L.sectorSell(store.currentFloor?.sectorID ?? ""))
                 Spacer(minLength: 12)
                 Text("+\(Money.text(store.manualRevenue))")
                     .foregroundStyle(Palette.mustard)
@@ -152,14 +154,6 @@ struct ActionPanelView: View {
 
     @ViewBuilder
     private var equipmentTab: some View {
-        row(
-            title: L.upgradeWarehouse,
-            subtitle: L.warehouseHolds(DurationText.text(store.offlineCapacitySeconds)),
-            trailing: store.warehouseUpgradeCost.map(Money.text) ?? L.equipmentMaxed,
-            enabled: store.warehouseUpgradeCost.map { store.state.money >= $0 } ?? false,
-            action: { store.upgradeWarehouse() }
-        )
-
         ForEach(store.equipmentRows) { item in
             row(
                 title: L.equipmentName(item.id),
@@ -197,6 +191,47 @@ struct ActionPanelView: View {
         } else {
             note(L.branchesFull)
             note(L.branchesRunning(store.branchCount))
+        }
+    }
+
+    // MARK: - Bina
+
+    @ViewBuilder
+    private var buildingTab: some View {
+        if let cost = store.nextFloorCost, let next = store.nextSector {
+            row(
+                title: L.openNextFloor,
+                subtitle: L.floorOpensSector(L.sectorName(next.id)),
+                trailing: Money.text(cost),
+                enabled: store.state.money >= cost,
+                action: { store.unlockNextFloor() }
+            )
+        } else {
+            note(L.buildingFull)
+        }
+
+        // Depo bütün katların ortak kapasitesi, tek bir sektörün değil.
+        row(
+            title: L.upgradeWarehouse,
+            subtitle: L.warehouseHolds(DurationText.text(store.offlineCapacitySeconds)),
+            trailing: store.warehouseUpgradeCost.map(Money.text) ?? L.equipmentMaxed,
+            enabled: store.warehouseUpgradeCost.map { store.state.money >= $0 } ?? false,
+            action: { store.upgradeWarehouse() }
+        )
+
+        ForEach(Array(store.floors.enumerated()), id: \.element.id) { entry in
+            HStack(spacing: 10) {
+                Text(entry.offset == 0 ? L.groundFloor : L.floorNumber(entry.offset))
+                    .foregroundStyle(Palette.inkFaint)
+                Text(L.sectorName(entry.element.sectorID))
+                    .foregroundStyle(entry.offset == store.selectedFloor ? Palette.ink : Palette.inkSoft)
+                Spacer(minLength: 8)
+                Text(Money.preciseText(store.netRate(of: entry.offset)))
+                    .foregroundStyle(Palette.pistachio)
+            }
+            .font(Typography.label(13))
+            .padding(.horizontal, 4)
+            .padding(.vertical, 3)
         }
     }
 

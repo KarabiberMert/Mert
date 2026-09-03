@@ -1,7 +1,7 @@
 import XCTest
 @testable import NotOnMyShift
 
-/// Çağ 2: ekipman, maaş ve şubeler.
+/// Çağ 2: ekipman, maaş ve şubeler — hepsi kat başına.
 ///
 /// Tasarım raporundaki asıl soru burada ölçülüyor: eleman maaşı ile makine
 /// yatırımı arasında gerçek bir seçim var mı? Ekipman bir kez ödenir ve çarpar;
@@ -9,19 +9,22 @@ import XCTest
 final class EquipmentAndBranchTests: XCTestCase {
 
     private let config = BalanceFixture.config(wagePerSecond: 0.25)
+    private var ground: BalanceConfig.SectorSpec { config.sectors[0] }
+
+    private func floor(_ state: GameState) -> FloorState { state.floors[0] }
 
     // MARK: - Ekipman
 
     func testEquipmentMultiplierIsOneWhenNothingIsUpgraded() {
         let state = BalanceFixture.state(config: config)
-        XCTAssertEqual(GameEngine.equipmentMultiplier(for: state, config: config), 1, accuracy: 1e-9)
+        XCTAssertEqual(GameEngine.equipmentMultiplier(for: floor(state), spec: ground), 1, accuracy: 1e-9)
     }
 
     func testEquipmentMultiplierFollowsTheOwnedLevel() {
         for (level, expected) in [(0, 1.0), (1, 2.0), (2, 4.0)] {
             let state = BalanceFixture.state(equipmentLevels: ["grinder": level], config: config)
             XCTAssertEqual(
-                GameEngine.equipmentMultiplier(for: state, config: config), expected, accuracy: 1e-9
+                GameEngine.equipmentMultiplier(for: floor(state), spec: ground), expected, accuracy: 1e-9
             )
         }
     }
@@ -30,44 +33,44 @@ final class EquipmentAndBranchTests: XCTestCase {
         // Dengeye yeni parça eklendiğinde ya da seviye dizisi kısaldığında
         // eski kayıt çökmemeli.
         let tooHigh = BalanceFixture.state(equipmentLevels: ["grinder": 99], config: config)
-        XCTAssertEqual(GameEngine.equipmentMultiplier(for: tooHigh, config: config), 4, accuracy: 1e-9)
+        XCTAssertEqual(GameEngine.equipmentMultiplier(for: floor(tooHigh), spec: ground), 4, accuracy: 1e-9)
 
         let unknown = BalanceFixture.state(equipmentLevels: ["bilinmeyen": 3], config: config)
-        XCTAssertEqual(GameEngine.equipmentMultiplier(for: unknown, config: config), 1, accuracy: 1e-9)
+        XCTAssertEqual(GameEngine.equipmentMultiplier(for: floor(unknown), spec: ground), 1, accuracy: 1e-9)
     }
 
     func testUpgradingEquipmentDeductsCostAndRaisesOutput() {
         let state = BalanceFixture.state(money: 100, staffCount: 1, config: config)
         let before = GameEngine.grossRate(for: state, config: config)
 
-        guard case .success(let next) = GameEngine.upgradeEquipment("grinder", state, config: config) else {
+        guard case .success(let next) = GameEngine.upgradeEquipment("grinder", onFloor: 0, state, config: config) else {
             return XCTFail("Öğütücü yükseltilemedi")
         }
 
         XCTAssertEqual(next.money, 50, accuracy: 1e-9)
-        XCTAssertEqual(next.equipmentLevel("grinder"), 1)
+        XCTAssertEqual(next.floors[0].equipmentLevel("grinder"), 1)
         XCTAssertEqual(GameEngine.grossRate(for: next, config: config), before * 2, accuracy: 1e-9)
     }
 
     func testEquipmentUpgradeFailsCleanly() {
         let poor = BalanceFixture.state(money: 10, config: config)
-        guard case .failure(let funds) = GameEngine.upgradeEquipment("grinder", poor, config: config) else {
+        guard case .failure(let funds) = GameEngine.upgradeEquipment("grinder", onFloor: 0, poor, config: config) else {
             return XCTFail("Para yetmezken yükseltme geçmemeli")
         }
         XCTAssertEqual(funds, .insufficientFunds)
 
         let rich = BalanceFixture.state(money: 1_000_000, config: config)
-        guard case .failure(let unknown) = GameEngine.upgradeEquipment("yok_boyle", rich, config: config) else {
+        guard case .failure(let unknown) = GameEngine.upgradeEquipment("yok_boyle", onFloor: 0, rich, config: config) else {
             return XCTFail("Tanınmayan ekipman geçmemeli")
         }
         XCTAssertEqual(unknown, .unknownEquipment)
 
         let maxed = BalanceFixture.state(money: 1_000_000, equipmentLevels: ["grinder": 2], config: config)
-        guard case .failure(let level) = GameEngine.upgradeEquipment("grinder", maxed, config: config) else {
+        guard case .failure(let level) = GameEngine.upgradeEquipment("grinder", onFloor: 0, maxed, config: config) else {
             return XCTFail("Son seviyede yükseltme geçmemeli")
         }
         XCTAssertEqual(level, .maxLevelReached)
-        XCTAssertNil(GameEngine.equipmentUpgradeCost("grinder", for: maxed, config: config))
+        XCTAssertNil(GameEngine.equipmentUpgradeCost("grinder", for: floor(maxed), spec: ground))
     }
 
     func testEquipmentAlsoHelpsHandSelling() {
@@ -75,10 +78,10 @@ final class EquipmentAndBranchTests: XCTestCase {
         let plain = BalanceFixture.state(config: config)
         let upgraded = BalanceFixture.state(equipmentLevels: ["grinder": 1], config: config)
 
-        XCTAssertEqual(GameEngine.manualRevenue(for: plain, config: config), 10, accuracy: 1e-9)
-        XCTAssertEqual(GameEngine.manualRevenue(for: upgraded, config: config), 20, accuracy: 1e-9)
+        XCTAssertEqual(GameEngine.manualRevenue(for: floor(plain), spec: ground), 10, accuracy: 1e-9)
+        XCTAssertEqual(GameEngine.manualRevenue(for: floor(upgraded), spec: ground), 20, accuracy: 1e-9)
 
-        let sold = GameEngine.sellManually(upgraded, config: config)
+        let sold = GameEngine.sellManually(onFloor: 0, upgraded, config: config)
         XCTAssertEqual(sold.money, 20, accuracy: 1e-9)
     }
 
@@ -118,12 +121,12 @@ final class EquipmentAndBranchTests: XCTestCase {
         // eleman hem pahalıdır hem her saniye maaş ister.
         let base = BalanceFixture.state(money: 500, staffCount: 2, config: config)
 
-        XCTAssertEqual(GameEngine.equipmentUpgradeCost("grinder", for: base, config: config) ?? -1,
+        XCTAssertEqual(GameEngine.equipmentUpgradeCost("grinder", for: floor(base), spec: ground) ?? -1,
                        50, accuracy: 1e-9)
-        XCTAssertEqual(GameEngine.hireCost(for: base, config: config) ?? -1, 400, accuracy: 1e-9)
+        XCTAssertEqual(GameEngine.hireCost(for: floor(base), spec: ground) ?? -1, 400, accuracy: 1e-9)
 
-        guard case .success(let withKit) = GameEngine.upgradeEquipment("grinder", base, config: config),
-              case .success(let withStaff) = GameEngine.hireStaff(base, config: config) else {
+        guard case .success(let withKit) = GameEngine.upgradeEquipment("grinder", onFloor: 0, base, config: config),
+              case .success(let withStaff) = GameEngine.hireStaff(onFloor: 0, base, config: config) else {
             return XCTFail("Karşılaştırma kurulamadı")
         }
 
@@ -150,33 +153,33 @@ final class EquipmentAndBranchTests: XCTestCase {
     func testBranchCostFollowsTheGrowthCurve() {
         // İkinci şube 500, üçüncü 5000.
         let first = BalanceFixture.state(config: config)
-        XCTAssertEqual(GameEngine.branchCost(for: first, config: config) ?? -1, 500, accuracy: 1e-9)
+        XCTAssertEqual(GameEngine.branchCost(for: floor(first), spec: ground) ?? -1, 500, accuracy: 1e-9)
 
         let second = BalanceFixture.state(branchCount: 2, config: config)
-        XCTAssertEqual(GameEngine.branchCost(for: second, config: config) ?? -1, 5_000, accuracy: 1e-9)
+        XCTAssertEqual(GameEngine.branchCost(for: floor(second), spec: ground) ?? -1, 5_000, accuracy: 1e-9)
     }
 
     func testOpeningABranchCopiesTheShop() {
         let state = BalanceFixture.state(money: 600, staffCount: 2, equipmentLevels: ["grinder": 1], config: config)
 
-        guard case .success(let next) = GameEngine.openBranch(state, config: config) else {
+        guard case .success(let next) = GameEngine.openBranch(onFloor: 0, state, config: config) else {
             return XCTFail("Şube açılamadı")
         }
 
         XCTAssertEqual(next.money, 100, accuracy: 1e-9)
-        XCTAssertEqual(next.branchCount, 2)
+        XCTAssertEqual(next.floors[0].branchCount, 2)
         // Kadro ve ekipman devralınır — ayrı ayar yok.
-        XCTAssertEqual(next.staff.count, state.staff.count)
-        XCTAssertEqual(next.equipmentLevel("grinder"), 1)
+        XCTAssertEqual(next.floors[0].staff.count, state.floors[0].staff.count)
+        XCTAssertEqual(next.floors[0].equipmentLevel("grinder"), 1)
         XCTAssertEqual(GameEngine.grossRate(for: next, config: config),
                        GameEngine.grossRate(for: state, config: config) * 2, accuracy: 1e-9)
     }
 
     func testBranchLimitIsRespected() {
         let full = BalanceFixture.state(money: 1_000_000, branchCount: 3, config: config)
-        XCTAssertNil(GameEngine.branchCost(for: full, config: config))
+        XCTAssertNil(GameEngine.branchCost(for: floor(full), spec: ground))
 
-        guard case .failure(let error) = GameEngine.openBranch(full, config: config) else {
+        guard case .failure(let error) = GameEngine.openBranch(onFloor: 0, full, config: config) else {
             return XCTFail("Kat doluyken şube açılmamalı")
         }
         XCTAssertEqual(error, .branchLimitReached)
@@ -185,6 +188,6 @@ final class EquipmentAndBranchTests: XCTestCase {
     func testSavedBranchCountIsClampedToTheBalance() {
         // Denge sınırı düşerse eski kayıt sınırın üstünde kalmasın.
         let overflowing = BalanceFixture.state(branchCount: 99, config: config)
-        XCTAssertEqual(GameEngine.branchCount(for: overflowing, config: config), 3)
+        XCTAssertEqual(GameEngine.branchCount(for: floor(overflowing), spec: ground), 3)
     }
 }

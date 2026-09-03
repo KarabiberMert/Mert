@@ -24,7 +24,7 @@ final class GameStoreTests: XCTestCase {
             // Çağ 0 → Çağ 1: elle biriktir, ilk elemanı tut.
             for _ in 0..<10 { store.sellManually() }          // 10 x 10 ₺ = 100 ₺
             store.hireStaff()
-            XCTAssertEqual(store.state.staff.count, 1)
+            XCTAssertEqual(store.state.floors[0].staff.count, 1)
             XCTAssertEqual(store.state.money, 0, accuracy: 1e-9)
 
             // Uygulamayı kapat, beş dakika sonra dön.
@@ -55,7 +55,7 @@ final class GameStoreTests: XCTestCase {
             let second = GameStore(config: config, saves: saves, now: clock.provider)
 
             XCTAssertEqual(second.state.money, 150, accuracy: 1e-6)
-            XCTAssertEqual(second.state.staff.count, 1)
+            XCTAssertEqual(second.state.floors[0].staff.count, 1)
             XCTAssertEqual(second.state.stats.manualSales, 25)
         }
     }
@@ -103,7 +103,7 @@ final class GameStoreTests: XCTestCase {
             for _ in 0..<20 { store.sellManually() }        // ikinci eleman 200 ₺
             store.hireStaff()
 
-            XCTAssertEqual(store.state.staff.count, 2)
+            XCTAssertEqual(store.state.floors[0].staff.count, 2)
             XCTAssertNil(store.firstHireCelebration, "Çağ 1 anı ikinci kez oynatılmamalı")
 
             // Uygulama yeniden açıldığında da tekrar etmemeli.
@@ -133,6 +133,41 @@ final class GameStoreTests: XCTestCase {
         }
     }
 
+    func testOpeningAFloorSelectsItAndRaisesTheCelebration() async throws {
+        try await withTemporaryDirectory { directory in
+            let config = BalanceFixture.config(upperUnlockCost: 1_000)
+            let store = GameStore(
+                config: config,
+                saves: SaveStore(containerDirectory: directory),
+                now: { BalanceFixture.epoch }
+            )
+
+            XCTAssertEqual(store.floors.count, 1)
+            XCTAssertEqual(store.nextFloorCost, 1_000)
+
+            // Para yetmiyorsa kat açılmaz.
+            store.unlockNextFloor()
+            XCTAssertEqual(store.floors.count, 1)
+            XCTAssertNil(store.newFloorCelebration)
+
+            for _ in 0..<120 { store.sellManually() }        // 120 × 10 = 1.200
+            store.unlockNextFloor()
+
+            XCTAssertEqual(store.floors.count, 2)
+            XCTAssertEqual(store.selectedFloor, 1, "Açtığın katın başında ol")
+            XCTAssertEqual(store.newFloorCelebration, "bakery")
+            XCTAssertEqual(store.currentSpec?.id, "bakery")
+            // Panel artık üst katın sayılarıyla çalışır.
+            XCTAssertEqual(store.manualRevenue, 100, accuracy: 1e-9)
+
+            store.dismissNewFloorCelebration()
+            store.selectFloor(0)
+            XCTAssertEqual(store.manualRevenue, 10, accuracy: 1e-9)
+
+            store.handleWillResignActive()
+        }
+    }
+
     func testStartOverClearsEverything() async throws {
         try await withTemporaryDirectory { directory in
             let store = GameStore(
@@ -146,7 +181,7 @@ final class GameStoreTests: XCTestCase {
             store.startOver()
 
             XCTAssertEqual(store.state.money, 0, accuracy: 1e-9)
-            XCTAssertTrue(store.state.staff.isEmpty)
+            XCTAssertTrue(store.state.floors[0].staff.isEmpty)
             XCTAssertEqual(store.state.stats.manualSales, 0)
 
             store.handleWillResignActive()

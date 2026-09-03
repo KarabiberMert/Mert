@@ -1,11 +1,16 @@
 import SwiftUI
 
-/// Çağ 0 → Çağ 1. Oyunun ilk büyük ödül anı, bir kez görünür.
+/// Oyunun büyük anları: ilk eleman, açılan kat. İkisi de bir kez görünür.
 ///
-/// Faz 1'in test ettiği tek soru bu ekranda: ilk elemanı tutmak tatmin edici mi?
-struct FirstHireBannerView: View {
+/// Aynı kalıbı paylaşıyorlar çünkü ikisi de aynı şeyi söylüyor: "artık bu da
+/// sensiz yürüyor."
+struct MomentBannerView: View {
 
-    let member: StaffMember
+    let title: String
+    /// Başlığın altındaki tek satırlık renkli not — huy ya da sektör adı.
+    let highlight: String
+    let body body_: String
+    let actionTitle: String
     let onDismiss: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -18,21 +23,23 @@ struct FirstHireBannerView: View {
                 .onTapGesture(perform: onDismiss)
 
             VStack(alignment: .leading, spacing: 14) {
-                Text(L.startedWork(L.staffName(member.id)))
+                Text(title)
                     .font(Typography.display(28))
                     .foregroundStyle(Palette.ink)
+                    .fixedSize(horizontal: false, vertical: true)
 
-                Text(L.staffTrait(member.id))
+                Text(highlight)
                     .font(Typography.label(16))
                     .foregroundStyle(Palette.pistachio)
+                    .fixedSize(horizontal: false, vertical: true)
 
-                Text(L.firstHireBody)
+                Text(body_)
                     .font(.system(.subheadline))
                     .foregroundStyle(Palette.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Button(action: onDismiss) {
-                    Text(L.firstHireAction)
+                    Text(actionTitle)
                         .font(Typography.display(18))
                         .foregroundStyle(Palette.plaster)
                         .frame(maxWidth: .infinity, minHeight: 50)

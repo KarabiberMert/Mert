@@ -2,8 +2,7 @@
 """balance.json'ın ilerleme eğrisini tablo olarak yazar.
 
 Sayılar birimsizdir: para birimi dile bağlı (bkz. Localizable.strings).
-
-Bir sayıyı değiştirdikten sonra bunu çalıştır: eğrinin nereye gittiğini
+Bir sayıyı değiştirdikten sonra bunu çalıştır — eğrinin nereye gittiğini
 oyunu açmadan görürsün.
 
     python3 scripts/balance_report.py
@@ -22,95 +21,101 @@ def human(seconds):
         return f"{seconds / 60:.0f} dk"
     if seconds < 86400:
         return f"{seconds / 3600:.1f} sa"
-    return f"{seconds / 86400:.1f} gün"
+    return f"{seconds / 86400:.1f} gun"
 
 
-def main():
-    config = json.loads((ROOT / "NotOnMyShift/Resources/balance.json").read_text())
-    tap = config["manual"]["revenuePerSale"]
-    staff = config["staff"]
-    pool = config["staffPool"]
+def sector_report(sector):
+    staff = sector["staff"]
+    pool = sector["staffPool"]
+    equipment = sector["equipment"]
+    branches = sector["branches"]
+    wage = staff["wagePerSecond"]
 
-    print(f"Elle satış        : {tap:g}/dokunuş")
-    print(f"İlk eleman        : {staff['baseCost']:.0f} = {staff['baseCost'] / tap:.0f} dokunuş")
-    print(f"Ücret çarpanı     : {staff['costGrowth']:g}\n")
+    print(f"\n{'=' * 62}")
+    print(f"SEKTOR: {sector['id']}   kat acilis ucreti {sector['unlockCost']:,.0f}")
+    print("=" * 62)
+    print(f"Elle satis {sector['manual']['revenuePerSale']:g}/dokunus · "
+          f"ilk eleman {staff['baseCost']:.0f} = {staff['baseCost'] / sector['manual']['revenuePerSale']:.0f} dokunus")
+    print(f"Ucret carpani {staff['costGrowth']:g} · maas {wage:g}/sn/kisi\n")
 
-    print(f"{'#':>2}  {'kimlik':<12} {'ücret':>10}  {'oran/sn':>9}  {'biriktirme':>10}  {'toplam':>8}")
-    rate = 0.0
+    print(f"{'#':>2}  {'kimlik':<12} {'ucret':>10}  {'brut/sn':>8}  {'biriktirme':>10}  {'toplam':>8}")
+    gross = 0.0
     elapsed = 0.0
     for index in range(min(staff["maxCount"], len(pool))):
         cost = staff["baseCost"] * staff["costGrowth"] ** index
-        wait = cost / rate if rate > 0 else 0.0
+        net = max(0.0, gross - wage * index)
+        wait = cost / net if net > 0 else 0.0
         elapsed += wait
-        rate += staff["ratePerSecond"] * pool[index]["rateMultiplier"]
+        gross += staff["ratePerSecond"] * pool[index]["rateMultiplier"]
         label = "elle" if index == 0 else human(wait)
-        print(f"{index + 1:>2}  {pool[index]['id']:<12} {cost:>8.0f}  {rate:>9.2f}  {label:>10}  {human(elapsed):>8}")
+        print(f"{index + 1:>2}  {pool[index]['id']:<12} {cost:>10.0f}  {gross:>8.2f}  {label:>10}  {human(elapsed):>8}")
 
-    print(f"\nTam kadro için biriken üretim süresi: {human(elapsed)}")
-    print(f"Tam kadro oranı: {rate:.2f}/sn = {rate * 3600:,.0f}/saat\n")
-
-    equipment = config["equipment"]
-    branches = config["branches"]
-    wage = staff["wagePerSecond"]
-
-    print(f"{'ekipman':<10} {'sv':>2}  {'ücret':>10}  {'çarpan':>7}")
     full_multiplier = 1.0
-    for spec in equipment:
-        for index, level in enumerate(spec["levels"]):
+    print(f"\n{'ekipman':<10} {'sv':>2}  {'ucret':>10}  {'carpan':>7}")
+    for item in equipment:
+        for index, level in enumerate(item["levels"]):
             if index == 0:
                 continue
-            label = spec["id"] if index == 1 else ""
-            print(f"{label:<10} {index:>2}  {level['cost']:>8.0f}  x{level['multiplier']:.2f}")
-        full_multiplier *= spec["levels"][-1]["multiplier"]
-    print(f"{'toplam':<10} {'':>2}  {'':>10}  x{full_multiplier:.2f}\n")
+            label = item["id"] if index == 1 else ""
+            print(f"{label:<10} {index:>2}  {level['cost']:>10.0f}  x{level['multiplier']:.2f}")
+        full_multiplier *= item["levels"][-1]["multiplier"]
+    print(f"{'toplam':<10} {'':>2}  {'':>10}  x{full_multiplier:.2f}")
 
-    print(f"Maas {wage:g}/sn/kisi. Tam kadroda saniyede {wage * staff['maxCount']:.2f} gider.")
-    print(f"{'durum':<34} {'brut':>8} {'maas':>7} {'net':>8}  {'net/saat':>12}")
-    for label, count, multiplier, branch_count in (
+    print(f"\n{'sube':>4}  {'ucret':>10}")
+    for index in range(1, branches["maxCount"]):
+        print(f"{index + 1:>4}  {branches['baseCost'] * branches['costGrowth'] ** (index - 1):>10.0f}")
+
+    print(f"\n{'durum':<32} {'brut':>10} {'maas':>8} {'net':>10}  {'net/saat':>14}")
+    rows = (
         ("ilk eleman", 1, 1.0, 1),
         ("tam kadro", staff["maxCount"], 1.0, 1),
         ("tam kadro + tam ekipman", staff["maxCount"], full_multiplier, 1),
         ("hepsi + tum subeler", staff["maxCount"], full_multiplier, branches["maxCount"]),
-    ):
-        crew_sum = sum(p["rateMultiplier"] for p in pool[:count])
-        gross = staff["ratePerSecond"] * crew_sum * multiplier * branch_count
+    )
+    peak = 0.0
+    for label, count, multiplier, branch_count in rows:
+        crew = sum(p["rateMultiplier"] for p in pool[:count])
+        total = staff["ratePerSecond"] * crew * multiplier * branch_count
         cost = wage * count * branch_count
-        print(f"{label:<34} {gross:>8.2f} {cost:>7.2f} {gross - cost:>8.2f}  {(gross - cost) * 3600:>12,.0f}")
-
-    print(f"\n{'sube':>4}  {'ucret':>10}  {'tam kadroyla':>12}")
-    for index in range(1, branches["maxCount"]):
-        cost = branches["baseCost"] * branches["costGrowth"] ** (index - 1)
-        print(f"{index + 1:>4}  {cost:>8.0f}  {human(cost / rate) if rate else '-':>12}")
-    print()
-
-    print(f"{'sv':>2}  {'kapasite':>9}  {'ücret':>10}  {'tam kadroyla':>12}  {'dolu depo':>12}")
-    for index, level in enumerate(config["warehouse"]["levels"]):
-        wait = level["cost"] / rate if rate > 0 else 0.0
-        full = rate * level["capacitySeconds"]
-        print(f"{index:>2}  {level['capacitySeconds'] / 3600:>6.0f} sa  {level['cost']:>8.0f}  "
-              f"{human(wait):>12}  {full:>10,.0f}")
+        peak = max(peak, total - cost)
+        print(f"{label:<32} {total:>10.2f} {cost:>8.2f} {total - cost:>10.2f}  {(total - cost) * 3600:>14,.0f}")
 
     crew_cost = sum(staff["baseCost"] * staff["costGrowth"] ** i for i in range(staff["maxCount"]))
-    warehouse_cost = sum(level["cost"] for level in config["warehouse"]["levels"])
-    equipment_cost = sum(level["cost"] for spec in equipment for level in spec["levels"])
+    equipment_cost = sum(level["cost"] for item in equipment for level in item["levels"])
     branch_cost = sum(
         branches["baseCost"] * branches["costGrowth"] ** i for i in range(branches["maxCount"] - 1)
     )
-    total = crew_cost + warehouse_cost + equipment_cost + branch_cost
+    total_cost = crew_cost + equipment_cost + branch_cost
+    print(f"\nKadro {crew_cost:,.0f} · ekipman {equipment_cost:,.0f} · sube {branch_cost:,.0f}")
+    print(f"Sektorun tamami: {total_cost:,.0f}  ({human(total_cost / peak)} tepe uretim)")
+    return peak, total_cost
 
-    peak_crew = sum(p["rateMultiplier"] for p in pool[: staff["maxCount"]])
-    peak = (
-        staff["ratePerSecond"] * peak_crew * full_multiplier * branches["maxCount"]
-        - wage * staff["maxCount"] * branches["maxCount"]
-    )
 
-    print(
-        f"\nKadro {crew_cost:,.0f} · ekipman {equipment_cost:,.0f} · "
-        f"şube {branch_cost:,.0f} · depo {warehouse_cost:,.0f}"
-    )
-    print(f"Her şeyin toplamı: {total:,.0f}")
-    print(f"Tepe net {peak:.1f}/sn ile {human(total / peak)} — ama yol boyunca oran çok daha düşük")
-    print("Tasarım hedefi: ilk sektör 4-6 gün (docs/oyun-tasarim-raporu.md §5)")
+def main():
+    config = json.loads((ROOT / "NotOnMyShift/Resources/balance.json").read_text())
+
+    print(f"Bina: {len(config['sectors'])} sektor acik, palet {config['building']['paletteFloors']} kata gore soguyor")
+
+    peaks = []
+    grand_total = 0.0
+    for sector in config["sectors"]:
+        peak, cost = sector_report(sector)
+        peaks.append(peak)
+        grand_total += cost + sector["unlockCost"]
+
+    print(f"\n{'=' * 62}\nDEPO (butun katlarin ortak kapasitesi)\n{'=' * 62}")
+    reference = peaks[0] if peaks else 1
+    print(f"{'sv':>2}  {'kapasite':>9}  {'ucret':>10}  {'dolu depo (zemin tepe)':>24}")
+    for index, level in enumerate(config["warehouse"]["levels"]):
+        print(f"{index:>2}  {level['capacitySeconds'] / 3600:>6.0f} sa  {level['cost']:>10.0f}  "
+              f"{reference * level['capacitySeconds']:>24,.0f}")
+    warehouse_cost = sum(level["cost"] for level in config["warehouse"]["levels"])
+    grand_total += warehouse_cost
+
+    print(f"\nDepo {warehouse_cost:,.0f}")
+    print(f"Her seyin toplami: {grand_total:,.0f}")
+    print(f"Tepe net {max(peaks):,.1f}/sn — ama yol boyunca oran cok daha dusuk")
+    print("Tasarim hedefi: her sektor 4-6 gun (docs/oyun-tasarim-raporu.md §5)")
 
 
 if __name__ == "__main__":

@@ -16,9 +16,7 @@
 "duration.none" = "nada de tiempo";
 
 /* La tienda */
-"shop.name" = "CAFÉ DEL ABUELO";
-"shop.open" = "ABIERTO";
-"shop.tapHint" = "Toca el mostrador y vende un café.";
+"shop.tapHint" = "Toca el mostrador para vender.";
 "shop.a11y" = "La cafetería. Toca para vender un café.";
 
 /* Plantilla */
@@ -43,7 +41,6 @@
 "cash.perSecond" = "%@ por segundo";
 
 /* Acciones */
-"action.sell" = "Vender un café";
 "action.hire" = "Contratar a alguien";
 "action.upgradeWarehouse" = "Ampliar el almacén";
 "action.staffFull" = "Detrás del mostrador ya no cabe nadie más.";
@@ -103,3 +100,45 @@
 /* Bruto y sueldos */
 "cash.gross" = "%@ bruto";
 "cash.wages" = "%@ sueldos";
+
+/* Sectores — una planta es un sector */
+"sector.coffee.name" = "Café del Abuelo";
+"sector.coffee.sign" = "CAFÉ DEL ABUELO";
+"sector.coffee.sell" = "Vender un café";
+"sector.bakery.name" = "Panadería de la Esquina";
+"sector.bakery.sign" = "PANADERÍA";
+"sector.bakery.sell" = "Vender una barra";
+"sector.unknown.name" = "Un negocio nuevo";
+"sector.unknown.sign" = "ABIERTO";
+"sector.unknown.sell" = "Vender";
+
+/* Plantas */
+"floor.open" = "Abrir la planta de arriba";
+"floor.opensSector" = "Se instala %@";
+"floor.allOpen" = "Todas las plantas son tuyas. El edificio está lleno.";
+"floor.number" = "Planta %lld";
+"floor.ground" = "Planta baja";
+"tab.building" = "Edificio";
+"newFloor.title" = "%@ ya está abierto";
+"newFloor.body" = "Una planta nueva, un oficio nuevo. Empieza vacía: contrata, equípala y esta también funcionará sin ti.";
+"newFloor.action" = "Vamos";
+
+/* Plantilla de la panadería */
+"staff.baker.name" = "Inés";
+"staff.baker.trait" = "Conoce el horno mejor que el termostato.";
+"staff.kneader.name" = "Gus";
+"staff.kneader.trait" = "Le habla a la masa. Y la masa obedece.";
+"staff.froster.name" = "Marion";
+"staff.froster.trait" = "Todas las tartas salen rectas. Todas.";
+"staff.night.name" = "Sam";
+"staff.night.trait" = "Empieza a las tres de la mañana y parece contento.";
+"staff.apprentice.name" = "Bo";
+"staff.apprentice.trait" = "Todavía lo mide todo dos veces. Aprende rápido.";
+
+/* Equipo de la panadería */
+"equipment.oven.name" = "Horno de solera";
+"equipment.oven.note" = "Calor uniforme, tres pisos, sin rincones fríos.";
+"equipment.mixer.name" = "Amasadora espiral";
+"equipment.mixer.note" = "Amasa en diez minutos lo que costaba una hora.";
+"equipment.case.name" = "Vitrina";
+"equipment.case.note" = "Ya no se queda nada duro en la estantería.";

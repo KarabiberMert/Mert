@@ -6,6 +6,7 @@ import XCTest
 final class GameEngineTests: XCTestCase {
 
     private let config = BalanceFixture.config()
+    private var ground: BalanceConfig.SectorSpec { config.sectors[0] }
 
     // MARK: - İlerleme
 
@@ -70,7 +71,7 @@ final class GameEngineTests: XCTestCase {
 
         XCTAssertEqual(outcome.creditedSeconds, eightHours, accuracy: 1e-9)
         XCTAssertEqual(outcome.wastedSeconds, 0, accuracy: 1e-9)
-        XCTAssertEqual(outcome.earned, eightHours, accuracy: 1e-6)     // 1 ₺/sn
+        XCTAssertEqual(outcome.earned, eightHours, accuracy: 1e-6)     // 1 birim/sn
         XCTAssertFalse(outcome.didFillWarehouse)
         XCTAssertTrue(outcome.shouldShowReport)
         XCTAssertEqual(outcome.state.stats.offlineReturns, 1)
@@ -155,8 +156,6 @@ final class GameEngineTests: XCTestCase {
     }
 
     func testClockRollbackCannotBeFarmed() {
-        // Saati geri al, sonra ileri al: elde edilen para, saat hiç oynanmamış
-        // gibi davranıldığındakinden fazla olmamalı.
         let start = BalanceFixture.state(staffCount: 1, warehouseLevel: 1, config: config)
 
         let rolledBack = GameEngine.resume(
@@ -184,18 +183,18 @@ final class GameEngineTests: XCTestCase {
         var state = BalanceFixture.state(money: 1_000, config: config)
         XCTAssertEqual(GameEngine.productionRate(for: state, config: config), 0)
 
-        guard case .success(let afterFirst) = GameEngine.hireStaff(state, config: config) else {
+        guard case .success(let afterFirst) = GameEngine.hireStaff(onFloor: 0, state, config: config) else {
             return XCTFail("İlk eleman alınamadı")
         }
         state = afterFirst
 
         XCTAssertEqual(state.money, 900, accuracy: 1e-9)              // taban ücret 100
-        XCTAssertEqual(state.staff.count, 1)
-        XCTAssertEqual(state.staff[0].id, "quick")
+        XCTAssertEqual(state.floors[0].staff.count, 1)
+        XCTAssertEqual(state.floors[0].staff[0].id, "quick")
         XCTAssertEqual(GameEngine.productionRate(for: state, config: config), 1.0, accuracy: 1e-9)
         XCTAssertTrue(state.isAutomated)
 
-        guard case .success(let afterSecond) = GameEngine.hireStaff(state, config: config) else {
+        guard case .success(let afterSecond) = GameEngine.hireStaff(onFloor: 0, state, config: config) else {
             return XCTFail("İkinci eleman alınamadı")
         }
         state = afterSecond
@@ -208,7 +207,7 @@ final class GameEngineTests: XCTestCase {
     func testHiringFailsWithoutEnoughMoney() {
         let state = BalanceFixture.state(money: 99, config: config)
 
-        guard case .failure(let error) = GameEngine.hireStaff(state, config: config) else {
+        guard case .failure(let error) = GameEngine.hireStaff(onFloor: 0, state, config: config) else {
             return XCTFail("Para yetmezken alım başarılı olmamalı")
         }
         XCTAssertEqual(error, .insufficientFunds)
@@ -217,8 +216,8 @@ final class GameEngineTests: XCTestCase {
     func testStaffLimitIsRespected() {
         let state = BalanceFixture.state(money: 1_000_000, staffCount: 3, config: config)
 
-        XCTAssertNil(GameEngine.hireCost(for: state, config: config))
-        guard case .failure(let error) = GameEngine.hireStaff(state, config: config) else {
+        XCTAssertNil(GameEngine.hireCost(for: state.floors[0], spec: ground))
+        guard case .failure(let error) = GameEngine.hireStaff(onFloor: 0, state, config: config) else {
             return XCTFail("Kadro doluyken alım başarılı olmamalı")
         }
         XCTAssertEqual(error, .staffLimitReached)
@@ -228,7 +227,7 @@ final class GameEngineTests: XCTestCase {
         for count in 0..<3 {
             let state = BalanceFixture.state(staffCount: count, config: config)
             XCTAssertEqual(
-                GameEngine.hireCost(for: state, config: config) ?? -1,
+                GameEngine.hireCost(for: state.floors[0], spec: ground) ?? -1,
                 100 * pow(2.0, Double(count)),
                 accuracy: 1e-9
             )
@@ -266,7 +265,7 @@ final class GameEngineTests: XCTestCase {
     func testManualSaleAddsRevenueAndCountsUp() {
         let state = BalanceFixture.state(config: config)
 
-        let next = GameEngine.sellManually(state, config: config)
+        let next = GameEngine.sellManually(onFloor: 0, state, config: config)
 
         XCTAssertEqual(next.money, 10, accuracy: 1e-9)
         XCTAssertEqual(next.lifetimeEarnings, 10, accuracy: 1e-9)
@@ -279,60 +278,69 @@ final class GameEngineTests: XCTestCase {
     func testShippedBalanceParsesAndIsSane() throws {
         let config = try loadShippedConfig()
 
-        XCTAssertFalse(config.sector.id.isEmpty)
-        XCTAssertGreaterThan(config.manual.revenuePerSale, 0)
-        XCTAssertGreaterThan(config.staff.ratePerSecond, 0)
-        XCTAssertGreaterThan(config.staff.baseCost, 0)
-        XCTAssertGreaterThan(config.staff.costGrowth, 1, "Ücret eğrisi artmıyorsa oyun kırılır")
+        XCTAssertGreaterThan(config.building.paletteFloors, 1)
+        XCTAssertFalse(config.sectors.isEmpty)
+        XCTAssertEqual(config.sectors.first?.unlockCost, 0, "Zemin kat bedava olmalı")
+        XCTAssertEqual(
+            Set(config.sectors.map(\.id)).count, config.sectors.count,
+            "Sektör kimlikleri benzersiz olmalı"
+        )
+
+        for sector in config.sectors {
+            XCTAssertGreaterThan(sector.manual.revenuePerSale, 0)
+            XCTAssertGreaterThan(sector.staff.ratePerSecond, 0)
+            XCTAssertGreaterThan(sector.staff.baseCost, 0)
+            XCTAssertGreaterThan(sector.staff.costGrowth, 1, "Ücret eğrisi artmıyorsa oyun kırılır")
+            XCTAssertGreaterThanOrEqual(sector.staff.wagePerSecond, 0)
+            XCTAssertLessThan(
+                sector.staff.wagePerSecond, sector.staff.ratePerSecond,
+                "'\(sector.id)': maaş taban üretimi geçerse ilk eleman zarar ettirir"
+            )
+
+            XCTAssertFalse(sector.equipment.isEmpty)
+            for item in sector.equipment {
+                XCTAssertGreaterThanOrEqual(item.levels.count, 2, "'\(item.id)' yükseltilemiyor")
+                XCTAssertEqual(item.levels.first?.cost, 0, "'\(item.id)' ilk seviyesi bedava olmalı")
+                XCTAssertEqual(item.levels.first?.multiplier, 1, "'\(item.id)' ilk seviyesi nötr olmalı")
+                for (previous, next) in zip(item.levels, item.levels.dropFirst()) {
+                    XCTAssertGreaterThan(next.cost, previous.cost)
+                    XCTAssertGreaterThan(next.multiplier, previous.multiplier)
+                }
+                XCTAssertNotEqual(
+                    L.equipmentName(item.id), L.equipmentName("__yok__"),
+                    "'\(item.id)' için dil dosyasında isim yok"
+                )
+            }
+
+            XCTAssertGreaterThan(sector.branches.maxCount, 1)
+            XCTAssertGreaterThan(sector.branches.baseCost, 0)
+            XCTAssertGreaterThan(sector.branches.costGrowth, 1)
+
+            // Havuz, kadro sınırını doldurmaya yetmeli — isimsiz eleman olmayacak.
+            XCTAssertGreaterThanOrEqual(sector.staffPool.count, sector.staff.maxCount)
+            XCTAssertEqual(
+                Set(sector.staffPool.map(\.id)).count, sector.staffPool.count,
+                "'\(sector.id)': eleman kimlikleri benzersiz olmalı"
+            )
+            for template in sector.staffPool {
+                XCTAssertGreaterThan(template.rateMultiplier, 0)
+                XCTAssertNotEqual(
+                    L.staffName(template.id), L.staffName("__yok__"),
+                    "'\(template.id)' için dil dosyasında isim yok"
+                )
+                XCTAssertNotEqual(
+                    L.staffTrait(template.id), L.staffTrait("__yok__"),
+                    "'\(template.id)' için dil dosyasında huy yok"
+                )
+            }
+        }
+
         XCTAssertFalse(config.warehouse.levels.isEmpty)
         XCTAssertEqual(config.warehouse.levels.first?.cost, 0, "İlk depo seviyesi bedava olmalı")
         XCTAssertEqual(config.warehouse.levels.last?.capacitySeconds, 86_400, "Tasarım hedefi 24 saat")
-
-        // Kapasite ve ücret monoton artmalı.
         for (previous, next) in zip(config.warehouse.levels, config.warehouse.levels.dropFirst()) {
             XCTAssertGreaterThan(next.capacitySeconds, previous.capacitySeconds)
             XCTAssertGreaterThan(next.cost, previous.cost)
-        }
-
-        XCTAssertGreaterThanOrEqual(config.staff.wagePerSecond, 0)
-        XCTAssertLessThan(
-            config.staff.wagePerSecond, config.staff.ratePerSecond,
-            "Maaş taban üretimi geçerse ilk eleman zarar ettirir"
-        )
-
-        XCTAssertFalse(config.equipment.isEmpty)
-        for spec in config.equipment {
-            XCTAssertGreaterThanOrEqual(spec.levels.count, 2, "'\(spec.id)' yükseltilemiyor")
-            XCTAssertEqual(spec.levels.first?.cost, 0, "'\(spec.id)' ilk seviyesi bedava olmalı")
-            XCTAssertEqual(spec.levels.first?.multiplier, 1, "'\(spec.id)' ilk seviyesi nötr olmalı")
-            for (previous, next) in zip(spec.levels, spec.levels.dropFirst()) {
-                XCTAssertGreaterThan(next.cost, previous.cost)
-                XCTAssertGreaterThan(next.multiplier, previous.multiplier)
-            }
-            XCTAssertNotEqual(
-                L.equipmentName(spec.id), L.equipmentName("__yok__"),
-                "'\(spec.id)' için dil dosyasında isim yok"
-            )
-        }
-
-        XCTAssertGreaterThan(config.branches.maxCount, 1)
-        XCTAssertGreaterThan(config.branches.baseCost, 0)
-        XCTAssertGreaterThan(config.branches.costGrowth, 1)
-
-        // Havuz, kadro sınırını doldurmaya yetmeli — isimsiz eleman olmayacak.
-        XCTAssertGreaterThanOrEqual(config.staffPool.count, config.staff.maxCount)
-        XCTAssertEqual(Set(config.staffPool.map(\.id)).count, config.staffPool.count, "Eleman kimlikleri benzersiz olmalı")
-        for template in config.staffPool {
-            XCTAssertGreaterThan(template.rateMultiplier, 0)
-            // İsim ve huy dil dosyalarından geliyor; kimliğin karşılığı olmalı.
-            XCTAssertNotEqual(
-                L.staffName(template.id), L.staffName("__yok__"),
-                "'\(template.id)' için dil dosyasında isim yok"
-            )
-            XCTAssertNotEqual(
-                L.staffTrait(template.id), L.staffTrait("__yok__"),
-                "'\(template.id)' için dil dosyasında huy yok"
-            )
         }
     }
 

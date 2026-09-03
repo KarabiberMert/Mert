@@ -47,19 +47,76 @@ enum L {
 
     // MARK: - Dükkân
 
-    /// Emaye tabelada göründüğü hâliyle. Kod büyük harfe çevirmez.
-    static var shopName: String {
-        String(localized: "shop.name", defaultValue: "POP'S COFFEE",
-               comment: "Name on the enamel shop sign, written exactly as it should appear")
-    }
-    static var open: String {
-        String(localized: "shop.open", defaultValue: "OPEN", comment: "Plaque on the door")
-    }
     static var tapToSell: String {
-        String(localized: "shop.tapHint", defaultValue: "Tap the counter to sell a coffee.", comment: "Age 0 hint")
+        String(localized: "shop.tapHint", defaultValue: "Tap the counter to make a sale.", comment: "Age 0 hint")
     }
     static var shopAccessibility: String {
         String(localized: "shop.a11y", defaultValue: "The shop. Tap to sell a coffee.", comment: "Accessibility label for the building")
+    }
+
+    // MARK: - Sektörler (kat = sektör)
+
+    /// Cümle içinde geçen adı: "Köşe Fırın açıldı".
+    static func sectorName(_ id: String) -> String {
+        switch id {
+        case "coffee": String(localized: "sector.coffee.name", defaultValue: "Pop's Coffee", comment: "Sector name in a sentence")
+        case "bakery": String(localized: "sector.bakery.name", defaultValue: "Corner Bakery", comment: "Sector name in a sentence")
+        default: String(localized: "sector.unknown.name", defaultValue: "A new trade", comment: "Fallback sector name")
+        }
+    }
+
+    /// Emaye tabelada göründüğü hâliyle. Kod büyük harfe çevirmez —
+    /// yerele bağlı çevirme İngilizce adları bozardı (Willie → WİLLİE).
+    static func sectorSign(_ id: String) -> String {
+        switch id {
+        case "coffee": String(localized: "sector.coffee.sign", defaultValue: "POP'S COFFEE", comment: "Text on the enamel sign, exactly as it should appear")
+        case "bakery": String(localized: "sector.bakery.sign", defaultValue: "CORNER BAKERY", comment: "Text on the enamel sign, exactly as it should appear")
+        default: String(localized: "sector.unknown.sign", defaultValue: "OPEN FOR BUSINESS", comment: "Fallback sign text")
+        }
+    }
+
+    /// Elle satış butonu — sektöre göre değişir, ton kaybolmasın.
+    static func sectorSell(_ id: String) -> String {
+        switch id {
+        case "coffee": String(localized: "sector.coffee.sell", defaultValue: "Sell a coffee", comment: "Manual production button")
+        case "bakery": String(localized: "sector.bakery.sell", defaultValue: "Sell a loaf", comment: "Manual production button")
+        default: String(localized: "sector.unknown.sell", defaultValue: "Make a sale", comment: "Fallback manual production button")
+        }
+    }
+
+    // MARK: - Katlar
+
+    static var openNextFloor: String {
+        String(localized: "floor.open", defaultValue: "Open the floor above", comment: "Unlock the next floor")
+    }
+    /// "Corner Bakery moves in"
+    static func floorOpensSector(_ name: String) -> String {
+        String(localized: "floor.opensSector", defaultValue: "\(name) moves in", comment: "Which sector the next floor will hold")
+    }
+    static var buildingFull: String {
+        String(localized: "floor.allOpen", defaultValue: "Every floor is yours. The building is full.", comment: "No sectors left")
+    }
+    /// Çoğul eki yok.
+    static func floorNumber(_ number: Int) -> String {
+        String(localized: "floor.number", defaultValue: "Floor \(number)", comment: "Floor label. Must read correctly for 1 as well as 8.")
+    }
+    static var groundFloor: String {
+        String(localized: "floor.ground", defaultValue: "Ground floor", comment: "The first floor")
+    }
+    static var tabBuilding: String {
+        String(localized: "tab.building", defaultValue: "Building", comment: "Panel tab")
+    }
+
+    /// "Corner Bakery is open"
+    static func newFloorTitle(_ name: String) -> String {
+        String(localized: "newFloor.title", defaultValue: "\(name) is open", comment: "Floor unlocked celebration heading")
+    }
+    static var newFloorBody: String {
+        String(localized: "newFloor.body", defaultValue: "A new floor, a new trade. It starts empty — hire, kit it out, and this one will run without you too.",
+               comment: "What opening a floor means")
+    }
+    static var newFloorAction: String {
+        String(localized: "newFloor.action", defaultValue: "Let's go", comment: "Dismiss the floor celebration")
     }
 
     // MARK: - Kadro (isimler ve huylar dile göre değişir)
@@ -74,6 +131,11 @@ enum L {
         case "veteran": String(localized: "staff.veteran.name", defaultValue: "Walter", comment: "Crew member name")
         case "phone": String(localized: "staff.phone.name", defaultValue: "Theo", comment: "Crew member name")
         case "artist": String(localized: "staff.artist.name", defaultValue: "Priya", comment: "Crew member name")
+        case "baker": String(localized: "staff.baker.name", defaultValue: "Ines", comment: "Crew member name")
+        case "kneader": String(localized: "staff.kneader.name", defaultValue: "Gus", comment: "Crew member name")
+        case "froster": String(localized: "staff.froster.name", defaultValue: "Marion", comment: "Crew member name")
+        case "night": String(localized: "staff.night.name", defaultValue: "Sam", comment: "Crew member name")
+        case "apprentice": String(localized: "staff.apprentice.name", defaultValue: "Bo", comment: "Crew member name")
         default: String(localized: "staff.unknown.name", defaultValue: "New hire", comment: "Fallback for a crew id this build does not know")
         }
     }
@@ -86,6 +148,11 @@ enum L {
         case "veteran": String(localized: "staff.veteran.trait", defaultValue: "Slow, but has not got one wrong in thirty years.", comment: "Crew member quirk")
         case "phone": String(localized: "staff.phone.trait", defaultValue: "Never off the phone, somehow never behind.", comment: "Crew member quirk")
         case "artist": String(localized: "staff.artist.trait", defaultValue: "Working on latte art. Currently drawing kidneys.", comment: "Crew member quirk")
+        case "baker": String(localized: "staff.baker.trait", defaultValue: "Knows the oven better than the thermostat does.", comment: "Crew member quirk")
+        case "kneader": String(localized: "staff.kneader.trait", defaultValue: "Talks to the dough. The dough behaves.", comment: "Crew member quirk")
+        case "froster": String(localized: "staff.froster.trait", defaultValue: "Every cake leaves straight. Every one.", comment: "Crew member quirk")
+        case "night": String(localized: "staff.night.trait", defaultValue: "Starts at three in the morning and seems happy about it.", comment: "Crew member quirk")
+        case "apprentice": String(localized: "staff.apprentice.trait", defaultValue: "Still measuring everything twice. Learning fast.", comment: "Crew member quirk")
         default: String(localized: "staff.unknown.trait", defaultValue: "Keeps to themselves.", comment: "Fallback quirk")
         }
     }
@@ -112,9 +179,6 @@ enum L {
 
     // MARK: - Eylemler
 
-    static var sellCoffee: String {
-        String(localized: "action.sell", defaultValue: "Sell a coffee", comment: "Manual production button")
-    }
     static var hireStaff: String {
         String(localized: "action.hire", defaultValue: "Hire someone", comment: "Hire button")
     }
@@ -149,6 +213,9 @@ enum L {
         case "grinder": String(localized: "equipment.grinder.name", defaultValue: "Grinder", comment: "Equipment name")
         case "machine": String(localized: "equipment.machine.name", defaultValue: "Espresso machine", comment: "Equipment name")
         case "milk": String(localized: "equipment.milk.name", defaultValue: "Milk station", comment: "Equipment name")
+        case "oven": String(localized: "equipment.oven.name", defaultValue: "Deck oven", comment: "Equipment name")
+        case "mixer": String(localized: "equipment.mixer.name", defaultValue: "Spiral mixer", comment: "Equipment name")
+        case "case": String(localized: "equipment.case.name", defaultValue: "Display case", comment: "Equipment name")
         default: String(localized: "equipment.unknown.name", defaultValue: "New kit", comment: "Fallback equipment name")
         }
     }
@@ -158,6 +225,9 @@ enum L {
         case "grinder": String(localized: "equipment.grinder.note", defaultValue: "Fresher grounds, faster shots.", comment: "What the equipment does")
         case "machine": String(localized: "equipment.machine.note", defaultValue: "Two groups instead of one.", comment: "What the equipment does")
         case "milk": String(localized: "equipment.milk.note", defaultValue: "No more queueing for the steam wand.", comment: "What the equipment does")
+        case "oven": String(localized: "equipment.oven.note", defaultValue: "Even heat, three decks, no cold corners.", comment: "What the equipment does")
+        case "mixer": String(localized: "equipment.mixer.note", defaultValue: "Kneads in ten minutes what took an hour.", comment: "What the equipment does")
+        case "case": String(localized: "equipment.case.note", defaultValue: "Nothing goes stale on the shelf any more.", comment: "What the equipment does")
         default: String(localized: "equipment.unknown.note", defaultValue: "Does its job quietly.", comment: "Fallback equipment note")
         }
     }

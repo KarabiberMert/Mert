@@ -8,9 +8,9 @@ kat yükseliyor.
 Tam tasarım dokümanı: [`docs/oyun-tasarim-raporu.md`](docs/oyun-tasarim-raporu.md)
 Geliştirme yönergesi: [`docs/claude-code-prompt.md`](docs/claude-code-prompt.md)
 
-**Durum: Faz 2 — ekipman katmanı ve şubeler.**
-Zemin kat kesiti çizildi; elle üretimden ilk elemana geçiş, ekipman
-yükseltmeleri, maaşlar ve şube açma yerinde.
+**Durum: Faz 3 — ikinci sektör ve kat açma.**
+Bina artık kat kat yükseliyor: her kat bir sektör, kat içindeki hücreler o
+sektörün şubeleri. İki sektör açık (kahve, fırın).
 
 ---
 
@@ -65,8 +65,14 @@ Xcode içinden ⌘U.
    elle satışın getirisi büyür. Kasa satırında `brüt · maaş` görünür.
 8. **Şube** şeridinden ikinci şubeyi aç: binada ikinci bir hücre belirir,
    aynı kadro ve ekipmanla. Üretim de maaş da ikiye katlanır.
-9. Ayarlar → Erişilebilirlik → **Hareketi Azalt**'ı aç: süzülen rakam ve
-   yerleşme animasyonu susar, oyun aynı çalışır.
+9. **Bina** şeridinden üst katı aç: bina yükselir, yeni kat boş gelir ve
+   otomatik seçilir. Kutlama bir kez çıkar.
+10. Katlara dokunarak aralarında geç. Seçili kat hardal keyline ile işaretli;
+    ona dokunmak satış yapar, başka bir kata dokunmak onu seçer.
+11. Üst katın paleti hafifçe soğuk: emaye mavi betona, hardal tezgâh cam griye
+    kayar. Hardal vurgusu iki katta da aynı.
+12. Ayarlar → Erişilebilirlik → **Hareketi Azalt**'ı aç: süzülen rakam,
+    yerleşme ve bina yükselme animasyonu susar, oyun aynı çalışır.
 
 ### Dil kontrolü
 
@@ -145,7 +151,11 @@ oyuncu dili değiştirince mevcut kadro da yeni dilde görünür.
 
 ### Ekonomi
 
-`net = max(0, brüt − maaş)`. Motor hep neti işler; oyuncu asla geri gitmez.
+Ekonomi kat kat: her kat bir sektör, her katın kendi kadrosu, ekipmanı ve
+şubeleri var. Kasa ve depo ortaktır.
+
+`kat neti = max(0, brüt − maaş)`, bina neti bunların toplamı. Zarardaki bir kat
+kârdaki katı aşağı çekmez; oyuncu asla geri gitmez.
 
 | | Nasıl hesaplanır |
 |---|---|
@@ -159,13 +169,23 @@ ekipmanı devralır, ayrı ayarı yoktur.
 
 `python3 scripts/balance_report.py` bu tablonun sayısal karşılığını yazar.
 
-### Bina ve şubeler
+### Bina, katlar ve şubeler
 
-Kat, şube sayısı kadar hücreye bölünür. Aynı çizim kodu yan yana daha küçük
-kutulara girer; hücre **asla gerilmez**, sığmıyorsa küçülür. Şerit yatayda
-ortalanır ve zemine yaslanır — üstünde kalan boşluk binanın devamıdır ve
-Faz 3'te kat olacak. Dar hücrede ince ayrıntılar (fayans motifi, tebeşir
-satırları, fincanlar) çizilmez.
+Kat geniş ve alçak bir **bant**. Bandın yapısı (döşeme, duvar, çini lambri,
+zemin) tüm genişlik boyunca sürer; şubeler bandı dikey bölmelerle hücrelere
+ayırır — tasarım raporundaki "kat içindeki hücreler" tam olarak bu.
+
+Dikey ölçüler banttan, yatay ölçüler hücreden gelir: hücre daralınca insanlar
+ve tezgâh kısalmaz, sadece incelir. Zemin kat sokağa baktığı için daha
+yüksektir — tentesi ve kaldırımı var.
+
+Katı katından ayıran şey iki demirbaş: duvardaki ve tezgâhtaki parça
+(`SectorFittings`). Kabuk, tezgâh, fayans ve kadro ortak. Yeni bir sektör
+eklemek buraya iki çizim eklemekten ibaret.
+
+Palet kat yükseldikçe esnaftan kurumsala karışır (`FloorPalette`): emaye mavi
+betona, hardal tezgâh cam griye kayar. Hardal vurgusu değişmez — para hep aynı
+renk.
 
 ### Motorun sözleşmesi
 

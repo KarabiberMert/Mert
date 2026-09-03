@@ -19,9 +19,7 @@
 "duration.none" = "hiç";
 
 /* Dükkân */
-"shop.name" = "DEDE KAHVE";
-"shop.open" = "AÇIK";
-"shop.tapHint" = "Tezgâha dokun, kahveyi sat.";
+"shop.tapHint" = "Tezgâha dokun, satışı yap.";
 "shop.a11y" = "Dükkân. Dokununca bir kahve satarsın.";
 
 /* Kadro */
@@ -46,11 +44,10 @@
 "cash.perSecond" = "saniyede %@";
 
 /* Eylemler */
-"action.sell" = "Kahve sat";
 "action.hire" = "Eleman tut";
 "action.upgradeWarehouse" = "Depoyu büyüt";
 "action.staffFull" = "Tezgâhın arkasına başka kimse sığmıyor.";
-"action.coffeesToGo" = "%lld kahve daha";
+"action.coffeesToGo" = "%lld satış daha";
 
 /* Depo */
 "warehouse.holds" = "Sen yokken %@ kadar üretim birikir.";
@@ -106,3 +103,45 @@
 /* Brüt ve maaş */
 "cash.gross" = "brüt %@";
 "cash.wages" = "maaş %@";
+
+/* Sektörler — kat = sektör */
+"sector.coffee.name" = "Dede Kahve";
+"sector.coffee.sign" = "DEDE KAHVE";
+"sector.coffee.sell" = "Kahve sat";
+"sector.bakery.name" = "Köşe Fırın";
+"sector.bakery.sign" = "KÖŞE FIRIN";
+"sector.bakery.sell" = "Ekmek sat";
+"sector.unknown.name" = "Yeni bir iş";
+"sector.unknown.sign" = "AÇILDI";
+"sector.unknown.sell" = "Bir satış yap";
+
+/* Katlar */
+"floor.open" = "Üst katı aç";
+"floor.opensSector" = "%@ taşınıyor";
+"floor.allOpen" = "Bütün katlar senin. Bina doldu.";
+"floor.number" = "%lld. kat";
+"floor.ground" = "Zemin kat";
+"tab.building" = "Bina";
+"newFloor.title" = "%@ açıldı";
+"newFloor.body" = "Yeni bir kat, yeni bir iş. Boş başlıyor — eleman tut, ekipmanını kur, bu da sensiz yürümeye başlar.";
+"newFloor.action" = "Başlayalım";
+
+/* Fırının kadrosu */
+"staff.baker.name" = "İnci";
+"staff.baker.trait" = "Fırını termostattan iyi bilir.";
+"staff.kneader.name" = "Gökhan";
+"staff.kneader.trait" = "Hamurla konuşur. Hamur da laf dinler.";
+"staff.froster.name" = "Meral";
+"staff.froster.trait" = "Her pasta dümdüz çıkar. Hepsi.";
+"staff.night.name" = "Samet";
+"staff.night.trait" = "Gece üçte başlar ve bundan memnun görünür.";
+"staff.apprentice.name" = "Bora";
+"staff.apprentice.trait" = "Hâlâ her şeyi iki kez ölçüyor. Çabuk öğreniyor.";
+
+/* Fırının ekipmanı */
+"equipment.oven.name" = "Taş fırın";
+"equipment.oven.note" = "Eşit ısı, üç kat, soğuk köşe yok.";
+"equipment.mixer.name" = "Spiral yoğurucu";
+"equipment.mixer.note" = "Bir saatlik yoğurmayı on dakikada bitirir.";
+"equipment.case.name" = "Teşhir dolabı";
+"equipment.case.note" = "Rafta hiçbir şey bayatlamıyor artık.";

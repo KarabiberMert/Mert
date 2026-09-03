@@ -3,26 +3,40 @@ import Foundation
 /// Oyunun tüm sayıları. Koda gömülmez, `Resources/balance.json` içinden okunur.
 ///
 /// Kural: bir fiyatı değiştirmek için Swift dosyası açman gerekiyorsa yanlış yerdedir.
+/// Bu dosya **sadece sayı ve kimlik** tutar; ekranda görünen her metin dile
+/// bağlı olduğu için `Localizable.strings` içindedir.
 struct BalanceConfig: Codable, Sendable, Equatable {
 
     var version: Int
-    var sector: Sector
-    var manual: Manual
-    var staff: Staff
-    var equipment: [EquipmentSpec]
-    var branches: Branches
+    var building: Building
+    /// Katların sırası. Sıfırıncı sektör zemin kattır ve baştan açıktır.
+    var sectors: [SectorSpec]
     var warehouse: Warehouse
     var offline: Offline
-    var staffPool: [StaffTemplate]
 
-    // MARK: - Alt bölümler
+    // MARK: - Bina
 
-    /// Faz 1'de tek sektör var: kahve arabası. Kat açma geldiğinde bu bir dizi olacak.
+    struct Building: Codable, Sendable, Equatable {
+        /// Paletin tamamen kurumsala döndüğü kat sayısı. Bina bundan alçak olsa
+        /// bile üst katlar oransal olarak soğur — geçiş sert olmasın diye.
+        var paletteFloors: Int
+    }
+
+    // MARK: - Sektör
+
+    /// Bir kat = bir sektör. Kat açmak sektöre girmektir.
     ///
-    /// Dükkânın adı burada değil: tabelada yazan metin dile göre değişir,
-    /// dolayısıyla `Localizable.strings` içinde (`shop.name`).
-    struct Sector: Codable, Sendable, Equatable {
+    /// Adı, elemanlarının isimleri ve ekipmanının adları dil dosyalarındadır;
+    /// burada yalnızca kimlikler ve sayılar durur.
+    struct SectorSpec: Codable, Sendable, Equatable, Identifiable {
         var id: String
+        /// Bu katı açmanın ücreti. Zemin katta 0.
+        var unlockCost: Double
+        var manual: Manual
+        var staff: Staff
+        var equipment: [EquipmentSpec]
+        var branches: Branches
+        var staffPool: [StaffTemplate]
     }
 
     /// Çağ 0: elle üretip satma.
@@ -39,7 +53,7 @@ struct BalanceConfig: Codable, Sendable, Equatable {
         var baseCost: Double
         /// Her elemanda ücretin çarpanı. `cost(n) = baseCost * costGrowth^n`
         var costGrowth: Double
-        /// Kahve arabasına sığan eleman sayısı.
+        /// Bu kata sığan eleman sayısı.
         var maxCount: Int
         /// Elemanın saniyelik maaşı. Brüt üretimden düşer ve ekipman yatırımını
         /// gerçek bir seçim hâline getirir: makine bir kez ödenir, maaş her saniye.
@@ -47,11 +61,11 @@ struct BalanceConfig: Codable, Sendable, Equatable {
     }
 
     /// Çağ 2: ekipman. Her parça kendi seviye izini yürütür; seviyelerin
-    /// çarpanları birbiriyle çarpılarak toplam üretim çarpanını verir.
+    /// çarpanları birbiriyle çarpılarak katın üretim çarpanını verir.
     ///
     /// Ekipman maaş ödemez — eleman ödediği için, ekipman yatırımı zamanla
     /// eleman almaya baskın gelir. Tasarım raporundaki seçim buradan doğuyor.
-    struct EquipmentSpec: Codable, Sendable, Equatable {
+    struct EquipmentSpec: Codable, Sendable, Equatable, Identifiable {
         /// Adı ve açıklaması dil dosyalarında (`equipment.<id>.name`).
         var id: String
         var levels: [Level]
@@ -59,23 +73,37 @@ struct BalanceConfig: Codable, Sendable, Equatable {
         struct Level: Codable, Sendable, Equatable {
             /// Bu seviyeye çıkmanın ücreti. İlk seviyede 0 (baştan sahipsin).
             var cost: Double
-            /// Toplam üretim çarpanına katkısı.
+            /// Katın üretim çarpanına katkısı.
             var multiplier: Double
         }
     }
 
     /// Şubeler: kat içindeki hücreler. Yeni şube mevcut kadro ve ekipmanı
-    /// devralır — tek tuş kopyalama, ayrı ayrı ayar değil.
+    /// devralır — tek tuş kopyalama, ayrı ayarı yok.
     struct Branches: Codable, Sendable, Equatable {
         /// İkinci şubenin ücreti.
         var baseCost: Double
         /// `cost(n) = baseCost * costGrowth^(n-1)` — n açılacak şubenin sırası.
         var costGrowth: Double
-        /// Zemin kata sığan hücre sayısı.
+        /// Bir kata sığan hücre sayısı.
         var maxCount: Int
     }
 
-    /// Depo = çevrimdışı kazanç kapasitesi.
+    /// Havuzdaki eleman şablonu. İşe alım sırası bu dizinin sırasıdır —
+    /// rastgelelik yok, böylece motor saf ve testler deterministik kalır.
+    ///
+    /// Kimlik huyu anlatır (`quick`, `veteran`), isim değil: isim ve huy metni
+    /// dile göre değiştiği için `Localizable.strings` içinde durur. Kayıtta
+    /// kimlik saklandığından oyuncu dili değiştirince kadro da yeni dilde görünür.
+    struct StaffTemplate: Codable, Sendable, Equatable, Identifiable {
+        var id: String
+        var rateMultiplier: Double
+    }
+
+    // MARK: - Genel (kata bağlı değil)
+
+    /// Depo = çevrimdışı kazanç kapasitesi. Oyuncunun kendi kapasitesidir,
+    /// katlara bölünmez.
     struct Warehouse: Codable, Sendable, Equatable {
         var levels: [Level]
 
@@ -93,15 +121,14 @@ struct BalanceConfig: Codable, Sendable, Equatable {
         var minimumReportSeconds: TimeInterval
     }
 
-    /// Havuzdaki eleman şablonu. İşe alım sırası bu dizinin sırasıdır —
-    /// rastgelelik yok, böylece motor saf ve testler deterministik kalır.
-    ///
-    /// Kimlik huyu anlatır (`quick`, `veteran`), isim değil: isim ve huy metni
-    /// dile göre değiştiği için `Localizable.strings` içinde durur. Kayıtta
-    /// kimlik saklandığından oyuncu dili değiştirince kadro da yeni dilde görünür.
-    struct StaffTemplate: Codable, Sendable, Equatable {
-        var id: String
-        var rateMultiplier: Double
+    // MARK: - Arama
+
+    func sector(id: String) -> SectorSpec? {
+        sectors.first { $0.id == id }
+    }
+
+    func sector(at index: Int) -> SectorSpec? {
+        sectors.indices.contains(index) ? sectors[index] : nil
     }
 
     // MARK: - Yükleme

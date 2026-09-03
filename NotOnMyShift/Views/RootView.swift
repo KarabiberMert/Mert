@@ -36,10 +36,13 @@ struct RootView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                ShopSceneView(
-                    staff: store.state.staff,
-                    branchCount: store.branchCount,
+                BuildingView(
+                    floors: store.floors,
+                    selectedFloor: store.selectedFloor,
+                    plannedFloors: store.plannedFloors,
+                    unitCounts: store.unitCounts,
                     gainText: "+\(Money.text(store.manualRevenue))",
+                    onSelect: { store.selectFloor($0) },
                     onSell: { sell() }
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -65,8 +68,23 @@ struct RootView: View {
         }
         .overlay {
             if let member = store.firstHireCelebration {
-                FirstHireBannerView(member: member) {
+                MomentBannerView(
+                    title: L.startedWork(L.staffName(member.id)),
+                    highlight: L.staffTrait(member.id),
+                    body: L.firstHireBody,
+                    actionTitle: L.firstHireAction
+                ) {
                     store.dismissFirstHireCelebration()
+                }
+                .transition(.opacity)
+            } else if let sector = store.newFloorCelebration {
+                MomentBannerView(
+                    title: L.newFloorTitle(L.sectorName(sector)),
+                    highlight: L.floorNumber(max(1, store.floors.count - 1)),
+                    body: L.newFloorBody,
+                    actionTitle: L.newFloorAction
+                ) {
+                    store.dismissNewFloorCelebration()
                 }
                 .transition(.opacity)
             }
@@ -74,6 +92,10 @@ struct RootView: View {
         .animation(
             reduceMotion ? nil : .easeOut(duration: 0.2),
             value: store.firstHireCelebration?.id
+        )
+        .animation(
+            reduceMotion ? nil : .easeOut(duration: 0.2),
+            value: store.newFloorCelebration
         )
     }
 

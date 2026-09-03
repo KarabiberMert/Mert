@@ -17,9 +17,7 @@
 "duration.none" = "no time at all";
 
 /* Shop */
-"shop.name" = "POP'S COFFEE";
-"shop.open" = "OPEN";
-"shop.tapHint" = "Tap the counter to sell a coffee.";
+"shop.tapHint" = "Tap the counter to make a sale.";
 "shop.a11y" = "The shop. Tap to sell a coffee.";
 
 /* Crew */
@@ -44,7 +42,6 @@
 "cash.perSecond" = "%@ per second";
 
 /* Actions */
-"action.sell" = "Sell a coffee";
 "action.hire" = "Hire someone";
 "action.upgradeWarehouse" = "Grow the store room";
 "action.staffFull" = "No room behind the counter for anyone else.";
@@ -104,3 +101,45 @@
 /* Gross and wages */
 "cash.gross" = "%@ gross";
 "cash.wages" = "%@ wages";
+
+/* Sectors — a floor is a sector */
+"sector.coffee.name" = "Pop's Coffee";
+"sector.coffee.sign" = "POP'S COFFEE";
+"sector.coffee.sell" = "Sell a coffee";
+"sector.bakery.name" = "Corner Bakery";
+"sector.bakery.sign" = "CORNER BAKERY";
+"sector.bakery.sell" = "Sell a loaf";
+"sector.unknown.name" = "A new trade";
+"sector.unknown.sign" = "OPEN FOR BUSINESS";
+"sector.unknown.sell" = "Make a sale";
+
+/* Floors */
+"floor.open" = "Open the floor above";
+"floor.opensSector" = "%@ moves in";
+"floor.allOpen" = "Every floor is yours. The building is full.";
+"floor.number" = "Floor %lld";
+"floor.ground" = "Ground floor";
+"tab.building" = "Building";
+"newFloor.title" = "%@ is open";
+"newFloor.body" = "A new floor, a new trade. It starts empty — hire, kit it out, and this one will run without you too.";
+"newFloor.action" = "Let's go";
+
+/* Bakery crew */
+"staff.baker.name" = "Ines";
+"staff.baker.trait" = "Knows the oven better than the thermostat does.";
+"staff.kneader.name" = "Gus";
+"staff.kneader.trait" = "Talks to the dough. The dough behaves.";
+"staff.froster.name" = "Marion";
+"staff.froster.trait" = "Every cake leaves straight. Every one.";
+"staff.night.name" = "Sam";
+"staff.night.trait" = "Starts at three in the morning and seems happy about it.";
+"staff.apprentice.name" = "Bo";
+"staff.apprentice.trait" = "Still measuring everything twice. Learning fast.";
+
+/* Bakery equipment */
+"equipment.oven.name" = "Deck oven";
+"equipment.oven.note" = "Even heat, three decks, no cold corners.";
+"equipment.mixer.name" = "Spiral mixer";
+"equipment.mixer.note" = "Kneads in ten minutes what took an hour.";
+"equipment.case.name" = "Display case";
+"equipment.case.note" = "Nothing goes stale on the shelf any more.";
