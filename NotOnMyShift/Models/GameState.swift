@@ -12,8 +12,8 @@ struct GameState: Codable, Sendable, Equatable {
 
     /// 1 → Faz 0-1 · 2 → ilk eleman kutlaması · 3 → ekipman ve şubeler
     /// 4 → kat kat bina (tek dükkân yerine `floors`) · 5 → olaylar ve pazar
-    /// 6 → çatı katı ve süreç katmanı
-    static let currentSchemaVersion = 6
+    /// 6 → çatı katı ve süreç katmanı · 7 → sektör satışı ve holding puanı
+    static let currentSchemaVersion = 7
 
     /// `marketShare` ve `nextEventAtGameSeconds` için "henüz kurulmadı" işareti.
     /// Kod çözücünün dengeye erişimi yok; ilk değerleri motor koyuyor.
@@ -85,6 +85,15 @@ struct GameState: Codable, Sendable, Equatable {
     /// Müdür olayları kendi karara bağlasın mı? Saf kolaylık, bonusu yok.
     var autoResolvesEvents: Bool
 
+    /// Satılan her sektörden kalan kalıcı puan. (şema 7)
+    ///
+    /// **Asla azalmaz** — halka arzda bile taşınır. Tüm katların brütünü
+    /// çarpar; rapor §5'in "tüm gelecek işlere pasif çarpan"ı budur.
+    var holdingPoints: Int
+
+    /// Kaçıncı şehirdesin. İlk oyun 1; her halka arz bunu bir artırır.
+    var cityNumber: Int
+
     var stats: Stats
 
     // MARK: - Yeni oyun
@@ -111,6 +120,8 @@ struct GameState: Codable, Sendable, Equatable {
             managedSectors: [],
             activeRules: [:],
             autoResolvesEvents: false,
+            holdingPoints: 0,
+            cityNumber: 1,
             stats: Stats()
         )
     }
@@ -118,7 +129,8 @@ struct GameState: Codable, Sendable, Equatable {
     // MARK: - Türetilmiş
 
     /// İş kendi kendine yürüyor mu? (Çağ 0 → Çağ 1 geçişi)
-    var isAutomated: Bool { floors.contains { !$0.staff.isEmpty } }
+    /// Yatırım katı da sensiz üretir — kadrosu olmasa bile.
+    var isAutomated: Bool { floors.contains(where: \.isAutomated) }
 
     /// Bu katta müdür var mı?
     func hasManager(_ sectorID: String) -> Bool {
@@ -156,6 +168,7 @@ struct GameState: Codable, Sendable, Equatable {
         case hasCelebratedFirstHire, floors, selectedFloor
         case modifiers, nextEventAtGameSeconds, eventSeed, marketShare
         case hasRoof, managedSectors, activeRules, autoResolvesEvents
+        case holdingPoints, cityNumber
         // Şema 3 ve öncesinden kalan düz alanlar — sadece göç için okunur.
         case staff, equipmentLevels, branchCount
     }
@@ -251,6 +264,10 @@ struct GameState: Codable, Sendable, Equatable {
         activeRules = try container.decodeIfPresent([String: [String]].self, forKey: .activeRules) ?? [:]
         autoResolvesEvents = try container.decodeIfPresent(Bool.self, forKey: .autoResolvesEvents) ?? false
 
+        // Şema 7 öncesinde prestij yoktu: puan sıfır, ilk şehir.
+        holdingPoints = max(0, try container.decodeIfPresent(Int.self, forKey: .holdingPoints) ?? 0)
+        cityNumber = max(1, try container.decodeIfPresent(Int.self, forKey: .cityNumber) ?? 1)
+
         // Şema 1 kayıtlarında bu alan yok. Zaten eleman tutmuşsa kutlamayı
         // tekrar göstermeyelim — o an bir kez yaşanır.
         hasCelebratedFirstHire = try container.decodeIfPresent(Bool.self, forKey: .hasCelebratedFirstHire)
@@ -280,6 +297,8 @@ struct GameState: Codable, Sendable, Equatable {
         try container.encode(managedSectors, forKey: .managedSectors)
         try container.encode(activeRules, forKey: .activeRules)
         try container.encode(autoResolvesEvents, forKey: .autoResolvesEvents)
+        try container.encode(holdingPoints, forKey: .holdingPoints)
+        try container.encode(cityNumber, forKey: .cityNumber)
         try container.encode(stats, forKey: .stats)
     }
 }
@@ -302,22 +321,31 @@ struct FloorState: Codable, Sendable, Equatable, Identifiable {
     /// Açık şube sayısı. En az 1 — ana dükkân da bir şubedir.
     var branchCount: Int
 
+    /// Satılmış katın saniyelik pasif geliri. 0 ise kat hâlâ senin işletmen.
+    ///
+    /// Satıştaki net üretimin bir oranıdır ve **satış anında donar** — kadro ve
+    /// ekipman gittiği için yeniden hesaplanamaz. Rapor §5'in "binada kalıcı
+    /// iz"i bu: sattığın şey yok olmaz, kira ödemeye devam eder. (şema 7)
+    var investmentRate: Double
+
     var id: String { sectorID }
 
     private enum CodingKeys: String, CodingKey {
-        case sectorID, staff, equipmentLevels, branchCount
+        case sectorID, staff, equipmentLevels, branchCount, investmentRate
     }
 
     init(
         sectorID: String,
         staff: [StaffMember] = [],
         equipmentLevels: [String: Int] = [:],
-        branchCount: Int = 1
+        branchCount: Int = 1,
+        investmentRate: Double = 0
     ) {
         self.sectorID = sectorID
         self.staff = staff
         self.equipmentLevels = equipmentLevels
         self.branchCount = max(1, branchCount)
+        self.investmentRate = max(0, investmentRate)
     }
 
     init(from decoder: any Decoder) throws {
@@ -326,14 +354,18 @@ struct FloorState: Codable, Sendable, Equatable, Identifiable {
         staff = try container.decodeIfPresent([StaffMember].self, forKey: .staff) ?? []
         equipmentLevels = try container.decodeIfPresent([String: Int].self, forKey: .equipmentLevels) ?? [:]
         branchCount = max(1, try container.decodeIfPresent(Int.self, forKey: .branchCount) ?? 1)
+        investmentRate = max(0, try container.decodeIfPresent(Double.self, forKey: .investmentRate) ?? 0)
     }
+
+    /// Bu kat satıldı mı? Yatırım katı üretir ama artık yönetilmez.
+    var isInvestment: Bool { investmentRate > 0 }
 
     /// Bir ekipmanın sahip olunan seviyesi. Tanımadığımız kimlik 0'dır.
     func equipmentLevel(_ id: String) -> Int {
         max(0, equipmentLevels[id] ?? 0)
     }
 
-    var isAutomated: Bool { !staff.isEmpty }
+    var isAutomated: Bool { !staff.isEmpty || isInvestment }
 }
 
 // MARK: - Olay etkisi
@@ -434,9 +466,15 @@ struct Stats: Codable, Sendable, Equatable {
     /// Müdürlerin yaptığı otomatik işlem sayısı. (şema 6)
     var automatedActions: Int
 
+    /// Satılan sektör sayısı. Halka arzdan sonra da sayılmaya devam eder. (şema 7)
+    var sectorsSold: Int
+
+    /// Tamamlanıp halka arz edilen şehir sayısı.
+    var citiesCompleted: Int
+
     private enum CodingKeys: String, CodingKey {
         case manualSales, offlineReturns, lastOfflineEarnings, wastedOfflineSeconds
-        case eventsResolved, automatedActions
+        case eventsResolved, automatedActions, sectorsSold, citiesCompleted
     }
 
     init(
@@ -445,7 +483,9 @@ struct Stats: Codable, Sendable, Equatable {
         lastOfflineEarnings: Double = 0,
         wastedOfflineSeconds: TimeInterval = 0,
         eventsResolved: Int = 0,
-        automatedActions: Int = 0
+        automatedActions: Int = 0,
+        sectorsSold: Int = 0,
+        citiesCompleted: Int = 0
     ) {
         self.manualSales = manualSales
         self.offlineReturns = offlineReturns
@@ -453,6 +493,8 @@ struct Stats: Codable, Sendable, Equatable {
         self.wastedOfflineSeconds = wastedOfflineSeconds
         self.eventsResolved = eventsResolved
         self.automatedActions = automatedActions
+        self.sectorsSold = sectorsSold
+        self.citiesCompleted = citiesCompleted
     }
 
     init(from decoder: any Decoder) throws {
@@ -463,5 +505,7 @@ struct Stats: Codable, Sendable, Equatable {
         wastedOfflineSeconds = try container.decodeIfPresent(TimeInterval.self, forKey: .wastedOfflineSeconds) ?? 0
         eventsResolved = try container.decodeIfPresent(Int.self, forKey: .eventsResolved) ?? 0
         automatedActions = try container.decodeIfPresent(Int.self, forKey: .automatedActions) ?? 0
+        sectorsSold = try container.decodeIfPresent(Int.self, forKey: .sectorsSold) ?? 0
+        citiesCompleted = try container.decodeIfPresent(Int.self, forKey: .citiesCompleted) ?? 0
     }
 }

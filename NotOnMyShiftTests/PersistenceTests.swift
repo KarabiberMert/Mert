@@ -229,6 +229,8 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(object["schemaVersion"] as? Int, GameState.currentSchemaVersion)
         XCTAssertNotNil(object["marketShare"])
         XCTAssertNotNil(object["eventSeed"])
+        XCTAssertNotNil(object["holdingPoints"])
+        XCTAssertNotNil(object["cityNumber"])
         // Şema 3'ün düz alanları kök seviyede kalmamalı — kat içinde yaşıyorlar.
         for legacy in ["staff", "equipmentLevels", "branchCount"] {
             XCTAssertNil(object[legacy], "'\(legacy)' kök seviyede yazılmamalı")

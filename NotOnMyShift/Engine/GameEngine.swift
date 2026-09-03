@@ -42,6 +42,12 @@ enum GameEngine {
         case managerAlreadyHired
         /// Dengede böyle bir kural yok.
         case unknownRule
+        /// Kat henüz olgunlaşmadı: kadro, ekipman ya da hücreler eksik.
+        case sectorNotMature
+        /// Bu kat zaten satıldı; yatırım katı yeniden işletilemez.
+        case sectorAlreadySold
+        /// Halka arz için bina henüz hazır değil.
+        case notReadyToGoPublic
     }
 
     // MARK: - Deterministik rastgelelik
@@ -99,6 +105,9 @@ enum GameEngine {
         spec: BalanceConfig.SectorSpec,
         bonus: Double = 1
     ) -> Double {
+        // Yatırım katı kira öder: kadrosu ve ekipmanı yok, oranı satışta dondu.
+        guard !floor.isInvestment else { return max(0, floor.investmentRate) * max(0, bonus) }
+
         let multiplierSum = floor.staff.reduce(0.0) { $0 + $1.rateMultiplier }
         return spec.staff.ratePerSecond
             * multiplierSum
@@ -125,7 +134,8 @@ enum GameEngine {
     /// Ekipman maaş ödemez; tasarım raporundaki "eleman maaşı ile makine
     /// yatırımı arasında gerçek bir seçim" buradan doğuyor.
     static func floorWages(_ floor: FloorState, spec: BalanceConfig.SectorSpec) -> Double {
-        max(0, spec.staff.wagePerSecond)
+        guard !floor.isInvestment else { return 0 }
+        return max(0, spec.staff.wagePerSecond)
             * Double(floor.staff.count)
             * Double(branchCount(for: floor, spec: spec))
     }
@@ -153,9 +163,18 @@ enum GameEngine {
         }
     }
 
+    /// Satılan sektörlerden kalan kalıcı çarpan (rapor §5).
+    ///
+    /// Olay çarpanı gibi **brüte** uygulanır, maaşa değil. Puan asla azalmaz;
+    /// halka arzda bile taşınır — oyuncu geriye gitmez.
+    static func holdingMultiplier(for state: GameState, config: BalanceConfig) -> Double {
+        1 + Double(max(0, state.holdingPoints)) * max(0, config.prestige.multiplierPerPoint)
+    }
+
     static func grossRate(for state: GameState, config: BalanceConfig) -> Double {
-        sum(state, config) { floor, spec in
-            floorGross(floor, spec: spec, bonus: processBonus(for: floor, state: state, config: config))
+        let holding = holdingMultiplier(for: state, config: config)
+        return sum(state, config) { floor, spec in
+            floorGross(floor, spec: spec, bonus: processBonus(for: floor, state: state, config: config)) * holding
         }
     }
 
@@ -174,7 +193,7 @@ enum GameEngine {
     /// Olay çarpanı brüte uygulanır, maaşa değil: yavaşlatan bir olayda maaş
     /// yine ödenir, hızlandıran bir olayda maaş artmaz.
     static func productionRate(for state: GameState, config: BalanceConfig) -> Double {
-        let buff = eventMultiplier(for: state)
+        let buff = eventMultiplier(for: state) * holdingMultiplier(for: state, config: config)
         return sum(state, config) { floor, spec in
             let bonus = processBonus(for: floor, state: state, config: config)
             return max(0, floorGross(floor, spec: spec, bonus: bonus) * buff - floorWages(floor, spec: spec))
@@ -347,8 +366,11 @@ enum GameEngine {
         config: BalanceConfig
     ) -> Double {
         guard state.floors.indices.contains(index),
+              !state.floors[index].isInvestment,
               let spec = spec(for: state.floors[index], config: config) else { return 0 }
-        return manualRevenue(for: state.floors[index], spec: spec) * eventMultiplier(for: state)
+        return manualRevenue(for: state.floors[index], spec: spec)
+            * eventMultiplier(for: state)
+            * holdingMultiplier(for: state, config: config)
     }
 
     // MARK: - Zamanı ilerlet
@@ -515,6 +537,8 @@ enum GameEngine {
         guard state.floors.indices.contains(index) else { return .failure(.unknownFloor) }
         let floor = state.floors[index]
         guard let spec = spec(for: floor, config: config) else { return .failure(.unknownSector) }
+        // Yatırım katı artık senin işletmen değil: kadro, ekipman, hücre alınmaz.
+        guard !floor.isInvestment else { return .failure(.sectorAlreadySold) }
 
         switch change(floor, spec) {
         case .success(let purchase):
@@ -531,9 +555,12 @@ enum GameEngine {
     /// Çağ 0: elle bir ürün sat.
     static func sellManually(onFloor index: Int, _ state: GameState, config: BalanceConfig) -> GameState {
         guard state.floors.indices.contains(index),
+              !state.floors[index].isInvestment,
               let spec = spec(for: state.floors[index], config: config) else { return state }
 
-        let revenue = manualRevenue(for: state.floors[index], spec: spec) * eventMultiplier(for: state)
+        let revenue = manualRevenue(for: state.floors[index], spec: spec)
+            * eventMultiplier(for: state)
+            * holdingMultiplier(for: state, config: config)
         var next = state
         next.money += revenue
         next.lifetimeEarnings += revenue
@@ -860,7 +887,7 @@ enum GameEngine {
         let reserve = productionRate(for: state, config: config) * max(0, config.process.reserveSeconds)
 
         for (index, floor) in state.floors.enumerated() {
-            guard let spec = spec(for: floor, config: config) else { continue }
+            guard let spec = spec(for: floor, config: config), !floor.isInvestment else { continue }
             let rules = state.rules(for: floor.sectorID)
 
             for rule in config.process.rules where rules.contains(rule.id) {
@@ -935,6 +962,142 @@ enum GameEngine {
             value += rate * (choice.multiplier - 1) * choice.durationSeconds
         }
         return value
+    }
+
+    // MARK: - Yumuşak prestij (rapor §5)
+
+    /// Katın olgunluğu 0..1. Kadro, ekipman ve hücreler eşit ağırlıklı.
+    ///
+    /// Şerit bunu bir ilerleme çubuğu olarak gösterir: satış bir sürpriz değil,
+    /// baştan görünen bir hedef olsun.
+    static func maturityProgress(_ floor: FloorState, spec: BalanceConfig.SectorSpec) -> Double {
+        guard !floor.isInvestment else { return 1 }
+
+        let staffTarget = max(1, staffCapacity(spec: spec))
+        let staffPart = min(1, Double(floor.staff.count) / Double(staffTarget))
+
+        let equipmentTarget = spec.equipment.reduce(0) { $0 + max(0, $1.levels.count - 1) }
+        let equipmentOwned = spec.equipment.reduce(0) { total, item in
+            total + min(floor.equipmentLevel(item.id), max(0, item.levels.count - 1))
+        }
+        let equipmentPart = equipmentTarget > 0 ? Double(equipmentOwned) / Double(equipmentTarget) : 1
+
+        let branchTarget = max(1, spec.branches.maxCount)
+        let branchPart = min(1, Double(branchCount(for: floor, spec: spec)) / Double(branchTarget))
+
+        return min(1, max(0, (staffPart + equipmentPart + branchPart) / 3))
+    }
+
+    /// Kat olgunlaştı mı? Rapor §5: "tüm şubeler + tüm yükseltmeler".
+    static func isMature(_ floor: FloorState, spec: BalanceConfig.SectorSpec) -> Bool {
+        guard !floor.isInvestment else { return false }
+        guard floor.staff.count >= staffCapacity(spec: spec) else { return false }
+        guard branchCount(for: floor, spec: spec) >= max(1, spec.branches.maxCount) else { return false }
+        return spec.equipment.allSatisfy { item in
+            floor.equipmentLevel(item.id) >= max(0, item.levels.count - 1)
+        }
+    }
+
+    /// Satılan katın koruyacağı saniyelik pasif gelir. Satış anında donar.
+    ///
+    /// Holding çarpanı **burada uygulanmaz**: çarpan çalışma anında bütün
+    /// katların brütüne zaten uygulanıyor, buraya da yazmak iki kez sayardı.
+    static func investmentRate(
+        of floor: FloorState,
+        spec: BalanceConfig.SectorSpec,
+        config: BalanceConfig
+    ) -> Double {
+        max(0, floorNet(floor, spec: spec)) * max(0, config.prestige.investmentShare)
+    }
+
+    /// Katı satmanın getireceği nakit. Kat olgun değilse `nil`.
+    static func saleValue(onFloor index: Int, _ state: GameState, config: BalanceConfig) -> Double? {
+        guard state.floors.indices.contains(index) else { return nil }
+        let floor = state.floors[index]
+        guard let spec = spec(for: floor, config: config), isMature(floor, spec: spec) else { return nil }
+        return max(0, floorNet(floor, spec: spec))
+            * holdingMultiplier(for: state, config: config)
+            * max(0, config.prestige.payoutSeconds)
+    }
+
+    /// Olgunlaşan sektörü sat: nakit, kalıcı puan ve binada kalıcı bir iz.
+    ///
+    /// Satılan kat yok olmaz — yatırım katına dönüşür ve küçük bir pasif gelir
+    /// üretmeye devam eder. Rapor §5 bunu şart koşuyor: oyuncu sattığı şeyin
+    /// kaybolmadığını görmezse satmaya direnir.
+    static func sellSector(
+        onFloor index: Int,
+        _ state: GameState,
+        config: BalanceConfig
+    ) -> Result<GameState, ActionError> {
+        guard state.floors.indices.contains(index) else { return .failure(.unknownFloor) }
+        let floor = state.floors[index]
+        guard !floor.isInvestment else { return .failure(.sectorAlreadySold) }
+        guard let spec = spec(for: floor, config: config) else { return .failure(.unknownSector) }
+        guard isMature(floor, spec: spec) else { return .failure(.sectorNotMature) }
+        guard let payout = saleValue(onFloor: index, state, config: config) else { return .failure(.sectorNotMature) }
+
+        var next = normalised(state, config: config)
+        next.money += payout
+        next.lifetimeEarnings += payout
+        next.holdingPoints += max(0, config.prestige.pointsPerSale)
+        next.stats.sectorsSold += 1
+
+        var sold = floor
+        sold.investmentRate = investmentRate(of: floor, spec: spec, config: config)
+        sold.staff = []
+        sold.equipmentLevels = [:]
+        sold.branchCount = 1
+        next.floors[index] = sold
+
+        // Müdür ve kurallar satılan katla birlikte gider; yatırım katı yönetilmez.
+        next.managedSectors.removeAll { $0 == floor.sectorID }
+        next.activeRules[floor.sectorID] = nil
+
+        return .success(next)
+    }
+
+    // MARK: - Final: halka arz
+
+    /// Bina halka arza hazır mı? Her sektöre girilmiş ve her kat ya satılmış
+    /// ya da olgunlaşmış olmalı (rapor §5: "son sektör tamamlandığında").
+    static func canGoPublic(_ state: GameState, config: BalanceConfig) -> Bool {
+        guard !config.sectors.isEmpty else { return false }
+        let opened = Set(state.floors.map(\.sectorID))
+        guard config.sectors.allSatisfy({ opened.contains($0.id) }) else { return false }
+
+        return state.floors.allSatisfy { floor in
+            guard let spec = spec(for: floor, config: config) else { return true }
+            return floor.isInvestment || isMature(floor, spec: spec)
+        }
+    }
+
+    /// Holdingi halka arz et ve yeni şehre geç.
+    ///
+    /// Binaya ait olan her şey sıfırlanır; **sana ait olan kalır** — holding
+    /// puanı, depo ve istatistikler. Böylece yeni şehir baştan başlamak değil,
+    /// daha hızlı başlamak olur (rapor §5: "hızlandırılmış eğri").
+    ///
+    /// Motor saf: yeni oyunun zamanı `Date()` değil, kaydın kendi damgasıdır.
+    static func goPublic(_ state: GameState, config: BalanceConfig) -> Result<GameState, ActionError> {
+        guard canGoPublic(state, config: config) else { return .failure(.notReadyToGoPublic) }
+
+        var next = GameState.newGame(
+            characterID: state.characterID,
+            sectorID: config.sectors.first?.id ?? GameState.groundSectorID,
+            now: state.lastSeenAt
+        )
+        next.holdingPoints = state.holdingPoints + max(0, config.prestige.pointsPerCity)
+        next.cityNumber = state.cityNumber + 1
+        next.warehouseLevel = state.warehouseLevel
+        next.lifetimeEarnings = state.lifetimeEarnings
+        next.hasCelebratedFirstHire = state.hasCelebratedFirstHire
+        // Yeni şehir yeni olay dizisi ister ama deterministik kalmalı.
+        let advanced = state.eventSeed &+ 0x9E37_79B9_7F4A_7C15
+        next.eventSeed = advanced == 0 ? 0x2545_F491_4F6C_DD1D : advanced
+        next.stats = state.stats
+        next.stats.citiesCompleted += 1
+        return .success(next)
     }
 
     /// Panelin çalışacağı katı değiştir.

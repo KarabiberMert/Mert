@@ -71,8 +71,10 @@ struct BuildingView: View {
                     .position(x: frame.midX, y: frame.midY)
                     .contentShape(Rectangle())
                     .onTapGesture {
+                        // Yatırım katında tezgâh yok: dokunmak sahte bir rakam
+                        // uçurmasın. Kat yine de seçilebilir.
                         if index == selectedFloor {
-                            sell()
+                            if !entry.element.isInvestment { sell() }
                         } else {
                             onSelect(index)
                         }
@@ -81,8 +83,14 @@ struct BuildingView: View {
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(L.sectorName(entry.element.sectorID))
                     .accessibilityAddTraits(index == selectedFloor ? [.isButton, .isSelected] : .isButton)
-                    .accessibilityHint(index == selectedFloor ? L.shopAccessibility : "")
-                    .accessibilityAction { index == selectedFloor ? sell() : onSelect(index) }
+                    .accessibilityHint(index == selectedFloor && !entry.element.isInvestment ? L.shopAccessibility : "")
+                    .accessibilityAction {
+                        if index == selectedFloor {
+                            if !entry.element.isInvestment { sell() }
+                        } else {
+                            onSelect(index)
+                        }
+                    }
                 }
 
                 ForEach(gains) { gain in

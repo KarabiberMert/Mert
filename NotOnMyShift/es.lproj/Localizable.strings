@@ -217,3 +217,31 @@
 "manager.report.branch" = "%@ — un hueco nuevo, ahora hay %lld";
 "manager.report.event" = "%@ — %@";
 "manager.report.other" = "Algo se ha resuelto";
+
+/* Prestigio suave: vender un negocio maduro */
+"prestige.sell" = "Vende este negocio";
+"prestige.ready" = "Ya está maduro y se puede vender";
+"prestige.growing" = "%@ crecido";
+"prestige.maturityNote" = "Plantilla completa, todas las mejoras, todos los huecos. Entonces aparece un comprador.";
+"prestige.keeps" = "Sigue dando %@ por segundo";
+"prestige.investment" = "Planta de inversión";
+"prestige.investmentNote" = "Esta la vendiste. Tu nombre sigue en la puerta y la renta sigue entrando.";
+"prestige.points" = "Puntos de holding %lld";
+"prestige.bonus" = "Todo lo que tienes gana un +%@";
+"prestige.pointsNote" = "Los puntos son tuyos para siempre. Cada negocio que abras irá más rápido gracias a ellos.";
+"sale.title" = "%@ vendido";
+"sale.body" = "La planta sigue siendo tuya como inversión y sigue pagando. Lo que te llevas arriba es el dinero y los puntos.";
+"sale.action" = "Adelante";
+
+/* El final: sacar el holding a bolsa y seguir */
+"finale.go" = "Saca el holding a bolsa";
+"finale.note" = "Todas las plantas están maduras. Aquí ya no queda nada por construir.";
+"finale.title" = "Tocaste la campana";
+"finale.body" = "El edificio ya cotiza en bolsa. Al otro lado de la ciudad hay otra tienda vacía esperando.";
+"finale.city" = "Ciudad %lld";
+"finale.earned" = "Ganado aquí";
+"finale.played" = "Te llevó";
+"finale.sold" = "Negocios vendidos";
+"finale.byHand" = "Ventas hechas por ti";
+"finale.newCity" = "Empieza la siguiente ciudad";
+"finale.newCityNote" = "Calle nueva, oficios nuevos. Tus puntos y tu almacén se vienen contigo.";

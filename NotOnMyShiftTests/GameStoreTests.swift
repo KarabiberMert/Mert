@@ -278,6 +278,100 @@ final class GameStoreTests: XCTestCase {
         }
     }
 
+    // MARK: - Yumuşak prestij
+
+    /// Satış üç şeyi birden verir ve hiçbiri geri alınmaz.
+    func testSellingASectorPaysKeepsThePointAndLeavesTheFloorEarning() async throws {
+        try await withTemporaryDirectory { directory in
+            let config = BalanceFixture.config(payoutSeconds: 100, investmentShare: 0.1, multiplierPerPoint: 0.5)
+            var seed = BalanceFixture.state(config: config)
+            seed.floors = [BalanceFixture.matureFloor(config: config)]
+            let saves = SaveStore(containerDirectory: directory)
+            try saves.save(seed)
+
+            let store = GameStore(config: config, saves: saves, now: { BalanceFixture.epoch })
+
+            XCTAssertEqual(store.maturityProgress, 1, accuracy: 1e-9)
+            XCTAssertEqual(store.saleValue ?? 0, 4_200, accuracy: 1e-6)
+            XCTAssertEqual(store.saleInvestmentRate, 4.2, accuracy: 1e-9)
+
+            store.sellSector()
+
+            XCTAssertEqual(store.state.money, 4_200, accuracy: 1e-6)
+            XCTAssertEqual(store.holdingPoints, 1)
+            XCTAssertEqual(store.holdingMultiplier, 1.5, accuracy: 1e-9)
+            XCTAssertEqual(store.sectorSaleCelebration, "coffee")
+            XCTAssertTrue(store.isSelectedFloorSold)
+            // Kat hâlâ ödüyor: 4,2/sn kira × 1,5 puan çarpanı.
+            XCTAssertEqual(store.netRate(of: 0), 4.2, accuracy: 1e-9)
+            XCTAssertEqual(store.productionRate, 6.3, accuracy: 1e-9)
+
+            store.dismissSectorSaleCelebration()
+            XCTAssertNil(store.sectorSaleCelebration)
+
+            store.handleWillResignActive()
+        }
+    }
+
+    func testAnUnfinishedFloorShowsProgressInsteadOfASalePrice() async throws {
+        try await withTemporaryDirectory { directory in
+            let config = BalanceFixture.config()
+            let store = GameStore(
+                config: config,
+                saves: SaveStore(containerDirectory: directory),
+                now: { BalanceFixture.epoch }
+            )
+
+            XCTAssertNil(store.saleValue)
+            XCTAssertFalse(store.isSelectedFloorSold)
+            XCTAssertGreaterThanOrEqual(store.maturityProgress, 0)
+            XCTAssertLessThan(store.maturityProgress, 1)
+
+            store.handleWillResignActive()
+        }
+    }
+
+    /// Halka arz biten şehri özetler ve yeni şehri kurar.
+    func testGoingPublicSummarisesTheCityThatEndedAndStartsTheNext() async throws {
+        try await withTemporaryDirectory { directory in
+            let config = BalanceFixture.config(pointsPerCity: 2)
+            var seed = BalanceFixture.state(config: config)
+            seed.floors = [
+                BalanceFixture.matureFloor(config: config),
+                BalanceFixture.matureFloor(sectorIndex: 1, config: config)
+            ]
+            seed.lifetimeEarnings = 50_000
+            seed.stats.manualSales = 12
+            seed.warehouseLevel = 1
+            let saves = SaveStore(containerDirectory: directory)
+            try saves.save(seed)
+
+            let store = GameStore(config: config, saves: saves, now: { BalanceFixture.epoch })
+
+            XCTAssertTrue(store.canGoPublic)
+            store.goPublic()
+
+            // Özet biten şehri anlatır.
+            let finale = try XCTUnwrap(store.finale)
+            XCTAssertEqual(finale.cityNumber, 1)
+            XCTAssertEqual(finale.lifetimeEarnings, 50_000, accuracy: 1e-9)
+            XCTAssertEqual(finale.manualSales, 12)
+            XCTAssertEqual(finale.holdingPoints, 2)
+
+            // Yeni şehir kuruldu; senin olan taşındı.
+            XCTAssertEqual(store.cityNumber, 2)
+            XCTAssertEqual(store.holdingPoints, 2)
+            XCTAssertEqual(store.state.warehouseLevel, 1)
+            XCTAssertEqual(store.floors.count, 1)
+            XCTAssertFalse(store.canGoPublic)
+
+            store.dismissFinale()
+            XCTAssertNil(store.finale)
+
+            store.handleWillResignActive()
+        }
+    }
+
     // MARK: - Yardımcı
 
     private func withTemporaryDirectory(_ body: (URL) throws -> Void) async throws {

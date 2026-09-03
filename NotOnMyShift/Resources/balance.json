@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "building": {
     "paletteFloors": 8
   },
@@ -390,5 +390,12 @@
         "id": "branch"
       }
     ]
+  },
+  "prestige": {
+    "payoutSeconds": 5400,
+    "investmentShare": 0.15,
+    "pointsPerSale": 1,
+    "pointsPerCity": 2,
+    "multiplierPerPoint": 0.12
   }
 }

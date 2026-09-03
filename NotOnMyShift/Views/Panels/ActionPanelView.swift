@@ -33,17 +33,25 @@ struct ActionPanelView: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            sellButton
+            // Yatırım katında tezgâh yok: satış butonu da yok.
+            if !store.isSelectedFloorSold {
+                sellButton
+            }
             tabBar
 
             ScrollView {
                 VStack(spacing: 8) {
-                    switch tab {
-                    case .crew: crewTab
-                    case .equipment: equipmentTab
-                    case .branches: branchesTab
-                    case .process: processTab
-                    case .building: buildingTab
+                    // Yatırım katı yönetilmez; bina şeridi yine de çalışır.
+                    if store.isSelectedFloorSold, tab != .building {
+                        investmentTab
+                    } else {
+                        switch tab {
+                        case .crew: crewTab
+                        case .equipment: equipmentTab
+                        case .branches: branchesTab
+                        case .process: processTab
+                        case .building: buildingTab
+                        }
                     }
                 }
                 .padding(.bottom, 4)
@@ -275,6 +283,23 @@ struct ActionPanelView: View {
 
     @ViewBuilder
     private var buildingTab: some View {
+        // Bu katın geleceği: büyüt, sonra sat. İş kendi kendine yürümeye
+        // başlamadan göstermiyoruz — Çağ 0'da satıştan söz etmek erken.
+        if !store.isSelectedFloorSold, store.currentFloor?.isAutomated == true {
+            saleRow
+        }
+        holdingRow
+
+        if store.canGoPublic {
+            row(
+                title: L.goPublic,
+                subtitle: L.goPublicNote,
+                trailing: L.cityNumber(store.cityNumber),
+                enabled: true,
+                action: { store.goPublic() }
+            )
+        }
+
         if let cost = store.nextFloorCost, let next = store.nextSector {
             row(
                 title: L.openNextFloor,
@@ -314,6 +339,11 @@ struct ActionPanelView: View {
                     .foregroundStyle(Palette.inkFaint)
                 Text(L.sectorName(entry.element.sectorID))
                     .foregroundStyle(entry.offset == store.selectedFloor ? Palette.ink : Palette.inkSoft)
+                if entry.element.isInvestment {
+                    Text(L.investmentFloor)
+                        .foregroundStyle(Palette.inkFaint)
+                        .lineLimit(1)
+                }
                 Spacer(minLength: 8)
                 Text(Money.preciseText(store.netRate(of: entry.offset)))
                     .foregroundStyle(Palette.pistachio)
@@ -321,6 +351,65 @@ struct ActionPanelView: View {
             .font(Typography.label(13))
             .padding(.horizontal, 4)
             .padding(.vertical, 3)
+        }
+    }
+
+    // MARK: - Yatırım katı
+
+    /// Satılan kat. Hiçbir satır kayıp anlatmaz: kat hâlâ ödüyor.
+    @ViewBuilder
+    private var investmentTab: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(L.investmentFloor)
+                .font(Typography.display(17))
+                .foregroundStyle(Palette.ink)
+            Spacer(minLength: 8)
+            Text(Money.preciseText(store.netRate(of: store.selectedFloor)))
+                .font(Typography.money(16))
+                .foregroundStyle(Palette.pistachio)
+        }
+        .padding(.horizontal, 4)
+
+        note(L.investmentNote)
+    }
+
+    // MARK: - Satış ve holding
+
+    /// Katın satışa hazırlığı. Satış bir sürpriz değil, baştan görünen hedef.
+    @ViewBuilder
+    private var saleRow: some View {
+        if let value = store.saleValue {
+            row(
+                title: L.sellSector,
+                subtitle: L.keepsEarning(Money.preciseText(store.saleInvestmentRate)),
+                trailing: Money.text(value),
+                enabled: true,
+                action: { store.sellSector() }
+            )
+            note(L.sectorReadyToSell)
+        } else {
+            MaturityBarView(progress: store.maturityProgress)
+                .padding(.horizontal, 4)
+            note(L.maturityNote)
+        }
+    }
+
+    /// Kalıcı puanlar. Yalnızca kazanılmışsa görünür — sıfır satır bilgi vermez.
+    @ViewBuilder
+    private var holdingRow: some View {
+        if store.holdingPoints > 0 {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(L.holdingPoints(store.holdingPoints))
+                    .font(Typography.display(15))
+                    .foregroundStyle(Palette.ink)
+                Spacer(minLength: 8)
+                Text(L.holdingBonus(Percent.text(store.holdingMultiplier - 1)))
+                    .font(Typography.label(13))
+                    .foregroundStyle(Palette.mustardDeep)
+            }
+            .padding(.horizontal, 4)
+
+            note(L.holdingNote)
         }
     }
 

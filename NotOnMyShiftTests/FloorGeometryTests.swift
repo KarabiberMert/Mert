@@ -218,6 +218,32 @@ final class FloorGeometryTests: XCTestCase {
         XCTAssertEqual(RoofGeometry.baseBottom, 1, accuracy: 1e-9)
     }
 
+    // MARK: - Yatırım katı
+
+    /// Kepenk tezgâhın ve fayansın yerini alır, tabelaya ve zemine dokunmaz —
+    /// satılan katta da oyuncunun adı kapıda kalır.
+    func testShutterCoversTheCounterButNotTheSign() {
+        XCTAssertGreaterThan(InvestmentGeometry.shutterTop, FloorGeometry.signBottom)
+        XCTAssertLessThan(InvestmentGeometry.shutterTop, InvestmentGeometry.shutterBottom)
+        XCTAssertLessThan(InvestmentGeometry.shutterBottom, FloorGeometry.floorY)
+        XCTAssertGreaterThan(InvestmentGeometry.shutterLeft, FloorGeometry.interiorLeft)
+        XCTAssertLessThan(InvestmentGeometry.shutterRight, FloorGeometry.interiorRight)
+    }
+
+    /// Levha kepenkin altındaki duvar şeridinde durur; ne kepenke ne zemine biner.
+    func testPlaqueSitsBetweenTheShutterAndTheGround() {
+        XCTAssertGreaterThanOrEqual(InvestmentGeometry.plaqueTop, InvestmentGeometry.shutterBottom)
+        XCTAssertLessThan(InvestmentGeometry.plaqueTop, InvestmentGeometry.plaqueBottom)
+        XCTAssertLessThanOrEqual(InvestmentGeometry.plaqueBottom, FloorGeometry.floorY)
+        XCTAssertGreaterThanOrEqual(InvestmentGeometry.plaqueLeft, FloorGeometry.interiorLeft)
+        XCTAssertLessThan(InvestmentGeometry.plaqueLeft, InvestmentGeometry.plaqueRight)
+        XCTAssertLessThanOrEqual(InvestmentGeometry.plaqueRight, FloorGeometry.interiorRight)
+    }
+
+    func testShutterHasEnoughSlatsToReadAsAShutter() {
+        XCTAssertGreaterThanOrEqual(InvestmentGeometry.shutterSlats, 2)
+    }
+
     // MARK: - Palet
 
     func testPaletteCoolsAsTheBuildingRises() {

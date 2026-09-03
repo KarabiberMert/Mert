@@ -16,31 +16,45 @@ struct FloorBandView: View {
             let detail = band.detail(unitCount: unitCount)
 
             ZStack(alignment: .topLeading) {
-                Canvas { context, size in
-                    FloorScene.drawBack(
-                        in: &context,
-                        band: FloorGeometry(rect: CGRect(origin: .zero, size: size)),
-                        palette: palette,
-                        sector: floor.sectorID,
-                        unitCount: unitCount,
-                        isGround: isGround,
-                        detail: detail
-                    )
-                }
+                if floor.isInvestment {
+                    // Satılmış kat: kepenk inik, tabela yerinde, kadro yok.
+                    Canvas { context, size in
+                        FloorScene.drawInvestment(
+                            in: &context,
+                            band: FloorGeometry(rect: CGRect(origin: .zero, size: size)),
+                            palette: palette,
+                            sector: floor.sectorID,
+                            isGround: isGround,
+                            detail: detail
+                        )
+                    }
+                } else {
+                    Canvas { context, size in
+                        FloorScene.drawBack(
+                            in: &context,
+                            band: FloorGeometry(rect: CGRect(origin: .zero, size: size)),
+                            palette: palette,
+                            sector: floor.sectorID,
+                            unitCount: unitCount,
+                            isGround: isGround,
+                            detail: detail
+                        )
+                    }
 
-                crew(in: band, detail: detail)
+                    crew(in: band, detail: detail)
 
-                Canvas { context, size in
-                    FloorScene.drawFront(
-                        in: &context,
-                        band: FloorGeometry(rect: CGRect(origin: .zero, size: size)),
-                        palette: palette,
-                        sector: floor.sectorID,
-                        unitCount: unitCount,
-                        detail: detail
-                    )
+                    Canvas { context, size in
+                        FloorScene.drawFront(
+                            in: &context,
+                            band: FloorGeometry(rect: CGRect(origin: .zero, size: size)),
+                            palette: palette,
+                            sector: floor.sectorID,
+                            unitCount: unitCount,
+                            detail: detail
+                        )
+                    }
+                    .allowsHitTesting(false)
                 }
-                .allowsHitTesting(false)
             }
         }
         .clipped()

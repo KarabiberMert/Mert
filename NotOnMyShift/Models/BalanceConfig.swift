@@ -16,6 +16,7 @@ struct BalanceConfig: Codable, Sendable, Equatable {
     var events: Events
     var market: Market
     var process: Process
+    var prestige: Prestige
 
     // MARK: - Bina
 
@@ -219,6 +220,26 @@ struct BalanceConfig: Codable, Sendable, Equatable {
     struct RuleSpec: Codable, Sendable, Equatable, Identifiable {
         /// `hire` · `equip` · `branch` — motor bu kimliğe göre davranır.
         var id: String
+    }
+
+    // MARK: - Yumuşak prestij
+
+    /// Olgunlaşan sektörü satmanın karşılığı (rapor §5).
+    ///
+    /// Satış üç şey verir: büyük nakit, kalıcı holding puanı ve binada kalıcı
+    /// bir iz — satılan kat yatırım katına dönüşüp küçük bir pasif gelir
+    /// üretmeye devam eder. Üçüncüsü olmadan oyuncu satmaya direnir.
+    struct Prestige: Codable, Sendable, Equatable {
+        /// Satış bedeli: katın kaç saniyelik neti.
+        var payoutSeconds: Double
+        /// Yatırım katının koruduğu oran — satıştan önceki netin kaçta kaçı.
+        var investmentShare: Double
+        /// Her satışın kazandırdığı holding puanı.
+        var pointsPerSale: Int
+        /// Halka arzın kazandırdığı holding puanı — yeni şehir hızlanır.
+        var pointsPerCity: Int
+        /// Her puanın brüte kattığı oran. Kalıcıdır, hiç geri alınmaz.
+        var multiplierPerPoint: Double
     }
 
     // MARK: - Arama

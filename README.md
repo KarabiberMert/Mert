@@ -8,10 +8,10 @@ kat yükseliyor.
 Tam tasarım dokümanı: [`docs/oyun-tasarim-raporu.md`](docs/oyun-tasarim-raporu.md)
 Geliştirme yönergesi: [`docs/claude-code-prompt.md`](docs/claude-code-prompt.md)
 
-**Durum: Faz 5 — süreç katmanı.**
-Bina kat kat yükseliyor, olaylar kısa seansa yakıt veriyor, isimli rakipler
-pazar payı için yarışıyor ve çatıdaki yönetim katından tuttuğun müdürler
-koyduğun kurallarla işi sen yokken de yürütüyor.
+**Durum: Faz 6 — yumuşak prestij ve final.**
+Bina kat kat yükseliyor, çatıdaki müdürler koyduğun kurallarla işi sen yokken
+yürütüyor, olgunlaşan sektörü satıp holding puanı biriktiriyorsun ve son kat da
+büyüdüğünde holding halka arz olup sonraki şehir açılıyor.
 
 ---
 
@@ -89,7 +89,20 @@ Xcode içinden ⌘U.
     iki dakikalık yedek bırakır; biriktirdiğin parayı süpürmez.
 17. **Kararı müdürler versin**'i aç: olay kartı artık çıkmaz, olaylar sen
     yokken daha kârlı seçenekle kapanır ve raporda görünür.
-18. Ayarlar → Erişilebilirlik → **Hareketi Azalt**'ı aç: süzülen rakam,
+18. Bir katı sonuna kadar büyüt — tam kadro, bütün ekipman, bütün hücreler.
+    **Bina** şeridindeki "Bu işi sat" çubuğu doldukça ilerler; dolunca satırın
+    yerini fiyat alır. Çubuk dolmadan hiçbir metin "yapamazsın" demez.
+19. **Sat**: kasaya büyük bir para girer, holding puanı bir artar ve kat
+    kepenkli bir **yatırım katına** dönüşür — tabelası yerinde kalır ve saniyelik
+    kirası işlemeye devam eder. Kutlama bunu satır satır söyler.
+20. Kasa satırındaki oran düşer ama **holding puanı bütün katları çarpar**:
+    yeni açtığın kat ilk günden daha hızlı yürür. Puan hiç azalmaz.
+21. Yatırım katını seç: kadro, ekipman ve şube şeritleri yerine "burayı sattın"
+    notu çıkar, satış butonu kaybolur. Kat listesinde de işaretlidir.
+22. Bütün katlar büyüdüğünde **Holdingi halka arz et** satırı belirir. Bas:
+    final sahnesi biten şehrin rakamlarını yazar ve sonraki şehir açılır.
+    Puanların, depon ve istatistiklerin seninle gelir; bina sıfırlanır.
+23. Ayarlar → Erişilebilirlik → **Hareketi Azalt**'ı aç: süzülen rakam,
     yerleşme ve bina yükselme animasyonu susar, oyun aynı çalışır.
 
 ### Dil kontrolü
@@ -236,6 +249,33 @@ Olayların otomatik kararı ayrı bir tercih ve verim bonusu vermez — saf
 kolaylık. Açıkken müdür `bestChoice` ile en kârlı seçeneği seçer ve olay kartı
 oyuncuya hiç gösterilmez.
 
+### Yumuşak prestij ve final
+
+Bir sektör olgunlaştığında (tam kadro + tam ekipman + tüm hücreler) satılabilir.
+Rapor §5 satışın **üç şeyi birden** vermesini şart koşuyor, üçü de kodda:
+
+| | Ne verir |
+|---|---|
+| Nakit | katın netinin `payoutSeconds` katı — bir üst katı açmaya yeter |
+| Holding puanı | kalıcı çarpan, tüm katların brütünü büyütür, hiç azalmaz |
+| Yatırım katı | satılan kat binada kalır ve kirasını ödemeye devam eder |
+
+Üçüncüsü olmadan oyuncu satmaya direnir — sattığı şeyin yok olduğunu sanar. Bu
+yüzden kat silinmez: kepenk iner, **tabela yerinde kalır** ve saniyelik pasif
+gelir satış anında donmuş bir oranla işlemeye devam eder.
+
+Holding çarpanı olay çarpanıyla aynı kuralı izler: **brüte uygulanır, maaşa
+değil.** Yatırım katının kayıttaki oranı hamdır; çarpan çalışma anında üstüne
+biner, böylece iki kez sayılmaz.
+
+Her sektöre girildiyse ve her kat satılmış ya da olgunlaşmışsa holding halka arz
+olur. Oyun biter, uygulama silinmez: **binaya ait olan sıfırlanır, sana ait olan
+kalır** — holding puanı, depo ve istatistikler sonraki şehre taşınır. Halka arz
+ayrıca `pointsPerCity` puan ekler; "hızlandırılmış eğri" budur.
+
+`scripts/balance_report.py` satışın kurulum bedeline oranını ve bir şehri
+bitirmenin kaç puan ettiğini yazar.
+
 ### Bina, katlar ve şubeler
 
 Kat geniş ve alçak bir **bant**. Bandın yapısı (döşeme, duvar, çini lambri,
@@ -257,6 +297,10 @@ renk.
 Yönetim katı sektör katı değil: kadrosu, tezgâhı, hücresi yok. Bu yüzden kendi
 ölçü takımıyla (`RoofGeometry`) çizilir, normal bir banttan alçaktır ve tamamen
 kurumsal paletle gelir — binanın üstüne oturan bir ofis kutusu.
+
+Satılmış kat aynı bandı kullanır, sadece tezgâhın yerine inik kepenk ve kapıya
+hardal bir levha gelir (`InvestmentGeometry`). Tabela değişmez: oyuncunun adı
+kapıda kalır.
 
 ### Motorun sözleşmesi
 

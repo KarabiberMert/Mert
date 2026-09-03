@@ -218,3 +218,31 @@
 "manager.report.branch" = "%@ — a new unit, %lld open now";
 "manager.report.event" = "%@ — %@";
 "manager.report.other" = "Something was taken care of";
+
+/* Soft prestige: selling a grown business */
+"prestige.sell" = "Sell this business";
+"prestige.ready" = "Grown up and ready to sell";
+"prestige.growing" = "%@ grown";
+"prestige.maturityNote" = "Full crew, every upgrade, every unit. Then a buyer turns up.";
+"prestige.keeps" = "Keeps earning %@ a second";
+"prestige.investment" = "Investment floor";
+"prestige.investmentNote" = "You sold this one. Your name is still on the door and the rent still comes in.";
+"prestige.points" = "Holding points %lld";
+"prestige.bonus" = "Everything you own earns +%@";
+"prestige.pointsNote" = "Points are yours for good. Every business you ever open runs faster because of them.";
+"sale.title" = "%@ is sold";
+"sale.body" = "The floor stays yours as an investment and keeps paying. The cash and the points are what you take upstairs.";
+"sale.action" = "Onwards";
+
+/* The finale: floating the holding and moving on */
+"finale.go" = "Take the holding public";
+"finale.note" = "Every floor is grown. There is nothing left to build here.";
+"finale.title" = "You rang the bell";
+"finale.body" = "The building is a listed company now. Somewhere across town another empty shop is waiting.";
+"finale.city" = "City %lld";
+"finale.earned" = "Earned here";
+"finale.played" = "Took you";
+"finale.sold" = "Businesses sold";
+"finale.byHand" = "Sales you made yourself";
+"finale.newCity" = "Start the next city";
+"finale.newCityNote" = "New street, new trades. Your points and your store room come with you.";

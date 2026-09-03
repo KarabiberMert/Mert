@@ -88,7 +88,12 @@ enum BalanceFixture {
         managerBaseCost: Double = 200,
         // Varsayılan 0: otomasyonu ölçen testler yedeği ayrıca açar.
         reserveSeconds: Double = 0,
-        maxActionsPerVisit: Int = 20
+        maxActionsPerVisit: Int = 20,
+        payoutSeconds: Double = 100,
+        investmentShare: Double = 0.1,
+        pointsPerSale: Int = 1,
+        pointsPerCity: Int = 2,
+        multiplierPerPoint: Double = 0.5
     ) -> BalanceConfig {
         BalanceConfig(
             version: 1,
@@ -143,6 +148,15 @@ enum BalanceFixture {
                 reserveSeconds: reserveSeconds,
                 maxActionsPerVisit: maxActionsPerVisit,
                 rules: [.init(id: "hire"), .init(id: "equip"), .init(id: "branch")]
+            ),
+            // Yuvarlak sayılar: satış 100 saniyelik net, yatırım katı onda biri,
+            // her puan brütü yarım kat artırır.
+            prestige: .init(
+                payoutSeconds: payoutSeconds,
+                investmentShare: investmentShare,
+                pointsPerSale: pointsPerSale,
+                pointsPerCity: pointsPerCity,
+                multiplierPerPoint: multiplierPerPoint
             )
         )
     }
@@ -184,6 +198,34 @@ enum BalanceFixture {
         state.marketShare = config.market.startShare
         state.nextEventAtGameSeconds = config.events.firstAfterSeconds
         return state
+    }
+
+    /// Olgunlaşmış bir kat: tam kadro, tüm ekipman, tüm hücreler.
+    /// `sellSector` ve `canGoPublic` testleri bunun üstünden ölçer.
+    static func matureFloor(
+        sectorIndex: Int = 0,
+        config: BalanceConfig = BalanceFixture.config()
+    ) -> FloorState {
+        guard let spec = config.sector(at: sectorIndex) else {
+            return FloorState(sectorID: GameState.groundSectorID)
+        }
+        var levels: [String: Int] = [:]
+        for item in spec.equipment {
+            levels[item.id] = max(0, item.levels.count - 1)
+        }
+        var floor = FloorState(
+            sectorID: spec.id,
+            equipmentLevels: levels,
+            branchCount: max(1, spec.branches.maxCount)
+        )
+        let capacity = min(max(0, spec.staff.maxCount), spec.staffPool.count)
+        for index in 0..<capacity {
+            let template = spec.staffPool[index]
+            floor.staff.append(
+                StaffMember(id: template.id, rateMultiplier: template.rateMultiplier, hiredAtGameSeconds: 0)
+            )
+        }
+        return floor
     }
 
     /// Kadrosu hazır bir üst kat.

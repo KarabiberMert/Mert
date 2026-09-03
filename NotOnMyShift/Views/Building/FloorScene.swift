@@ -62,6 +62,83 @@ enum FloorScene {
         }
     }
 
+    // MARK: - Yatırım katı
+
+    /// Satılmış kat: kepenk inik, tabela yerinde.
+    ///
+    /// Rapor §5'in şartı görselde de duruyor — oyuncu sattığı şeyin yok
+    /// olmadığını görsün. Kabuk, döşeme ve tabela aynı; değişen tek şey
+    /// tezgâhın yerini alan kepenk ve kapıdaki pirinç levha.
+    static func drawInvestment(
+        in context: inout GraphicsContext,
+        band: FloorGeometry,
+        palette: FloorPalette,
+        sector: String,
+        isGround: Bool,
+        detail: FloorDetail
+    ) {
+        drawWall(in: &context, band: band, palette: palette)
+        if isGround {
+            drawAwning(in: &context, band: band, palette: palette)
+        } else {
+            drawSlab(in: &context, band: band, palette: palette)
+        }
+        drawShutter(in: &context, band: band, palette: palette, detail: detail)
+        drawSign(in: &context, band: band, palette: palette, sector: sector, detail: detail)
+        drawGround(in: &context, band: band, palette: palette)
+        drawPlaque(in: &context, band: band, palette: palette, detail: detail)
+    }
+
+    /// İnik kepenk. Yatay lamalar bandın yüksekliğine oranlı — bant alçalınca
+    /// lama sayısı değil aralığı küçülür, doku aynı kalır.
+    private static func drawShutter(
+        in context: inout GraphicsContext,
+        band: FloorGeometry,
+        palette: FloorPalette,
+        detail: FloorDetail
+    ) {
+        let shutter = band.box(
+            InvestmentGeometry.shutterLeft, InvestmentGeometry.shutterTop,
+            InvestmentGeometry.shutterRight, InvestmentGeometry.shutterBottom
+        )
+        context.fill(Path(shutter), with: .color(palette.fixture))
+        guard detail.showsFineDetail else { return }
+
+        let slats = max(2, InvestmentGeometry.shutterSlats)
+        let step = shutter.height / CGFloat(slats)
+        for index in 1..<slats {
+            let y = shutter.minY + step * CGFloat(index)
+            context.fill(
+                Path(CGRect(x: shutter.minX, y: y - band.h(0.006), width: shutter.width, height: band.h(0.012))),
+                with: .color(palette.fixtureDeep)
+            )
+        }
+        context.stroke(Path(shutter), with: .color(palette.fixtureDeep), lineWidth: band.h(0.010))
+    }
+
+    /// Kapıdaki pirinç levha. Hardal her katta aynı — para hep aynı renk.
+    private static func drawPlaque(
+        in context: inout GraphicsContext,
+        band: FloorGeometry,
+        palette: FloorPalette,
+        detail: FloorDetail
+    ) {
+        guard detail.showsFineDetail else { return }
+        let plaque = band.box(
+            InvestmentGeometry.plaqueLeft, InvestmentGeometry.plaqueTop,
+            InvestmentGeometry.plaqueRight, InvestmentGeometry.plaqueBottom
+        )
+        context.fill(
+            Path(roundedRect: plaque, cornerRadius: band.h(radiusTiny)),
+            with: .color(Palette.mustard)
+        )
+        context.stroke(
+            Path(roundedRect: plaque, cornerRadius: band.h(radiusTiny)),
+            with: .color(palette.frameDeep),
+            lineWidth: band.h(0.008)
+        )
+    }
+
     // MARK: - Parçalar
 
     private static func drawWall(in context: inout GraphicsContext, band: FloorGeometry, palette: FloorPalette) {

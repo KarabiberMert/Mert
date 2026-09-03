@@ -73,6 +73,41 @@ Rapor §4'ün kuralı pazarlığa kapalı: **derinlik ceza kaçınma değil, öd
   saf kolaylık. Açıkken olay kartı oyuncuya hiç gösterilmez.
 - Yönetim katı üretmez. Açmak kasa satırındaki oranı değiştirmemeli.
 
+## Yumuşak prestij
+
+Olgunlaşan sektör (tam kadro + tam ekipman + tüm hücreler) satılabilir. Rapor
+§5'in üçlüsü pazarlığa kapalı — **satış üç şeyi birden vermeli:**
+
+1. Büyük nakit (bir üst katı açmaya yeter),
+2. Kalıcı **holding puanı** — tüm katların brütünü çarpar, hiç azalmaz,
+3. Binada kalıcı bir iz: satılan kat **yatırım katına** dönüşür ve küçük bir
+   pasif gelir üretmeye devam eder.
+
+Üçüncüsü olmadan oyuncu satmaya direnir; sattığı şeyin yok olduğunu sanır.
+`investmentShare`'i sıfıra çekmek bu kuralı bozar.
+
+- Holding çarpanı **brüte** uygulanır, maaşa değil — olay çarpanıyla aynı kural.
+- Yatırım katının oranı satışta **donar**: kadro ve ekipman gittiği için
+  yeniden hesaplanamaz. Kayıtta ham oran durur; holding çarpanı çalışma anında
+  üstüne biner, iki kez sayılmaz.
+- Yatırım katı yönetilmez: kadro, ekipman, hücre alınmaz, müdür ve kurallar
+  satışla birlikte silinir, elle satış yapılmaz.
+- Satış ücretsiz değil ama zararsız: `payoutSeconds` katı kurmanın bedelinin
+  altına düşerse satmak kayıp olur. `scripts/balance_report.py` bu oranı yazar.
+
+## Final ve yeni şehir
+
+Her sektöre girildiyse ve her kat satılmış ya da olgunlaşmışsa holding halka
+arz olur. Oyun biter, uygulama silinmez.
+
+- **Binaya ait olan sıfırlanır, sana ait olan kalır:** holding puanı, depo ve
+  istatistikler yeni şehre taşınır; katlar, kasa, çatı ve müdürler sıfırlanır.
+  Bu ayrım tek kuraldır, istisna ekleme.
+- Halka arz `pointsPerCity` kadar puan ekler — "hızlandırılmış eğri" budur.
+- `goPublic` de saf kalır: yeni oyunun zamanı `Date()` değil kaydın kendi
+  `lastSeenAt`'idir.
+- Final özeti sıfırlamadan **önce** alınır; sahne biten şehri anlatır.
+
 ## Rakipler — cezalandırmama kuralı
 
 Rapor §6'nın kuralı pazarlığa kapalı: **rakip oyuncunun mevcut gelirini asla
@@ -137,10 +172,12 @@ kurumsal katman. Hardal vurgusu iki palette de aynı — para hep aynı renk.
   isim/tabela/satış fiili, `SectorFittings`'e iki çizim.
 - Yönetim katı sektör katı değil: kadrosu, tezgâhı, hücresi yok. Kendi ölçü
   takımı `RoofGeometry`'de durur ve normal bir banttan alçaktır.
+- Satılmış kat kepenkli çizilir ama **tabelası yerinde kalır** — oyuncunun adı
+  kapıda durur. Ölçüler `InvestmentGeometry`'de.
 
 ## Fazlar
 
-Faz 0 (bitti) → 1 (bitti) → 2 (bitti) → 3 (bitti) → 4 (bitti) → 5 (bitti):
-süreç katmanı → 6: yumuşak prestij ve final → 7: monetizasyon ve App Store.
+Faz 0 (bitti) → 1 (bitti) → 2 (bitti) → 3 (bitti) → 4 (bitti) → 5 (bitti) →
+6 (bitti): yumuşak prestij ve final → 7: monetizasyon ve App Store.
 
 Bir fazı bitirmeden sonrakine geçme. Her fazın sonunda proje temiz derlenmeli.

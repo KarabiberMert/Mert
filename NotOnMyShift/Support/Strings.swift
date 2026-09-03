@@ -470,6 +470,102 @@ enum L {
         String(localized: "manager.report.other", defaultValue: "Something was taken care of", comment: "Fallback report line")
     }
 
+    // MARK: - Yumuşak prestij (satış, holding puanı, yatırım katı)
+
+    static var sellSector: String {
+        String(localized: "prestige.sell", defaultValue: "Sell this business", comment: "Sell a mature sector")
+    }
+    /// "Ready to sell" / "Not ready yet"
+    static var sectorReadyToSell: String {
+        String(localized: "prestige.ready", defaultValue: "Grown up and ready to sell", comment: "The floor is mature")
+    }
+    /// "68% grown"
+    static func sectorGrowing(_ percent: String) -> String {
+        String(localized: "prestige.growing", defaultValue: "\(percent) grown", comment: "How close the floor is to maturity")
+    }
+    static var maturityNote: String {
+        String(localized: "prestige.maturityNote", defaultValue: "Full crew, every upgrade, every unit. Then a buyer turns up.",
+               comment: "What maturity means")
+    }
+    /// "Keeps earning $12 a second"
+    static func keepsEarning(_ amount: String) -> String {
+        String(localized: "prestige.keeps", defaultValue: "Keeps earning \(amount) a second", comment: "Passive income the sold floor keeps")
+    }
+    static var investmentFloor: String {
+        String(localized: "prestige.investment", defaultValue: "Investment floor", comment: "A sold floor")
+    }
+    static var investmentNote: String {
+        String(localized: "prestige.investmentNote", defaultValue: "You sold this one. Your name is still on the door and the rent still comes in.",
+               comment: "What an investment floor is. Must never read as a loss.")
+    }
+    /// "Holding points 3"
+    static func holdingPoints(_ count: Int) -> String {
+        String(localized: "prestige.points", defaultValue: "Holding points \(count)", comment: "Permanent points. Must read correctly for 1 as well.")
+    }
+    /// "Everything you own earns +36%"
+    static func holdingBonus(_ percent: String) -> String {
+        String(localized: "prestige.bonus", defaultValue: "Everything you own earns +\(percent)", comment: "The permanent multiplier from holding points")
+    }
+    static var holdingNote: String {
+        String(localized: "prestige.pointsNote", defaultValue: "Points are yours for good. Every business you ever open runs faster because of them.",
+               comment: "Holding points are permanent")
+    }
+
+    // MARK: - Satış anı
+
+    /// "Pop's Coffee is sold"
+    static func soldTitle(_ name: String) -> String {
+        String(localized: "sale.title", defaultValue: "\(name) is sold", comment: "Sale celebration heading")
+    }
+    static var soldBody: String {
+        String(localized: "sale.body", defaultValue: "The floor stays yours as an investment and keeps paying. The cash and the points are what you take upstairs.",
+               comment: "What selling gives you. Never a loss.")
+    }
+    static var soldAction: String {
+        String(localized: "sale.action", defaultValue: "Onwards", comment: "Dismiss the sale celebration")
+    }
+
+    // MARK: - Final: halka arz
+
+    static var goPublic: String {
+        String(localized: "finale.go", defaultValue: "Take the holding public", comment: "The finale action")
+    }
+    static var goPublicNote: String {
+        String(localized: "finale.note", defaultValue: "Every floor is grown. There is nothing left to build here.",
+               comment: "Why the finale is available")
+    }
+    /// "You floated the holding"
+    static var finaleTitle: String {
+        String(localized: "finale.title", defaultValue: "You rang the bell", comment: "Finale heading")
+    }
+    static var finaleBody: String {
+        String(localized: "finale.body", defaultValue: "The building is a listed company now. Somewhere across town another empty shop is waiting.",
+               comment: "Finale text")
+    }
+    /// "City 1"
+    static func cityNumber(_ number: Int) -> String {
+        String(localized: "finale.city", defaultValue: "City \(number)", comment: "Which city this run is. Must read correctly for 1 as well.")
+    }
+    static var finaleEarned: String {
+        String(localized: "finale.earned", defaultValue: "Earned here", comment: "Finale stat")
+    }
+    static var finalePlayed: String {
+        String(localized: "finale.played", defaultValue: "Took you", comment: "Finale stat: time played")
+    }
+    static var finaleSold: String {
+        String(localized: "finale.sold", defaultValue: "Businesses sold", comment: "Finale stat")
+    }
+    static var finaleByHand: String {
+        String(localized: "finale.byHand", defaultValue: "Sales you made yourself", comment: "Finale stat: manual sales")
+    }
+    static var newCity: String {
+        String(localized: "finale.newCity", defaultValue: "Start the next city", comment: "Begin a new run")
+    }
+    static var newCityNote: String {
+        String(localized: "finale.newCityNote", defaultValue: "New street, new trades. Your points and your store room come with you.",
+               comment: "What carries over to the next city")
+    }
+
     // MARK: - Dönüş özeti
 
     static var welcomeBack: String {

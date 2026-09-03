@@ -220,3 +220,31 @@
 "manager.report.branch" = "%@ — yeni bir hücre, artık %lld açık";
 "manager.report.event" = "%@ — %@";
 "manager.report.other" = "Bir iş halledildi";
+
+/* Yumuşak prestij: olgunlaşan işi satmak */
+"prestige.sell" = "Bu işi sat";
+"prestige.ready" = "Büyüdü, satılmaya hazır";
+"prestige.growing" = "%@ büyüdü";
+"prestige.maturityNote" = "Tam kadro, bütün yenilikler, bütün hücreler. Sonra kapıya bir alıcı gelir.";
+"prestige.keeps" = "Saniyede %@ kazandırmaya devam eder";
+"prestige.investment" = "Yatırım katı";
+"prestige.investmentNote" = "Burayı sattın. Kapıda hâlâ senin adın var, kira da işlemeye devam ediyor.";
+"prestige.points" = "Holding puanı %lld";
+"prestige.bonus" = "Sahip olduğun her şey +%@ kazanıyor";
+"prestige.pointsNote" = "Puanlar temelli senin. Bundan sonra açtığın her iş onlar sayesinde daha hızlı yürür.";
+"sale.title" = "%@ satıldı";
+"sale.body" = "Kat yatırım olarak sende kalıyor ve ödemeye devam ediyor. Yukarı taşıdığın şey nakit ve puanlar.";
+"sale.action" = "Devam";
+
+/* Final: halka arz ve sonraki şehir */
+"finale.go" = "Holdingi halka arz et";
+"finale.note" = "Bütün katlar büyüdü. Burada yapacak bir şey kalmadı.";
+"finale.title" = "Zili çaldın";
+"finale.body" = "Bina artık borsada bir şirket. Şehrin öbür ucunda boş bir dükkân seni bekliyor.";
+"finale.city" = "%lld. şehir";
+"finale.earned" = "Burada kazandığın";
+"finale.played" = "Süren";
+"finale.sold" = "Satılan iş";
+"finale.byHand" = "Kendi elinle yaptığın satış";
+"finale.newCity" = "Sonraki şehre başla";
+"finale.newCityNote" = "Yeni sokak, yeni işler. Puanların ve depon seninle geliyor.";

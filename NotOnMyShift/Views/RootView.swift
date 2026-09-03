@@ -70,7 +70,11 @@ struct RootView: View {
             OfflineReportView(report: report) { store.dismissOfflineReport() }
         }
         .overlay {
-            if let event = store.pendingEvent {
+            // Final her şeyin üstünde: sahne bittiğinde başka bir kart çıkmasın.
+            if let finale = store.finale {
+                FinaleView(summary: finale) { store.dismissFinale() }
+                    .transition(.opacity)
+            } else if let event = store.pendingEvent {
                 EventCardView(
                     event: event,
                     instantAmount: { store.eventInstantAmount($0) },
@@ -91,6 +95,16 @@ struct RootView: View {
             } else if !store.managerReport.isEmpty {
                 ManagerReportView(actions: store.managerReport) {
                     store.dismissManagerReport()
+                }
+                .transition(.opacity)
+            } else if let sold = store.sectorSaleCelebration {
+                MomentBannerView(
+                    title: L.soldTitle(L.sectorName(sold)),
+                    highlight: L.keepsEarning(Money.preciseText(store.netRate(of: soldFloorIndex(sold)))),
+                    body: L.soldBody,
+                    actionTitle: L.soldAction
+                ) {
+                    store.dismissSectorSaleCelebration()
                 }
                 .transition(.opacity)
             } else if let sector = store.newFloorCelebration {
@@ -121,6 +135,14 @@ struct RootView: View {
             reduceMotion ? nil : .easeOut(duration: 0.2),
             value: store.managerReport.count
         )
+        .animation(
+            reduceMotion ? nil : .easeOut(duration: 0.2),
+            value: store.sectorSaleCelebration
+        )
+        .animation(
+            reduceMotion ? nil : .easeOut(duration: 0.25),
+            value: store.finale?.id
+        )
     }
 
     // MARK: - Uyarılar
@@ -144,6 +166,11 @@ struct RootView: View {
     }
 
     // MARK: - Eylem
+
+    /// Satılan katın sırası. Kutlama metni oradan kalan kirayı yazar.
+    private func soldFloorIndex(_ sectorID: String) -> Int {
+        store.floors.firstIndex { $0.sectorID == sectorID } ?? store.selectedFloor
+    }
 
     private func sell() {
         store.sellManually()

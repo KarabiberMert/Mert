@@ -133,6 +133,28 @@ enum FloorDetail: Sendable, Equatable {
 ///
 /// Zemin kat daha yüksektir: tentesi, kaldırımı ve sokağa bakan yüzü var.
 /// Katlar aşağıdan yukarı dizilir; bina yükseldikçe bantlar incelir.
+/// Satılmış katın ölçüleri. Bandın kendi kutusuna göre 0..1.
+///
+/// Kat aynı bant, sadece tezgâhın yerinde kepenk var. Bu yüzden kendi
+/// katman sırası yok — yalnızca kepenk dokusu ve kapı levhası.
+enum InvestmentGeometry {
+
+    /// İnik kepenk. Dikey olarak tezgâhın ve fayansın yerini alır, yanlardan
+    /// içeri girer — duvara boyanmış değil, açıklığa inmiş görünsün.
+    static let shutterLeft = 0.060
+    static let shutterRight = 0.940
+    static let shutterTop = FloorGeometry.tileTop
+    static let shutterBottom = FloorGeometry.counterSlabBottom
+    /// Kepenkteki lama sayısı. Bant alçalınca aralık küçülür, sayı değil.
+    static let shutterSlats = 7
+
+    /// Kapı levhası. Kepenkin altındaki duvar şeridinde, zeminin üstünde.
+    static let plaqueLeft = 0.060
+    static let plaqueRight = 0.260
+    static let plaqueTop = 0.730
+    static let plaqueBottom = 0.870
+}
+
 /// Çatıdaki yönetim katı.
 ///
 /// Sektör katı değil: kadrosu, tezgâhı, hücresi yok — bu yüzden kendi ölçü

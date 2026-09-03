@@ -97,10 +97,12 @@ def main():
     print(f"Bina: {len(config['sectors'])} sektor acik, palet {config['building']['paletteFloors']} kata gore soguyor")
 
     peaks = []
+    sector_totals = []
     grand_total = 0.0
     for sector in config["sectors"]:
         peak, cost = sector_report(sector)
         peaks.append(peak)
+        sector_totals.append(cost)
         grand_total += cost + sector["unlockCost"]
 
     print(f"\n{'=' * 62}\nDEPO (butun katlarin ortak kapasitesi)\n{'=' * 62}")
@@ -168,6 +170,27 @@ def main():
     print(f"Yedek {human(process['reserveSeconds'])} uretim · donus basina en fazla "
           f"{process['maxActionsPerVisit']} islem")
     print("  Kural: surec kurmayan tam verimle calisir; bonus eksiltmez, ekler.")
+
+    prestige = config["prestige"]
+    print(f"\n{'=' * 62}\nYUMUSAK PRESTIJ\n{'=' * 62}")
+    print(f"{'sektor':<8} {'net/sn':>10} {'kurulum':>12} {'satis':>14} {'kat':>6} {'yatirim/sn':>11}")
+    for index, spec in enumerate(config["sectors"]):
+        peak = peaks[index] if index < len(peaks) else 0
+        build = sector_totals[index] if index < len(sector_totals) else 0
+        payout = peak * prestige["payoutSeconds"]
+        ratio = payout / build if build else 0
+        print(f"{spec['id']:<8} {peak:>10.2f} {build:>12,.0f} {payout:>14,.0f} "
+              f"{ratio:>5.2f}x {peak * prestige['investmentShare']:>11.2f}")
+    unlocks = [s["unlockCost"] for s in config["sectors"][1:]]
+    if unlocks and peaks:
+        first_sale = peaks[0] * prestige["payoutSeconds"]
+        print(f"Zemin katin satisi {first_sale:,.0f} · sonraki kat {max(unlocks):,.0f} → "
+              f"{'yetiyor' if first_sale > max(unlocks) else 'YETMIYOR'}")
+    points = len(config["sectors"]) * prestige["pointsPerSale"] + prestige["pointsPerCity"]
+    print(f"Bir sehri bitirmek {points} puan → sonraki sehirde brut "
+          f"+%{points * prestige['multiplierPerPoint'] * 100:.0f}")
+    print("  Kural: satis uc sey verir — nakit, kalici puan, kalici iz.")
+    print("  Satilan kat yok olmaz: yatirim kati olarak odemeye devam eder.")
 
     print(f"\nDepo {warehouse_cost:,.0f}")
     print(f"Her seyin toplami: {grand_total:,.0f}")

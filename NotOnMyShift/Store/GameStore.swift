@@ -23,6 +23,12 @@ final class GameStore {
     /// Çevrimdışı dönüş özeti. Doluysa ekranda gösterilir.
     var offlineReport: OfflineReport?
 
+    /// Sektör satıldığı an. Satılan sektörün kimliğini taşır.
+    var sectorSaleCelebration: String?
+
+    /// Halka arz özeti. Doluysa final sahnesi gösterilir.
+    var finale: FinaleSummary?
+
     /// Çağ 0 → Çağ 1 anı. İlk eleman tutulduğunda bir kez dolar.
     var firstHireCelebration: StaffMember?
 
@@ -183,6 +189,35 @@ final class GameStore {
 
     /// Bonusun tavanı — "daha ne kadar var" bilgisini gösterebilmek için.
     var maxProcessBonus: Double { max(0, config.process.maxBonus) }
+
+    // MARK: - Yumuşak prestij
+
+    /// Kalıcı holding puanı. Satılan her sektörden kalır, hiç azalmaz.
+    var holdingPoints: Int { state.holdingPoints }
+    /// Puanların brüte kattığı çarpan. 1,0 ise henüz sektör satılmadı.
+    var holdingMultiplier: Double { GameEngine.holdingMultiplier(for: state, config: config) }
+    var cityNumber: Int { state.cityNumber }
+
+    /// Seçili katın olgunluğu 0..1 — satışa ne kadar kaldığı.
+    var maturityProgress: Double {
+        guard let floor = currentFloor, let spec = currentSpec else { return 0 }
+        return GameEngine.maturityProgress(floor, spec: spec)
+    }
+
+    /// Seçili kat satılabilir mi, satılırsa ne kadar eder?
+    var saleValue: Double? { GameEngine.saleValue(onFloor: selectedFloor, state, config: config) }
+
+    /// Seçili kat satıldı mı — yatırım katı yönetilmez.
+    var isSelectedFloorSold: Bool { currentFloor?.isInvestment ?? false }
+
+    /// Satıştan sonra bu kattan kalacak saniyelik pasif gelir.
+    var saleInvestmentRate: Double {
+        guard let floor = currentFloor, let spec = currentSpec else { return 0 }
+        return GameEngine.investmentRate(of: floor, spec: spec, config: config)
+    }
+
+    /// Bina halka arza hazır mı?
+    var canGoPublic: Bool { GameEngine.canGoPublic(state, config: config) }
 
     // MARK: - Olaylar ve pazar
 
@@ -438,6 +473,57 @@ final class GameStore {
         managerReport = []
     }
 
+    // MARK: - Yumuşak prestij
+
+    /// Olgunlaşan sektörü sat. Kat yok olmaz, yatırım katına dönüşür.
+    func sellSector() {
+        guard let floor = currentFloor else { return }
+        let sold = floor.sectorID
+        switch GameEngine.sellSector(onFloor: selectedFloor, state, config: config) {
+        case .success(let next):
+            state = next
+            lastActionError = nil
+            sectorSaleCelebration = sold
+            Haptics.play(.success)
+            persist()
+        case .failure(let error):
+            lastActionError = error
+            Haptics.play(.warning)
+        }
+    }
+
+    func dismissSectorSaleCelebration() {
+        sectorSaleCelebration = nil
+    }
+
+    /// Holdingi halka arz et. Özet **sıfırlamadan önce** alınır: final sahnesi
+    /// biten şehri anlatır, yeni başlayanı değil.
+    func goPublic() {
+        let summary = FinaleSummary(
+            cityNumber: state.cityNumber,
+            lifetimeEarnings: state.lifetimeEarnings,
+            playedSeconds: state.elapsedGameSeconds,
+            sectorsSold: state.stats.sectorsSold,
+            manualSales: state.stats.manualSales,
+            holdingPoints: state.holdingPoints + max(0, config.prestige.pointsPerCity)
+        )
+        switch GameEngine.goPublic(state, config: config) {
+        case .success(let next):
+            state = next
+            lastActionError = nil
+            finale = summary
+            Haptics.play(.success)
+            persist()
+        case .failure(let error):
+            lastActionError = error
+            Haptics.play(.warning)
+        }
+    }
+
+    func dismissFinale() {
+        finale = nil
+    }
+
     func selectFloor(_ index: Int) {
         guard index != state.selectedFloor else { return }
         state = GameEngine.selectFloor(index, state)
@@ -512,6 +598,8 @@ final class GameStore {
         newFloorCelebration = nil
         pendingEvent = nil
         managerReport = []
+        sectorSaleCelebration = nil
+        finale = nil
         hasOfferedEventThisSession = false
         lastActionError = nil
         didRecoverFromBackup = false
@@ -554,6 +642,18 @@ struct EquipmentRow: Identifiable, Equatable, Sendable {
 }
 
 /// Çevrimdışı dönüş özeti — ekranda gösterilen hâli.
+/// Halka arz özeti. Biten şehrin rakamlarını taşır — final sahnesi bunu okur.
+struct FinaleSummary: Identifiable, Equatable {
+    let id = UUID()
+    var cityNumber: Int
+    var lifetimeEarnings: Double
+    var playedSeconds: TimeInterval
+    var sectorsSold: Int
+    var manualSales: Int
+    /// Yeni şehre taşınan puan — halka arzın kazandırdığı dahil.
+    var holdingPoints: Int
+}
+
 struct OfflineReport: Identifiable, Equatable {
     let id = UUID()
     var awaySeconds: TimeInterval
