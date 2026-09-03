@@ -8,9 +8,10 @@ kat yükseliyor.
 Tam tasarım dokümanı: [`docs/oyun-tasarim-raporu.md`](docs/oyun-tasarim-raporu.md)
 Geliştirme yönergesi: [`docs/claude-code-prompt.md`](docs/claude-code-prompt.md)
 
-**Durum: Faz 4 — olaylar ve rakipler.**
-Bina kat kat yükseliyor, olaylar kısa seansa yakıt veriyor ve isimli rakipler
-pazar payı için yarışıyor.
+**Durum: Faz 5 — süreç katmanı.**
+Bina kat kat yükseliyor, olaylar kısa seansa yakıt veriyor, isimli rakipler
+pazar payı için yarışıyor ve çatıdaki yönetim katından tuttuğun müdürler
+koyduğun kurallarla işi sen yokken de yürütüyor.
 
 ---
 
@@ -77,7 +78,18 @@ Xcode içinden ⌘U.
 13. **Bina** şeridinde pazar payı çubuğu ve isimli rakipler var. Uzun süre
     uğramazsan pay rakiplere kayar — **paran azalmaz**, sadece yeni hücre
     açma hakkın daralır. Yatırım yapınca pay geri gelir.
-14. Ayarlar → Erişilebilirlik → **Hareketi Azalt**'ı aç: süzülen rakam,
+14. **Bina** şeridinden **yönetim katını** aç: binanın tepesine alçak, cam
+    şeritli bir ofis bandı oturur ve şeritte **Ofis** sekmesi belirir. Çatı
+    kendi başına üretmez — kasa satırındaki oran değişmemeli.
+15. **Ofis** sekmesinden seçili kata müdür tut, sonra kuralları aç: her açık
+    kural katın verimine %10 ekler, tavan %30. Kural açmadan da oyun tam
+    verimle çalışır — hiçbir yazı "kural koymazsan kaybedersin" demez.
+16. Kuralları açık bırakıp uygulamayı kapat, birkaç dakika sonra dön:
+    "Müdürler boş durmamış" raporu ne aldığını satır satır yazar. Müdür kasada
+    iki dakikalık yedek bırakır; biriktirdiğin parayı süpürmez.
+17. **Kararı müdürler versin**'i aç: olay kartı artık çıkmaz, olaylar sen
+    yokken daha kârlı seçenekle kapanır ve raporda görünür.
+18. Ayarlar → Erişilebilirlik → **Hareketi Azalt**'ı aç: süzülen rakam,
     yerleşme ve bina yükselme animasyonu susar, oyun aynı çalışır.
 
 ### Dil kontrolü
@@ -197,6 +209,33 @@ asla düşürmez.** Pazar payı yalnızca *yeni* hücre açma hakkını belirler
 şube kapanmaz. Pay zamanla rakiplere kayar ve her yatırımda geri gelir, yani
 kaçırılan şey para değil fırsattır.
 
+### Süreç katmanı
+
+Çatıdaki yönetim katı süreç katmanını açar. Bir kata müdür tutarsın, o katta
+hazır kural tariflerini (eleman al, ekipman yenile, hücre aç) açıp kaparsın —
+mobilde kural editörü hızla fazla teknik hâle geldiği için tarifler hazır
+gelir (rapor §10.5).
+
+Rapor §4'ün kuralı koda gömülü: **derinlik ceza kaçınma değil, ödüldür.**
+
+| | Kural kurmayan | Kural kuran |
+|---|---|---|
+| Verim | %100 | %100 + kural başına %10, tavan %30 |
+| Emek | ara sıra elle müdahale | hiç dokunmaz |
+
+Yani süreç kurmamak hiçbir şey eksiltmez; kurmak üstüne ekler. Bonus katın
+kendisine yazılır — müdürsüz kat etkilenmez.
+
+Müdürlerin alımları `advance` içinde değil ondan **sonra** işlenir
+(`GameEngine.applyRules`): satın alma üretim oranını değiştirir ve bunu kapalı
+forma katmak motoru döngüye çevirirdi. Alımlar kasada mevcut netin iki
+dakikası kadar yedek bırakır ve bir dönüşte sayısı sınırlıdır; müdür oyuncunun
+biriktirdiği parayı süpürmez. Ne yaptığını dönüşte rapor eder.
+
+Olayların otomatik kararı ayrı bir tercih ve verim bonusu vermez — saf
+kolaylık. Açıkken müdür `bestChoice` ile en kârlı seçeneği seçer ve olay kartı
+oyuncuya hiç gösterilmez.
+
 ### Bina, katlar ve şubeler
 
 Kat geniş ve alçak bir **bant**. Bandın yapısı (döşeme, duvar, çini lambri,
@@ -214,6 +253,10 @@ eklemek buraya iki çizim eklemekten ibaret.
 Palet kat yükseldikçe esnaftan kurumsala karışır (`FloorPalette`): emaye mavi
 betona, hardal tezgâh cam griye kayar. Hardal vurgusu değişmez — para hep aynı
 renk.
+
+Yönetim katı sektör katı değil: kadrosu, tezgâhı, hücresi yok. Bu yüzden kendi
+ölçü takımıyla (`RoofGeometry`) çizilir, normal bir banttan alçaktır ve tamamen
+kurumsal paletle gelir — binanın üstüne oturan bir ofis kutusu.
 
 ### Motorun sözleşmesi
 

@@ -157,6 +157,67 @@ final class FloorGeometryTests: XCTestCase {
         XCTAssertEqual(BuildingLayout(floorCount: 2, available: .zero).bandHeight, 0, accuracy: 1e-9)
     }
 
+    // MARK: - Çatı katı
+
+    func testRoofSitsOnTopWithoutAGapAndStaysInTheBox() {
+        for count in 1...4 {
+            let layout = BuildingLayout(floorCount: count, available: screen, hasRoof: true)
+            guard let roof = layout.roofFrame else {
+                return XCTFail("\(count) katta çatı kutusu olmalı")
+            }
+            XCTAssertEqual(roof.width, screen.width, accuracy: 1e-6)
+            XCTAssertGreaterThan(roof.height, 0)
+            XCTAssertEqual(
+                roof.maxY, layout.frame(of: count - 1).minY, accuracy: 1e-6,
+                "Çatı en üst kata yaslanmalı"
+            )
+            XCTAssertGreaterThanOrEqual(roof.minY, -0.001)
+            XCTAssertEqual(layout.buildingFrame.minY, roof.minY, accuracy: 1e-6)
+            XCTAssertEqual(layout.buildingFrame.maxY, screen.height, accuracy: 1e-6)
+        }
+    }
+
+    func testRoofIsShorterThanASectorFloor() {
+        let layout = BuildingLayout(floorCount: 3, available: screen, hasRoof: true)
+        guard let roof = layout.roofFrame else { return XCTFail("çatı kutusu olmalı") }
+        XCTAssertLessThan(roof.height, layout.height(of: 1))
+        XCTAssertEqual(roof.height, layout.bandHeight * RoofGeometry.scale, accuracy: 1e-6)
+    }
+
+    /// Çatı açılınca bina daha çok bant taşır; katlar kısalır ama kaybolmaz.
+    func testOpeningTheRoofShortensTheFloorsInsteadOfOverflowing() {
+        let closed = BuildingLayout(floorCount: 3, available: screen)
+        let open = BuildingLayout(floorCount: 3, available: screen, hasRoof: true)
+        XCTAssertLessThan(open.bandHeight, closed.bandHeight)
+        XCTAssertGreaterThan(open.bandHeight, 0)
+        XCTAssertEqual(open.frame(of: 0).maxY, open.pavementFrame.minY, accuracy: 1e-6)
+    }
+
+    func testRoofIsAbsentUntilItIsOpened() {
+        XCTAssertNil(BuildingLayout(floorCount: 3, available: screen).roofFrame)
+        XCTAssertNil(BuildingLayout(floorCount: 0, available: screen, hasRoof: true).roofFrame)
+    }
+
+    /// Kapı levhası ile şerit cam yatayda üst üste binmemeli — Faz 3'te
+    /// tabelayı ezen tente hatasını burada tekrarlamayalım.
+    func testRoofPlateAndGlassDoNotOverlap() {
+        XCTAssertLessThan(RoofGeometry.plateRight, RoofGeometry.glassLeft)
+        XCTAssertGreaterThan(RoofGeometry.glassRight, RoofGeometry.glassLeft)
+        XCTAssertLessThanOrEqual(RoofGeometry.glassRight, RoofGeometry.interiorRight)
+        XCTAssertGreaterThanOrEqual(RoofGeometry.plateLeft, RoofGeometry.interiorLeft)
+    }
+
+    /// Dikey katmanlar sırada: saçak, cam ve levha, döşeme.
+    func testRoofLayersAreStackedInOrder() {
+        XCTAssertLessThan(RoofGeometry.capBottom, RoofGeometry.glassTop)
+        XCTAssertLessThan(RoofGeometry.glassTop, RoofGeometry.glassBottom)
+        XCTAssertLessThan(RoofGeometry.glassBottom, RoofGeometry.baseTop)
+        XCTAssertLessThan(RoofGeometry.capBottom, RoofGeometry.plateTop)
+        XCTAssertLessThan(RoofGeometry.plateTop, RoofGeometry.plateBottom)
+        XCTAssertLessThan(RoofGeometry.plateBottom, RoofGeometry.baseTop)
+        XCTAssertEqual(RoofGeometry.baseBottom, 1, accuracy: 1e-9)
+    }
+
     // MARK: - Palet
 
     func testPaletteCoolsAsTheBuildingRises() {

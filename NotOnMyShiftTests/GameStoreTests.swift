@@ -188,6 +188,96 @@ final class GameStoreTests: XCTestCase {
         }
     }
 
+    // MARK: - Süreç katmanı
+
+    /// Müdür sen yokken çalışır ve döndüğünde raporunu verir.
+    func testManagersWorkWhileYouAreAwayAndReportOnReturn() async throws {
+        try await withTemporaryDirectory { directory in
+            let config = BalanceFixture.config(baseCost: 100, roofCost: 100, managerBaseCost: 100)
+            let clock = TestClock(BalanceFixture.epoch)
+            let store = GameStore(
+                config: config,
+                saves: SaveStore(containerDirectory: directory),
+                now: clock.provider
+            )
+
+            for _ in 0..<30 { store.sellManually() }   // 300 ₺
+            store.unlockRoof()                          // -100 ₺
+            store.hireManager()                         // -100 ₺
+            store.setRule("hire", enabled: true)
+            XCTAssertTrue(store.hasRoof)
+            XCTAssertTrue(store.hasManagerOnSelectedFloor)
+            XCTAssertTrue(store.isRuleActive("hire"))
+            XCTAssertEqual(store.state.floors[0].staff.count, 0)
+
+            store.handleWillResignActive()
+            clock.date = BalanceFixture.epoch.addingTimeInterval(300)
+            store.handleBecameActive()
+
+            // Kasadaki para ilk elemana yetiyordu; müdür sen yokken onu tuttu.
+            XCTAssertEqual(store.state.floors[0].staff.count, 1)
+            XCTAssertFalse(store.managerReport.isEmpty)
+            XCTAssertEqual(store.managerReport.first?.rule, "hire")
+
+            store.dismissManagerReport()
+            XCTAssertTrue(store.managerReport.isEmpty)
+
+            store.handleWillResignActive()
+        }
+    }
+
+    /// Kural koymayan oyuncu hiçbir şey kaybetmez — çatı açmak tek başına
+    /// ne üretimi değiştirir ne de kadroya dokunur.
+    func testOpeningTheRoofAloneChangesNothingButTheDoor() async throws {
+        try await withTemporaryDirectory { directory in
+            let config = BalanceFixture.config(roofCost: 100)
+            let store = GameStore(
+                config: config,
+                saves: SaveStore(containerDirectory: directory),
+                now: { BalanceFixture.epoch }
+            )
+
+            for _ in 0..<20 { store.sellManually() }
+            store.hireStaff()                            // -100 ₺, kalan 100 ₺
+            let before = store.productionRate
+
+            store.unlockRoof()
+            XCTAssertTrue(store.hasRoof)
+            XCTAssertEqual(store.productionRate, before, accuracy: 1e-9)
+            XCTAssertEqual(store.processBonus, 1, accuracy: 1e-9)
+            XCTAssertFalse(store.hasManagerOnSelectedFloor)
+
+            store.handleWillResignActive()
+        }
+    }
+
+    /// Müdüre kararı devreden oyuncuya olay kartı gösterilmez.
+    func testAutoResolveKeepsTheEventCardOffTheScreen() async throws {
+        try await withTemporaryDirectory { directory in
+            let config = BalanceFixture.config(baseCost: 100, roofCost: 100)
+            let clock = TestClock(BalanceFixture.epoch)
+            let store = GameStore(
+                config: config,
+                saves: SaveStore(containerDirectory: directory),
+                now: clock.provider
+            )
+
+            for _ in 0..<20 { store.sellManually() }
+            store.hireStaff()
+            store.unlockRoof()
+            store.setAutoResolvesEvents(true)
+
+            store.handleWillResignActive()
+            clock.date = BalanceFixture.epoch.addingTimeInterval(300)
+            store.handleBecameActive()
+
+            XCTAssertNil(store.pendingEvent, "karar müdürdeyse kart çıkmamalı")
+            XCTAssertTrue(store.managerReport.contains { $0.rule == "event" })
+
+            store.handleWillResignActive()
+        }
+    }
+
     // MARK: - Yardımcı
 
     private func withTemporaryDirectory(_ body: (URL) throws -> Void) async throws {

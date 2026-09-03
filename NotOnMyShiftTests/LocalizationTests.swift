@@ -36,6 +36,17 @@ final class LocalizationTests: XCTestCase {
         }
     }
 
+    func testEveryShippedRuleHasANameAndANote() throws {
+        let config = try loadShippedConfig()
+        let fallbackName = L.ruleName("__bilinmeyen__")
+        let fallbackNote = L.ruleNote("__bilinmeyen__")
+
+        for rule in config.process.rules {
+            XCTAssertNotEqual(L.ruleName(rule.id), fallbackName, "'\(rule.id)' adsız")
+            XCTAssertNotEqual(L.ruleNote(rule.id), fallbackNote, "'\(rule.id)' açıklamasız")
+        }
+    }
+
     func testUnknownCrewIdFallsBackInsteadOfShowingTheKey() {
         // Eski bir kayıttan tanımadığımız bir kimlik gelirse ekranda ham
         // anahtar değil, insanca bir metin görünmeli.

@@ -184,3 +184,36 @@
 "competitor.percolate.quip" = "Una experiencia de café app-first, lo que sea que eso signifique.";
 "competitor.unknown.name" = "Otro más";
 "competitor.unknown.quip" = "Abriendo tiendas por ahí sin hacer ruido.";
+
+/* Capa de procesos: la azotea, los encargados y las reglas fijas */
+"tab.process" = "Oficina";
+"process.roof" = "Oficina central";
+"process.roofSign" = "OFICINA CENTRAL";
+"process.openRoof" = "Abre la oficina central";
+"process.roofNote" = "Una sala para ti en la azotea. Desde ahí contratas encargados y escribes las reglas que siguen.";
+"process.hireManager" = "Contrata a un encargado";
+"process.managerNote" = "El encargado aplica las reglas que pones en esta planta. Las reglas las decides tú.";
+"process.noManager" = "Aquí todavía no hay encargado. Contrata a uno y tus reglas empiezan a funcionar.";
+"process.rules" = "Reglas fijas";
+"process.bonus" = "Rendimiento +%@";
+"process.bonusNote" = "Cada regla suma rendimiento. No poner ninguna no te quita nada: el trabajo lo haces tú.";
+"process.bonusCapped" = "Esta planta ya va todo lo apretada que puede.";
+"process.autoEvents" = "Que decidan los encargados";
+"process.autoEventsNote" = "Lo que surja se resuelve mientras no estás, siempre con la mejor opción.";
+"rule.hire.name" = "Sigue contratando";
+"rule.hire.note" = "Contrata a la siguiente persona en cuanto haya dinero.";
+"rule.equip.name" = "Sigue mejorando";
+"rule.equip.note" = "Compra primero la mejora más barata y luego la siguiente.";
+"rule.branch.name" = "Sigue abriendo huecos";
+"rule.branch.note" = "Abre el siguiente hueco en cuanto el mercado deje sitio.";
+"rule.unknown.name" = "Que siga funcionando";
+"rule.unknown.note" = "Se resuelve sin preguntarte.";
+
+/* Lo que hicieron los encargados mientras no estabas */
+"manager.report.title" = "Los encargados no han parado";
+"manager.report.action" = "Bien";
+"manager.report.hire" = "%@ — %@ ha empezado a trabajar";
+"manager.report.equip" = "%@ — %@ mejorado";
+"manager.report.branch" = "%@ — un hueco nuevo, ahora hay %lld";
+"manager.report.event" = "%@ — %@";
+"manager.report.other" = "Algo se ha resuelto";

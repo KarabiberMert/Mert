@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "building": {
     "paletteFloors": 8
   },
@@ -368,6 +368,26 @@
       {
         "id": "percolate",
         "weight": 0.7
+      }
+    ]
+  },
+  "process": {
+    "roofCost": 400000,
+    "managerBaseCost": 120000,
+    "managerCostGrowth": 3.0,
+    "bonusPerRule": 0.1,
+    "maxBonus": 0.3,
+    "reserveSeconds": 120,
+    "maxActionsPerVisit": 20,
+    "rules": [
+      {
+        "id": "hire"
+      },
+      {
+        "id": "equip"
+      },
+      {
+        "id": "branch"
       }
     ]
   }

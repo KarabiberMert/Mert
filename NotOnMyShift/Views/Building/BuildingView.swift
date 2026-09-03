@@ -14,6 +14,8 @@ struct BuildingView: View {
     let plannedFloors: Int
     /// Kat başına hücre (şube) sayısı.
     let unitCounts: [Int]
+    /// Çatı katı açıldı mı — açıldıysa bina tepesinde ofis bandını taşır.
+    let hasRoof: Bool
     /// Dokunma başına yazılan miktarın hazır metni ("+$4").
     let gainText: String
     let onSelect: (Int) -> Void
@@ -29,13 +31,21 @@ struct BuildingView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let layout = BuildingLayout(floorCount: floors.count, available: proxy.size)
+            let layout = BuildingLayout(floorCount: floors.count, available: proxy.size, hasRoof: hasRoof)
 
             ZStack(alignment: .topLeading) {
                 Rectangle()
                     .fill(Palette.stone)
                     .frame(width: layout.pavementFrame.width, height: layout.pavementFrame.height)
                     .position(x: layout.pavementFrame.midX, y: layout.pavementFrame.midY)
+
+                if let roof = layout.roofFrame {
+                    RoofBandView(plannedFloors: plannedFloors)
+                        .frame(width: roof.width, height: roof.height)
+                        .position(x: roof.midX, y: roof.midY)
+                        .transition(.opacity.combined(with: .scale(scale: 0.88, anchor: .bottom)))
+                        .allowsHitTesting(false)
+                }
 
                 ForEach(Array(floors.enumerated()), id: \.element.id) { entry in
                     let index = entry.offset
@@ -88,6 +98,10 @@ struct BuildingView: View {
             .animation(
                 reduceMotion ? nil : .spring(response: 0.55, dampingFraction: 0.78),
                 value: floors.count
+            )
+            .animation(
+                reduceMotion ? nil : .spring(response: 0.55, dampingFraction: 0.78),
+                value: hasRoof
             )
             .animation(
                 reduceMotion ? nil : .easeOut(duration: 0.22),

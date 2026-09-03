@@ -187,3 +187,36 @@
 "competitor.percolate.quip" = "Uygulama öncelikli kahve deneyimi, her ne demekse.";
 "competitor.unknown.name" = "Bir başkası";
 "competitor.unknown.quip" = "Sessiz sedasız bir yerlerde dükkân açıyor.";
+
+/* Süreç katmanı: çatı, müdürler, sabit kurallar */
+"tab.process" = "Ofis";
+"process.roof" = "Yönetim katı";
+"process.roofSign" = "YÖNETİM KATI";
+"process.openRoof" = "Yönetim katını aç";
+"process.roofNote" = "Çatıda kendine ait bir oda. Buradan müdür tutarsın, çalışacakları kuralları sen yazarsın.";
+"process.hireManager" = "Müdür tut";
+"process.managerNote" = "Müdür bu katta senin koyduğun kuralları işletir. Kuralların ne olacağına yine sen karar verirsin.";
+"process.noManager" = "Bu katta henüz müdür yok. Birini tut, kuralların işlemeye başlasın.";
+"process.rules" = "Sabit kurallar";
+"process.bonus" = "Verim +%@";
+"process.bonusNote" = "Her kural verimi artırır. Hiç kural koymamak bir şey eksiltmez — işi kendin yaparsın, o kadar.";
+"process.bonusCapped" = "Bu kat gidebileceği kadar sıkı çalışıyor.";
+"process.autoEvents" = "Kararı müdürler versin";
+"process.autoEventsNote" = "Sen yokken çıkan işler hep daha iyi seçenekle hallolur.";
+"rule.hire.name" = "Almaya devam et";
+"rule.hire.note" = "Para biriktiği anda sıradaki elemanı işe al.";
+"rule.equip.name" = "Yenilemeye devam et";
+"rule.equip.note" = "Önce en ucuz yeniliği al, sonra sıradakini.";
+"rule.branch.name" = "Hücre açmaya devam et";
+"rule.branch.note" = "Pazarda yer açılır açılmaz sıradaki hücreyi aç.";
+"rule.unknown.name" = "İşi yürüt";
+"rule.unknown.note" = "Sana sormadan hallediliyor.";
+
+/* Sen yokken müdürlerin yaptıkları */
+"manager.report.title" = "Müdürler boş durmamış";
+"manager.report.action" = "Güzel";
+"manager.report.hire" = "%@ — %@ işe başladı";
+"manager.report.equip" = "%@ — %@ yenilendi";
+"manager.report.branch" = "%@ — yeni bir hücre, artık %lld açık";
+"manager.report.event" = "%@ — %@";
+"manager.report.other" = "Bir iş halledildi";

@@ -133,10 +133,47 @@ enum FloorDetail: Sendable, Equatable {
 ///
 /// Zemin kat daha yüksektir: tentesi, kaldırımı ve sokağa bakan yüzü var.
 /// Katlar aşağıdan yukarı dizilir; bina yükseldikçe bantlar incelir.
+/// Çatıdaki yönetim katı.
+///
+/// Sektör katı değil: kadrosu, tezgâhı, hücresi yok — bu yüzden kendi ölçü
+/// takımı var. Normal bir banttan alçaktır; binanın üstüne oturan bir ofis
+/// kutusu gibi okunur. Tüm sabitler bandın kendi kutusuna göre 0..1.
+enum RoofGeometry {
+
+    /// Normal bir kat bandına göre yükseklik oranı.
+    static let scale: CGFloat = 0.62
+
+    /// Saçak — binanın tepesini kapatan ince silme.
+    static let capTop = 0.0
+    static let capBottom = 0.14
+
+    /// Ofis camı. Kapı levhasının sağında durur, üstüne binmez.
+    static let glassTop = 0.30
+    static let glassBottom = 0.74
+    static let glassLeft = 0.46
+    static let glassRight = 0.94
+    static let panes = 6
+
+    /// Kapı levhası. Tabela gibi büyük harf taşır — arayüz değil, binanın parçası.
+    static let plateTop = 0.32
+    static let plateBottom = 0.62
+    static let plateLeft = 0.06
+    static let plateRight = 0.40
+
+    /// Bandın oturduğu döşeme.
+    static let baseTop = 0.86
+    static let baseBottom = 1.0
+
+    static let interiorLeft = 0.018
+    static let interiorRight = 0.982
+}
+
 struct BuildingLayout {
 
     let floorCount: Int
     let available: CGSize
+    /// Çatı katı açıldı mı. Açıldıysa bina bir bant daha taşır.
+    var hasRoof: Bool = false
 
     /// Zemin katın diğerlerine göre yükseklik oranı.
     static let groundFloorScale: CGFloat = 1.35
@@ -146,7 +183,7 @@ struct BuildingLayout {
     static let minimumBandHeight: CGFloat = 74
 
     private var units: CGFloat {
-        CGFloat(max(0, floorCount - 1)) + Self.groundFloorScale
+        CGFloat(max(0, floorCount - 1)) + Self.groundFloorScale + (hasRoof ? RoofGeometry.scale : 0)
     }
 
     /// Normal bir katın yüksekliği.
@@ -172,10 +209,18 @@ struct BuildingLayout {
         return CGRect(x: 0, y: bottom - bandHeight, width: available.width, height: bandHeight)
     }
 
-    /// Binanın tamamı — kaldırım dahil.
+    /// Çatı katının kutusu. Kat yoksa ya da çatı açılmadıysa yok.
+    var roofFrame: CGRect? {
+        guard hasRoof, floorCount > 0 else { return nil }
+        let top = frame(of: floorCount - 1)
+        let height = bandHeight * RoofGeometry.scale
+        return CGRect(x: 0, y: top.minY - height, width: available.width, height: height)
+    }
+
+    /// Binanın tamamı — kaldırım ve çatı dahil.
     var buildingFrame: CGRect {
         guard floorCount > 0 else { return .zero }
-        let top = frame(of: floorCount - 1).minY
+        let top = roofFrame?.minY ?? frame(of: floorCount - 1).minY
         return CGRect(x: 0, y: top, width: available.width, height: available.height - top)
     }
 

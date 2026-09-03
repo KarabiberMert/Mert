@@ -185,3 +185,36 @@
 "competitor.percolate.quip" = "An app-first coffee experience, whatever that means.";
 "competitor.unknown.name" = "Someone else";
 "competitor.unknown.quip" = "Quietly opening shops somewhere.";
+
+/* Process layer: the roof, managers and standing rules */
+"tab.process" = "Office";
+"process.roof" = "Head office";
+"process.roofSign" = "HEAD OFFICE";
+"process.openRoof" = "Open the head office";
+"process.roofNote" = "A room of your own on the roof. From up there you hire managers and write the rules they work to.";
+"process.hireManager" = "Hire a manager";
+"process.managerNote" = "A manager works the rules you set on this floor. You still decide what the rules are.";
+"process.noManager" = "No manager here yet. Hire one and your rules start running.";
+"process.rules" = "Standing rules";
+"process.bonus" = "Efficiency +%@";
+"process.bonusNote" = "Each rule adds efficiency. Setting none takes nothing away — you just do the work yourself.";
+"process.bonusCapped" = "This floor is running as tight as it gets.";
+"process.autoEvents" = "Let the managers decide";
+"process.autoEventsNote" = "Anything that comes up gets answered while you are away, always with the better option.";
+"rule.hire.name" = "Keep hiring";
+"rule.hire.note" = "Take the next person on as soon as the money is there.";
+"rule.equip.name" = "Keep upgrading";
+"rule.equip.note" = "Buy the cheapest upgrade first, then the next one.";
+"rule.branch.name" = "Keep opening units";
+"rule.branch.note" = "Open the next unit the moment the market has room.";
+"rule.unknown.name" = "Keep it running";
+"rule.unknown.note" = "Handled without asking you.";
+
+/* What the managers did while you were away */
+"manager.report.title" = "The managers were busy";
+"manager.report.action" = "Good";
+"manager.report.hire" = "%@ — %@ started work";
+"manager.report.equip" = "%@ — %@ upgraded";
+"manager.report.branch" = "%@ — a new unit, %lld open now";
+"manager.report.event" = "%@ — %@";
+"manager.report.other" = "Something was taken care of";

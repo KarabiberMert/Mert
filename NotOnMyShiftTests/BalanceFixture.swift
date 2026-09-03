@@ -83,7 +83,12 @@ enum BalanceFixture {
         wagePerSecond: Double = 0,
         minimumReportSeconds: TimeInterval = 60,
         upperUnlockCost: Double = 1_000,
-        plannedFloors: Int = 8
+        plannedFloors: Int = 8,
+        roofCost: Double = 1_000,
+        managerBaseCost: Double = 200,
+        // Varsayılan 0: otomasyonu ölçen testler yedeği ayrıca açar.
+        reserveSeconds: Double = 0,
+        maxActionsPerVisit: Int = 20
     ) -> BalanceConfig {
         BalanceConfig(
             version: 1,
@@ -127,6 +132,17 @@ enum BalanceFixture {
                 driftPerSecond: 0.001,
                 sharePerPurchase: 0.1,
                 competitors: [.init(id: "cedar", weight: 1), .init(id: "mill", weight: 1)]
+            ),
+            // Yuvarlak sayılar: üç kural, kural başına %10, tavan %30.
+            process: .init(
+                roofCost: roofCost,
+                managerBaseCost: managerBaseCost,
+                managerCostGrowth: 2,
+                bonusPerRule: 0.1,
+                maxBonus: 0.3,
+                reserveSeconds: reserveSeconds,
+                maxActionsPerVisit: maxActionsPerVisit,
+                rules: [.init(id: "hire"), .init(id: "equip"), .init(id: "branch")]
             )
         )
     }

@@ -9,7 +9,7 @@ import SwiftUI
 struct ActionPanelView: View {
 
     enum Tab: String, CaseIterable, Identifiable {
-        case crew, equipment, branches, building
+        case crew, equipment, branches, process, building
 
         var id: String { rawValue }
 
@@ -18,6 +18,7 @@ struct ActionPanelView: View {
             case .crew: L.tabCrew
             case .equipment: L.tabEquipment
             case .branches: L.tabBranches
+            case .process: L.tabProcess
             case .building: L.tabBuilding
             }
         }
@@ -41,6 +42,7 @@ struct ActionPanelView: View {
                     case .crew: crewTab
                     case .equipment: equipmentTab
                     case .branches: branchesTab
+                    case .process: processTab
                     case .building: buildingTab
                     }
                 }
@@ -81,9 +83,15 @@ struct ActionPanelView: View {
 
     // MARK: - Sekmeler
 
+    /// Çatı açılmadan ofis sekmesi yok — boş bir sekme oyuncuya bir şey anlatmaz.
+    /// Çatıyı açma satırı bina sekmesinde durur, kat açmanın yanında.
+    private var visibleTabs: [Tab] {
+        Tab.allCases.filter { $0 != .process || store.hasRoof }
+    }
+
     private var tabBar: some View {
         HStack(spacing: 0) {
-            ForEach(Tab.allCases) { item in
+            ForEach(visibleTabs) { item in
                 Button {
                     tab = item
                 } label: {
@@ -198,6 +206,71 @@ struct ActionPanelView: View {
         }
     }
 
+    // MARK: - Ofis
+
+    /// Süreç katmanı. Kural koymayan oyuncu hiçbir şey kaybetmez —
+    /// buradaki her satır üstüne ekler, altından almaz.
+    @ViewBuilder
+    private var processTab: some View {
+        if !store.hasRoof {
+            roofRow
+            note(L.roofNote)
+        } else {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(L.processBonus(Percent.text(store.processBonus - 1)))
+                    .font(Typography.display(17))
+                    .foregroundStyle(Palette.pistachio)
+                Spacer(minLength: 8)
+                Text(L.sectorName(store.currentFloor?.sectorID ?? ""))
+                    .font(Typography.label(13))
+                    .foregroundStyle(Palette.inkFaint)
+            }
+            .padding(.horizontal, 4)
+
+            if store.hasManagerOnSelectedFloor {
+                ForEach(store.ruleTemplates) { rule in
+                    toggleRow(
+                        title: L.ruleName(rule.id),
+                        subtitle: L.ruleNote(rule.id),
+                        isOn: store.isRuleActive(rule.id),
+                        action: { store.setRule(rule.id, enabled: !store.isRuleActive(rule.id)) }
+                    )
+                }
+                // Karşılaştırma aynı toplamdan kurulur; kayan nokta payı kalmasın.
+                note(store.processBonus >= 1 + store.maxProcessBonus ? L.processBonusCapped : L.processBonusNote)
+
+                toggleRow(
+                    title: L.autoEvents,
+                    subtitle: L.autoEventsNote,
+                    isOn: store.state.autoResolvesEvents,
+                    action: { store.setAutoResolvesEvents(!store.state.autoResolvesEvents) }
+                )
+            } else if let cost = store.managerCost {
+                row(
+                    title: L.hireManager,
+                    subtitle: L.managerNote,
+                    trailing: Money.text(cost),
+                    enabled: store.state.money >= cost,
+                    action: { store.hireManager() }
+                )
+                note(L.noManagerYet)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var roofRow: some View {
+        if let cost = store.roofCost {
+            row(
+                title: L.openRoof,
+                subtitle: L.rulesTitle,
+                trailing: Money.text(cost),
+                enabled: store.state.money >= cost,
+                action: { store.unlockRoof() }
+            )
+        }
+    }
+
     // MARK: - Bina
 
     @ViewBuilder
@@ -222,6 +295,10 @@ struct ActionPanelView: View {
             enabled: store.warehouseUpgradeCost.map { store.state.money >= $0 } ?? false,
             action: { store.upgradeWarehouse() }
         )
+
+        if !store.hasRoof {
+            roofRow
+        }
 
         MarketShareView(
             share: store.marketShare,
@@ -284,6 +361,44 @@ struct ActionPanelView: View {
         .buttonStyle(.plain)
         .disabled(!enabled)
         .accessibilityLabel("\(title), \(trailing)")
+    }
+
+    /// Kural anahtarı. Açık kural emaye kenarlıklı, kapalı olan sakin —
+    /// `Toggle` yerine aynı satır dilini kullanıyoruz ki şerit tek parça kalsın.
+    private func toggleRow(
+        title: String,
+        subtitle: String,
+        isOn: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(Typography.display(17))
+                        .foregroundStyle(Palette.ink)
+                    Text(subtitle)
+                        .font(Typography.label(14))
+                        .foregroundStyle(Palette.inkSoft)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer(minLength: 8)
+                Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(isOn ? Palette.pistachio : Palette.inkFaint)
+                    .font(.system(size: 20))
+            }
+            .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity, minHeight: 54, alignment: .leading)
+            .background(Palette.plaster, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(Palette.enamel.opacity(isOn ? 0.55 : 0.16), lineWidth: 1.5)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(isOn ? [.isButton, .isSelected] : .isButton)
     }
 
     private func note(_ text: String) -> some View {

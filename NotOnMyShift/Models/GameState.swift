@@ -12,7 +12,8 @@ struct GameState: Codable, Sendable, Equatable {
 
     /// 1 → Faz 0-1 · 2 → ilk eleman kutlaması · 3 → ekipman ve şubeler
     /// 4 → kat kat bina (tek dükkân yerine `floors`) · 5 → olaylar ve pazar
-    static let currentSchemaVersion = 5
+    /// 6 → çatı katı ve süreç katmanı
+    static let currentSchemaVersion = 6
 
     /// `marketShare` ve `nextEventAtGameSeconds` için "henüz kurulmadı" işareti.
     /// Kod çözücünün dengeye erişimi yok; ilk değerleri motor koyuyor.
@@ -71,6 +72,19 @@ struct GameState: Codable, Sendable, Equatable {
     /// Oyuncunun pazar payı (0..1). `unset` ise motor başlangıç payını koyar.
     var marketShare: Double
 
+    /// Çatı katı (yönetim ofisi) açıldı mı? Süreç katmanı buradan yürür. (şema 6)
+    var hasRoof: Bool
+
+    /// Müdür atanmış katların sektör kimlikleri. Müdürsüz katta kural çalışmaz.
+    var managedSectors: [String]
+
+    /// Sektör kimliği → açık kural kimlikleri. Kurallar hem otomasyon yapar
+    /// hem kata verim bonusu katar.
+    var activeRules: [String: [String]]
+
+    /// Müdür olayları kendi karara bağlasın mı? Saf kolaylık, bonusu yok.
+    var autoResolvesEvents: Bool
+
     var stats: Stats
 
     // MARK: - Yeni oyun
@@ -93,6 +107,10 @@ struct GameState: Codable, Sendable, Equatable {
             nextEventAtGameSeconds: unset,
             eventSeed: Self.seed(from: now),
             marketShare: unset,
+            hasRoof: false,
+            managedSectors: [],
+            activeRules: [:],
+            autoResolvesEvents: false,
             stats: Stats()
         )
     }
@@ -101,6 +119,17 @@ struct GameState: Codable, Sendable, Equatable {
 
     /// İş kendi kendine yürüyor mu? (Çağ 0 → Çağ 1 geçişi)
     var isAutomated: Bool { floors.contains { !$0.staff.isEmpty } }
+
+    /// Bu katta müdür var mı?
+    func hasManager(_ sectorID: String) -> Bool {
+        managedSectors.contains(sectorID)
+    }
+
+    /// Bu katta açık kurallar. Müdür yoksa hiçbiri çalışmaz.
+    func rules(for sectorID: String) -> [String] {
+        guard hasManager(sectorID) else { return [] }
+        return activeRules[sectorID] ?? []
+    }
 
     /// Deterministik tohum. Kayıt başına sabit, kayıtlar arasında farklı.
     static func seed(from date: Date) -> UInt64 {
@@ -126,6 +155,7 @@ struct GameState: Codable, Sendable, Equatable {
         case elapsedGameSeconds, lastSeenAt, startedAt, warehouseLevel, stats
         case hasCelebratedFirstHire, floors, selectedFloor
         case modifiers, nextEventAtGameSeconds, eventSeed, marketShare
+        case hasRoof, managedSectors, activeRules, autoResolvesEvents
         // Şema 3 ve öncesinden kalan düz alanlar — sadece göç için okunur.
         case staff, equipmentLevels, branchCount
     }
@@ -146,6 +176,10 @@ struct GameState: Codable, Sendable, Equatable {
         nextEventAtGameSeconds: TimeInterval,
         eventSeed: UInt64,
         marketShare: Double,
+        hasRoof: Bool,
+        managedSectors: [String],
+        activeRules: [String: [String]],
+        autoResolvesEvents: Bool,
         stats: Stats
     ) {
         self.schemaVersion = schemaVersion
@@ -163,6 +197,10 @@ struct GameState: Codable, Sendable, Equatable {
         self.nextEventAtGameSeconds = nextEventAtGameSeconds
         self.eventSeed = eventSeed
         self.marketShare = marketShare
+        self.hasRoof = hasRoof
+        self.managedSectors = managedSectors
+        self.activeRules = activeRules
+        self.autoResolvesEvents = autoResolvesEvents
         self.stats = stats
     }
 
@@ -207,6 +245,12 @@ struct GameState: Codable, Sendable, Equatable {
             ?? Self.seed(from: startedAt)
         marketShare = try container.decodeIfPresent(Double.self, forKey: .marketShare) ?? Self.unset
 
+        // Şema 6 öncesi kayıtlarda süreç katmanı yoktu. Kapalı başlar.
+        hasRoof = try container.decodeIfPresent(Bool.self, forKey: .hasRoof) ?? false
+        managedSectors = try container.decodeIfPresent([String].self, forKey: .managedSectors) ?? []
+        activeRules = try container.decodeIfPresent([String: [String]].self, forKey: .activeRules) ?? [:]
+        autoResolvesEvents = try container.decodeIfPresent(Bool.self, forKey: .autoResolvesEvents) ?? false
+
         // Şema 1 kayıtlarında bu alan yok. Zaten eleman tutmuşsa kutlamayı
         // tekrar göstermeyelim — o an bir kez yaşanır.
         hasCelebratedFirstHire = try container.decodeIfPresent(Bool.self, forKey: .hasCelebratedFirstHire)
@@ -232,6 +276,10 @@ struct GameState: Codable, Sendable, Equatable {
         try container.encode(nextEventAtGameSeconds, forKey: .nextEventAtGameSeconds)
         try container.encode(eventSeed, forKey: .eventSeed)
         try container.encode(marketShare, forKey: .marketShare)
+        try container.encode(hasRoof, forKey: .hasRoof)
+        try container.encode(managedSectors, forKey: .managedSectors)
+        try container.encode(activeRules, forKey: .activeRules)
+        try container.encode(autoResolvesEvents, forKey: .autoResolvesEvents)
         try container.encode(stats, forKey: .stats)
     }
 }
@@ -383,9 +431,12 @@ struct Stats: Codable, Sendable, Equatable {
     /// Karara bağlanan olay sayısı. (şema 5)
     var eventsResolved: Int
 
+    /// Müdürlerin yaptığı otomatik işlem sayısı. (şema 6)
+    var automatedActions: Int
+
     private enum CodingKeys: String, CodingKey {
         case manualSales, offlineReturns, lastOfflineEarnings, wastedOfflineSeconds
-        case eventsResolved
+        case eventsResolved, automatedActions
     }
 
     init(
@@ -393,13 +444,15 @@ struct Stats: Codable, Sendable, Equatable {
         offlineReturns: Int = 0,
         lastOfflineEarnings: Double = 0,
         wastedOfflineSeconds: TimeInterval = 0,
-        eventsResolved: Int = 0
+        eventsResolved: Int = 0,
+        automatedActions: Int = 0
     ) {
         self.manualSales = manualSales
         self.offlineReturns = offlineReturns
         self.lastOfflineEarnings = lastOfflineEarnings
         self.wastedOfflineSeconds = wastedOfflineSeconds
         self.eventsResolved = eventsResolved
+        self.automatedActions = automatedActions
     }
 
     init(from decoder: any Decoder) throws {
@@ -409,5 +462,6 @@ struct Stats: Codable, Sendable, Equatable {
         lastOfflineEarnings = try container.decodeIfPresent(Double.self, forKey: .lastOfflineEarnings) ?? 0
         wastedOfflineSeconds = try container.decodeIfPresent(TimeInterval.self, forKey: .wastedOfflineSeconds) ?? 0
         eventsResolved = try container.decodeIfPresent(Int.self, forKey: .eventsResolved) ?? 0
+        automatedActions = try container.decodeIfPresent(Int.self, forKey: .automatedActions) ?? 0
     }
 }

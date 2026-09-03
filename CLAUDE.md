@@ -53,6 +53,26 @@ kârdaki katı aşağı çekmez ve oyuncu asla geri gitmez.
   olarak yazılır — aynı olay Çağ 0'da da dört şubeli fırında da anlamlı kalır.
   Kasa asla eksiye düşmez.
 
+## Süreç katmanı
+
+Çatı katı süreç katmanını açar: kata müdür, müdüre hazır kural tarifleri.
+Rapor §4'ün kuralı pazarlığa kapalı: **derinlik ceza kaçınma değil, ödüldür.**
+
+- Kural kurmayan oyuncu **tam verimle** çalışmaya devam eder. Hiçbir sayı,
+  hiçbir metin "kural koymazsan kaybedersin" demez.
+- Her açık kural kata `bonusPerRule` ekler, tavan `maxBonus` (rapor %30).
+  Bonus katın kendisine yazılır; müdürsüz kat etkilenmez.
+- Müdürsüz katta kural çalışmaz. Eski kayıtta kural kalmışsa `rules(for:)`
+  onu görmezden gelir.
+- Kural açıp kapatmak ücretsizdir — kural yazmak yatırım değil, tercih.
+- Otomatik alımlar `advance` içinde değil, ondan sonra `applyRules` ile işlenir.
+  Satın alma oranı değiştirir; kapalı forma katmak motoru döngüye çevirirdi.
+- Alımlar kasada `reserveSeconds` kadar yedek bırakır ve bir dönüşte
+  `maxActionsPerVisit` ile sınırlıdır. Müdür oyuncunun birikimini süpürmez.
+- Olayların otomatik kararı ayrı bir tercihtir ve **verim bonusu vermez** —
+  saf kolaylık. Açıkken olay kartı oyuncuya hiç gösterilmez.
+- Yönetim katı üretmez. Açmak kasa satırındaki oranı değiştirmemeli.
+
 ## Rakipler — cezalandırmama kuralı
 
 Rapor §6'nın kuralı pazarlığa kapalı: **rakip oyuncunun mevcut gelirini asla
@@ -115,10 +135,12 @@ kurumsal katman. Hardal vurgusu iki palette de aynı — para hep aynı renk.
   her katta aynı kalır — para hep aynı renk.
 - Yeni sektör eklemek: `balance.json`'a bir `sectors` girdisi, dil dosyalarına
   isim/tabela/satış fiili, `SectorFittings`'e iki çizim.
+- Yönetim katı sektör katı değil: kadrosu, tezgâhı, hücresi yok. Kendi ölçü
+  takımı `RoofGeometry`'de durur ve normal bir banttan alçaktır.
 
 ## Fazlar
 
-Faz 0 (bitti) → 1 (bitti) → 2 (bitti) → 3 (bitti) → 4 (bitti): olaylar ve rakipler → 5: süreç katmanı →
-6: yumuşak prestij ve final → 7: monetizasyon ve App Store.
+Faz 0 (bitti) → 1 (bitti) → 2 (bitti) → 3 (bitti) → 4 (bitti) → 5 (bitti):
+süreç katmanı → 6: yumuşak prestij ve final → 7: monetizasyon ve App Store.
 
 Bir fazı bitirmeden sonrakine geçme. Her fazın sonunda proje temiz derlenmeli.

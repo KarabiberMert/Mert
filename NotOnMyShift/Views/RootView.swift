@@ -43,6 +43,7 @@ struct RootView: View {
                     selectedFloor: store.selectedFloor,
                     plannedFloors: store.plannedFloors,
                     unitCounts: store.unitCounts,
+                    hasRoof: store.hasRoof,
                     gainText: "+\(Money.text(store.manualRevenue))",
                     onSelect: { store.selectFloor($0) },
                     onSell: { sell() }
@@ -87,6 +88,11 @@ struct RootView: View {
                     store.dismissFirstHireCelebration()
                 }
                 .transition(.opacity)
+            } else if !store.managerReport.isEmpty {
+                ManagerReportView(actions: store.managerReport) {
+                    store.dismissManagerReport()
+                }
+                .transition(.opacity)
             } else if let sector = store.newFloorCelebration {
                 MomentBannerView(
                     title: L.newFloorTitle(L.sectorName(sector)),
@@ -110,6 +116,10 @@ struct RootView: View {
         .animation(
             reduceMotion ? nil : .easeOut(duration: 0.2),
             value: store.pendingEvent?.id
+        )
+        .animation(
+            reduceMotion ? nil : .easeOut(duration: 0.2),
+            value: store.managerReport.count
         )
     }
 

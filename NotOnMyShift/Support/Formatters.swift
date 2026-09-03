@@ -111,3 +111,15 @@ enum DurationText {
         return Duration.seconds(seconds).formatted(base.locale(locale))
     }
 }
+
+/// Yüzde metni. Sayı yereli paranınkiyle aynı — ondalık ayracı bir ekranda
+/// iki türlü görünmesin.
+enum Percent {
+
+    /// `0.3` → "30%". Oran değil pay yazdığımız için ondalık yok.
+    static func text(_ fraction: Double, locale: Locale = Money.current.numberLocale) -> String {
+        guard fraction.isFinite else { return "—" }
+        let value = (fraction * 100).formatted(.number.locale(locale).precision(.fractionLength(0)))
+        return "\(value)%"
+    }
+}

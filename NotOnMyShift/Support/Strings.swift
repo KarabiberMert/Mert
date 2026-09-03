@@ -371,6 +371,105 @@ enum L {
         }
     }
 
+    // MARK: - Süreç katmanı (çatı, müdürler, kurallar)
+
+    static var tabProcess: String {
+        String(localized: "tab.process", defaultValue: "Office", comment: "Panel tab")
+    }
+    static var roofTitle: String {
+        String(localized: "process.roof", defaultValue: "Head office", comment: "The floor on the roof")
+    }
+    /// Kapı levhasında göründüğü hâliyle. Kod büyük harfe çevirmez.
+    static var roofSign: String {
+        String(localized: "process.roofSign", defaultValue: "HEAD OFFICE", comment: "Text on the roof door plate, exactly as it should appear")
+    }
+    static var openRoof: String {
+        String(localized: "process.openRoof", defaultValue: "Open the head office", comment: "Unlock the roof floor")
+    }
+    static var roofNote: String {
+        String(localized: "process.roofNote", defaultValue: "A room of your own on the roof. From up there you hire managers and write the rules they work to.",
+               comment: "What the roof floor is for")
+    }
+    static var hireManager: String {
+        String(localized: "process.hireManager", defaultValue: "Hire a manager", comment: "Put a manager on this floor")
+    }
+    static var managerNote: String {
+        String(localized: "process.managerNote", defaultValue: "A manager works the rules you set on this floor. You still decide what the rules are.",
+               comment: "What a manager does")
+    }
+    static var noManagerYet: String {
+        String(localized: "process.noManager", defaultValue: "No manager here yet. Hire one and your rules start running.", comment: "Rules need a manager first")
+    }
+    static var rulesTitle: String {
+        String(localized: "process.rules", defaultValue: "Standing rules", comment: "Rules section heading")
+    }
+    /// "Efficiency +20%"
+    static func processBonus(_ percent: String) -> String {
+        String(localized: "process.bonus", defaultValue: "Efficiency +\(percent)", comment: "Extra output from the rules on this floor")
+    }
+    /// Derinlik ödüldür: kural kurmayan hiçbir şey kaybetmez.
+    static var processBonusNote: String {
+        String(localized: "process.bonusNote", defaultValue: "Each rule adds efficiency. Setting none takes nothing away — you just do the work yourself.",
+               comment: "Depth is a reward, never a penalty. Must never read as a loss.")
+    }
+    static var processBonusCapped: String {
+        String(localized: "process.bonusCapped", defaultValue: "This floor is running as tight as it gets.", comment: "Bonus is at the ceiling")
+    }
+    static var autoEvents: String {
+        String(localized: "process.autoEvents", defaultValue: "Let the managers decide", comment: "Toggle: managers answer events")
+    }
+    static var autoEventsNote: String {
+        String(localized: "process.autoEventsNote", defaultValue: "Anything that comes up gets answered while you are away, always with the better option.",
+               comment: "What the toggle does")
+    }
+
+    static func ruleName(_ id: String) -> String {
+        switch id {
+        case "hire": String(localized: "rule.hire.name", defaultValue: "Keep hiring", comment: "Standing rule name")
+        case "equip": String(localized: "rule.equip.name", defaultValue: "Keep upgrading", comment: "Standing rule name")
+        case "branch": String(localized: "rule.branch.name", defaultValue: "Keep opening units", comment: "Standing rule name")
+        default: String(localized: "rule.unknown.name", defaultValue: "Keep it running", comment: "Fallback rule name")
+        }
+    }
+
+    static func ruleNote(_ id: String) -> String {
+        switch id {
+        case "hire": String(localized: "rule.hire.note", defaultValue: "Take the next person on as soon as the money is there.", comment: "What the rule does")
+        case "equip": String(localized: "rule.equip.note", defaultValue: "Buy the cheapest upgrade first, then the next one.", comment: "What the rule does")
+        case "branch": String(localized: "rule.branch.note", defaultValue: "Open the next unit the moment the market has room.", comment: "What the rule does")
+        default: String(localized: "rule.unknown.note", defaultValue: "Handled without asking you.", comment: "Fallback rule note")
+        }
+    }
+
+    // MARK: - Müdür raporu
+
+    static var managerReportTitle: String {
+        String(localized: "manager.report.title", defaultValue: "The managers were busy", comment: "Report heading shown on return")
+    }
+    static var managerReportAction: String {
+        String(localized: "manager.report.action", defaultValue: "Good", comment: "Dismiss the manager report")
+    }
+    /// "Pop's Coffee — Rosie started work"
+    static func managerHiredLine(_ sector: String, _ name: String) -> String {
+        String(localized: "manager.report.hire", defaultValue: "\(sector) — \(name) started work", comment: "A manager hired someone")
+    }
+    /// "Corner Bakery — deck oven upgraded"
+    static func managerUpgradedLine(_ sector: String, _ item: String) -> String {
+        String(localized: "manager.report.equip", defaultValue: "\(sector) — \(item) upgraded", comment: "A manager bought an upgrade")
+    }
+    /// Çoğul eki yok: 2 ve 4 için aynı çalışmalı.
+    static func managerOpenedLine(_ sector: String, _ count: Int) -> String {
+        String(localized: "manager.report.branch", defaultValue: "\(sector) — a new unit, \(count) open now",
+               comment: "A manager opened a branch. Must read correctly for 2 as well as 4.")
+    }
+    /// "A video took off — Ride the wave"
+    static func managerHandledLine(_ event: String, _ choice: String) -> String {
+        String(localized: "manager.report.event", defaultValue: "\(event) — \(choice)", comment: "A manager answered an event")
+    }
+    static var managerDidSomething: String {
+        String(localized: "manager.report.other", defaultValue: "Something was taken care of", comment: "Fallback report line")
+    }
+
     // MARK: - Dönüş özeti
 
     static var welcomeBack: String {

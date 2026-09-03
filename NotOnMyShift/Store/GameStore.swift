@@ -32,6 +32,9 @@ final class GameStore {
     /// Karar bekleyen olay. Seans başına en fazla bir tane gösterilir.
     var pendingEvent: BalanceConfig.EventSpec?
 
+    /// Müdürlerin son dönüşte yaptıkları. Doluysa rapor gösterilir.
+    var managerReport: [GameEngine.AutomatedAction] = []
+
     /// Son başarısız eylemin sebebi. Kullanıcı bir şey yapınca temizlenir.
     private(set) var lastActionError: GameEngine.ActionError?
 
@@ -152,6 +155,35 @@ final class GameStore {
     /// Bina kaç kata kadar yükselecek — palet geçişi bunun üstünden hesaplanır.
     var plannedFloors: Int { max(1, config.building.paletteFloors) }
 
+    // MARK: - Süreç katmanı
+
+    var hasRoof: Bool { state.hasRoof }
+    var roofCost: Double? { GameEngine.roofCost(for: state, config: config) }
+    var managerCost: Double? { GameEngine.managerCost(for: state, config: config) }
+    var autoResolvesEvents: Bool { state.autoResolvesEvents }
+
+    /// Kural şablonları — hazır tarifler, kural editörü değil.
+    var ruleTemplates: [BalanceConfig.RuleSpec] { config.process.rules }
+
+    /// Seçili katta müdür var mı?
+    var hasManagerOnSelectedFloor: Bool {
+        currentFloor.map { state.hasManager($0.sectorID) } ?? false
+    }
+
+    func isRuleActive(_ ruleID: String) -> Bool {
+        guard let floor = currentFloor else { return false }
+        return state.rules(for: floor.sectorID).contains(ruleID)
+    }
+
+    /// Seçili katın süreç verimi (1,0 → bonus yok).
+    var processBonus: Double {
+        guard let floor = currentFloor else { return 1 }
+        return GameEngine.processBonus(for: floor, state: state, config: config)
+    }
+
+    /// Bonusun tavanı — "daha ne kadar var" bilgisini gösterebilmek için.
+    var maxProcessBonus: Double { max(0, config.process.maxBonus) }
+
     // MARK: - Olaylar ve pazar
 
     /// Süren olay etkileri.
@@ -235,6 +267,7 @@ final class GameStore {
             )
         }
 
+        runManagerRules(reporting: true)
         offerEventIfDue()
         persist()
         startTicking()
@@ -274,6 +307,7 @@ final class GameStore {
         let outcome = GameEngine.resume(state, at: now(), mode: .live, config: config)
         state = outcome.state
 
+        runManagerRules(reporting: false)
         offerEventIfDue()
 
         secondsSinceSave += outcome.creditedSeconds
@@ -283,9 +317,26 @@ final class GameStore {
         }
     }
 
+    /// Müdürlerin kurallarını işlet.
+    ///
+    /// `advance` içinde değil ondan sonra: satın alma oranı değiştirir ve bunu
+    /// kapalı forma katmak motoru döngüye çevirirdi.
+    private func runManagerRules(reporting: Bool) {
+        guard state.hasRoof else { return }
+        let outcome = GameEngine.applyRules(state, config: config)
+        guard !outcome.actions.isEmpty else { return }
+
+        state = outcome.state
+        if reporting {
+            managerReport = outcome.actions
+        }
+    }
+
     /// Sırası gelmiş bir olay varsa sun. Seans başına en fazla bir kez —
     /// olay kısa seansa yakıt, angarya değil.
     private func offerEventIfDue() {
+        // Müdür olayları kendi hallediyorsa oyuncuyu rahatsız etme.
+        guard !state.autoResolvesEvents else { return }
         guard pendingEvent == nil, !hasOfferedEventThisSession else { return }
         guard let event = GameEngine.pendingEvent(for: state, config: config) else { return }
         pendingEvent = event
@@ -349,6 +400,42 @@ final class GameStore {
             lastActionError = error
             Haptics.play(.warning)
         }
+    }
+
+    /// Çatı katını aç — yönetim ofisi.
+    func unlockRoof() {
+        apply(GameEngine.unlockRoof(state, config: config), success: .success)
+    }
+
+    /// Seçili kata müdür ata.
+    func hireManager() {
+        guard let floor = currentFloor else { return }
+        apply(GameEngine.hireManager(forSector: floor.sectorID, state, config: config))
+    }
+
+    /// Seçili katta bir kuralı aç ya da kapat.
+    func setRule(_ ruleID: String, enabled: Bool) {
+        guard let floor = currentFloor else { return }
+        switch GameEngine.setRule(ruleID, enabled: enabled, forSector: floor.sectorID, state, config: config) {
+        case .success(let next):
+            state = next
+            lastActionError = nil
+            Haptics.play(.light)
+            persist()
+        case .failure(let error):
+            lastActionError = error
+            Haptics.play(.warning)
+        }
+    }
+
+    func setAutoResolvesEvents(_ enabled: Bool) {
+        state = GameEngine.setAutoResolvesEvents(enabled, state)
+        Haptics.play(.light)
+        persist()
+    }
+
+    func dismissManagerReport() {
+        managerReport = []
     }
 
     func selectFloor(_ index: Int) {
@@ -424,6 +511,7 @@ final class GameStore {
         firstHireCelebration = nil
         newFloorCelebration = nil
         pendingEvent = nil
+        managerReport = []
         hasOfferedEventThisSession = false
         lastActionError = nil
         didRecoverFromBackup = false

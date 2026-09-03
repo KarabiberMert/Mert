@@ -15,6 +15,7 @@ struct BalanceConfig: Codable, Sendable, Equatable {
     var offline: Offline
     var events: Events
     var market: Market
+    var process: Process
 
     // MARK: - Bina
 
@@ -181,6 +182,43 @@ struct BalanceConfig: Codable, Sendable, Equatable {
         var id: String
         /// Kalan payın bu rakibe düşen ağırlığı.
         var weight: Double
+    }
+
+    // MARK: - Süreç katmanı
+
+    /// Çağ 3: çatı katındaki yönetim ofisi.
+    ///
+    /// Tasarım raporunun en kritik denge kararı (§4) burada yaşıyor:
+    /// **derinlik ceza kaçınma değil, ödüldür.** Süreç kurmayan oyuncu tam
+    /// verimle çalışmaya devam eder — hiçbir şey eksilmez. Süreç kuran oyuncu
+    /// üstüne bonus alır ve daha az dokunur. Tersi (kural kurmayan cezalanır)
+    /// kısa seans hedefini öldürür.
+    struct Process: Codable, Sendable, Equatable {
+        /// Çatı katını açmanın ücreti.
+        var roofCost: Double
+        /// İlk müdürün ücreti.
+        var managerBaseCost: Double
+        /// Her müdürde ücretin çarpanı.
+        var managerCostGrowth: Double
+        /// Açık her kuralın kata kattığı verim.
+        var bonusPerRule: Double
+        /// Verim bonusunun tavanı. Rapor %30 diyor.
+        var maxBonus: Double
+        /// Otomatik alımların kasada bırakacağı yedek: mevcut netin kaç saniyesi.
+        /// Müdür oyuncunun biriktirdiği parayı süpürmesin.
+        var reserveSeconds: Double
+        /// Bir dönüşte müdürün yapabileceği en fazla işlem. Döngü sınırlı kalsın.
+        var maxActionsPerVisit: Int
+        /// Kural şablonları. Kural yazma değil hazır tarif — mobilde kural
+        /// editörü hızla fazla teknik hâle gelir (rapor §10.5).
+        var rules: [RuleSpec]
+
+        func rule(id: String) -> RuleSpec? { rules.first { $0.id == id } }
+    }
+
+    struct RuleSpec: Codable, Sendable, Equatable, Identifiable {
+        /// `hire` · `equip` · `branch` — motor bu kimliğe göre davranır.
+        var id: String
     }
 
     // MARK: - Arama

@@ -146,6 +146,29 @@ def main():
         print(f"  {sector['id']:<8} {' · '.join(needed)}")
     print("  Kural: rakip mevcut geliri asla dusurmez, sadece yeni hucreyi geciktirir.")
 
+    process = config["process"]
+    print(f"\n{'=' * 62}\nSUREC KATMANI\n{'=' * 62}")
+    managers = len(config["sectors"])
+    manager_total = sum(
+        process["managerBaseCost"] * process["managerCostGrowth"] ** index
+        for index in range(managers)
+    )
+    process_cost = process["roofCost"] + manager_total
+    grand_total += process_cost
+    print(f"Cati {process['roofCost']:,.0f} · zemin tepesinde {process['roofCost'] / reference:,.0f} sn uretim")
+    print(f"{'mudur':>5}  {'ucret':>12}")
+    for index in range(managers):
+        cost = process["managerBaseCost"] * process["managerCostGrowth"] ** index
+        print(f"{index + 1:>5}  {cost:>12,.0f}")
+    print(f"Mudurlerin toplami {manager_total:,.0f} · surec katmani {process_cost:,.0f}")
+    rules = len(process["rules"])
+    reachable = min(process["maxBonus"], rules * process["bonusPerRule"])
+    print(f"{rules} kural x %{process['bonusPerRule'] * 100:.0f} → en fazla %{reachable * 100:.0f} "
+          f"(tavan %{process['maxBonus'] * 100:.0f})")
+    print(f"Yedek {human(process['reserveSeconds'])} uretim · donus basina en fazla "
+          f"{process['maxActionsPerVisit']} islem")
+    print("  Kural: surec kurmayan tam verimle calisir; bonus eksiltmez, ekler.")
+
     print(f"\nDepo {warehouse_cost:,.0f}")
     print(f"Her seyin toplami: {grand_total:,.0f}")
     print(f"Tepe net {max(peaks):,.1f}/sn — ama yol boyunca oran cok daha dusuk")

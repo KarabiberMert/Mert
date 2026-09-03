@@ -81,8 +81,6 @@ struct MarketShareView: View {
     }
 
     private func percent(_ value: Double) -> String {
-        (value * 100).formatted(
-            .number.locale(Money.current.numberLocale).precision(.fractionLength(0))
-        ) + "%"
+        Percent.text(value)
     }
 }

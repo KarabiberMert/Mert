@@ -34,6 +34,14 @@ enum GameEngine {
         case unknownEvent
         /// Pazar payı yeni bir hücreye yetmiyor. Rakipler payı kaptı.
         case marketShareTooLow
+        /// Çatı katı zaten açık.
+        case roofAlreadyOpen
+        /// Süreç katmanı için önce çatı katı gerekiyor.
+        case roofRequired
+        /// Bu katta zaten müdür var.
+        case managerAlreadyHired
+        /// Dengede böyle bir kural yok.
+        case unknownRule
     }
 
     // MARK: - Deterministik rastgelelik
@@ -86,12 +94,30 @@ enum GameEngine {
     ///
     /// Her şube aynı kadro ve ekipmanla çalışır (tek tuş kopyalama), dolayısıyla
     /// üretim şube sayısıyla doğrusal çarpılır.
-    static func floorGross(_ floor: FloorState, spec: BalanceConfig.SectorSpec) -> Double {
+    static func floorGross(
+        _ floor: FloorState,
+        spec: BalanceConfig.SectorSpec,
+        bonus: Double = 1
+    ) -> Double {
         let multiplierSum = floor.staff.reduce(0.0) { $0 + $1.rateMultiplier }
         return spec.staff.ratePerSecond
             * multiplierSum
             * equipmentMultiplier(for: floor, spec: spec)
             * Double(branchCount(for: floor, spec: spec))
+            * max(0, bonus)
+    }
+
+    /// Katın süreç verimi. Kural yoksa 1 — **süreç kurmayan oyuncu hiçbir şey
+    /// kaybetmez.** Kural kuran üstüne bonus alır (rapor §4).
+    static func processBonus(for floor: FloorState, state: GameState, config: BalanceConfig) -> Double {
+        let active = state.rules(for: floor.sectorID)
+            .filter { id in config.process.rules.contains { $0.id == id } }
+        guard !active.isEmpty else { return 1 }
+        let bonus = min(
+            max(0, config.process.maxBonus),
+            Double(active.count) * max(0, config.process.bonusPerRule)
+        )
+        return 1 + bonus
     }
 
     /// Katın saniyelik maaş gideri. Her şube kendi kadrosunu tutar.
@@ -106,8 +132,12 @@ enum GameEngine {
 
     /// Katın kasaya kattığı net. Maaş brütü geçerse kat sıfır üretir ama borç
     /// birikmez ve diğer katları da aşağı çekmez.
-    static func floorNet(_ floor: FloorState, spec: BalanceConfig.SectorSpec) -> Double {
-        max(0, floorGross(floor, spec: spec) - floorWages(floor, spec: spec))
+    static func floorNet(
+        _ floor: FloorState,
+        spec: BalanceConfig.SectorSpec,
+        bonus: Double = 1
+    ) -> Double {
+        max(0, floorGross(floor, spec: spec, bonus: bonus) - floorWages(floor, spec: spec))
     }
 
     // MARK: - Bina geneli
@@ -124,7 +154,9 @@ enum GameEngine {
     }
 
     static func grossRate(for state: GameState, config: BalanceConfig) -> Double {
-        sum(state, config) { floorGross($0, spec: $1) }
+        sum(state, config) { floor, spec in
+            floorGross(floor, spec: spec, bonus: processBonus(for: floor, state: state, config: config))
+        }
     }
 
     static func wageRate(for state: GameState, config: BalanceConfig) -> Double {
@@ -144,7 +176,8 @@ enum GameEngine {
     static func productionRate(for state: GameState, config: BalanceConfig) -> Double {
         let buff = eventMultiplier(for: state)
         return sum(state, config) { floor, spec in
-            max(0, floorGross(floor, spec: spec) * buff - floorWages(floor, spec: spec))
+            let bonus = processBonus(for: floor, state: state, config: config)
+            return max(0, floorGross(floor, spec: spec, bonus: bonus) * buff - floorWages(floor, spec: spec))
         }
     }
 
@@ -691,6 +724,217 @@ enum GameEngine {
             if roll <= 0 { return item }
         }
         return items.last
+    }
+
+    // MARK: - Süreç katmanı (Çağ 3)
+
+    /// Çatı katını açmanın ücreti. Zaten açıksa `nil`.
+    static func roofCost(for state: GameState, config: BalanceConfig) -> Double? {
+        state.hasRoof ? nil : max(0, config.process.roofCost)
+    }
+
+    /// Bir sonraki müdürün ücreti. Çatı yoksa `nil`.
+    static func managerCost(for state: GameState, config: BalanceConfig) -> Double? {
+        guard state.hasRoof else { return nil }
+        return max(0, config.process.managerBaseCost)
+            * pow(max(1, config.process.managerCostGrowth), Double(state.managedSectors.count))
+    }
+
+    /// Çatı katını aç — yönetim ofisi. Kendi başına üretmez, süreç katmanını açar.
+    static func unlockRoof(_ state: GameState, config: BalanceConfig) -> Result<GameState, ActionError> {
+        guard let cost = roofCost(for: state, config: config) else { return .failure(.roofAlreadyOpen) }
+        guard state.money >= cost else { return .failure(.insufficientFunds) }
+
+        var next = normalised(state, config: config)
+        next.money -= cost
+        next.hasRoof = true
+        return .success(rewardingShare(next, config: config))
+    }
+
+    /// Bir kata müdür ata. Müdürsüz katta kural çalışmaz.
+    static func hireManager(
+        forSector sectorID: String,
+        _ state: GameState,
+        config: BalanceConfig
+    ) -> Result<GameState, ActionError> {
+        guard state.hasRoof else { return .failure(.roofRequired) }
+        guard state.floors.contains(where: { $0.sectorID == sectorID }) else { return .failure(.unknownFloor) }
+        guard !state.hasManager(sectorID) else { return .failure(.managerAlreadyHired) }
+        guard let cost = managerCost(for: state, config: config) else { return .failure(.roofRequired) }
+        guard state.money >= cost else { return .failure(.insufficientFunds) }
+
+        var next = normalised(state, config: config)
+        next.money -= cost
+        next.managedSectors.append(sectorID)
+        return .success(rewardingShare(next, config: config))
+    }
+
+    /// Bir kuralı aç ya da kapat. Ücretsiz — kural yazmak yatırım değil, tercih.
+    static func setRule(
+        _ ruleID: String,
+        enabled: Bool,
+        forSector sectorID: String,
+        _ state: GameState,
+        config: BalanceConfig
+    ) -> Result<GameState, ActionError> {
+        guard config.process.rule(id: ruleID) != nil else { return .failure(.unknownRule) }
+        guard state.hasManager(sectorID) else { return .failure(.roofRequired) }
+
+        var next = state
+        var rules = next.activeRules[sectorID] ?? []
+        rules.removeAll { $0 == ruleID }
+        if enabled { rules.append(ruleID) }
+        next.activeRules[sectorID] = rules
+        return .success(next)
+    }
+
+    /// Müdür olayları kendi karara bağlasın mı? Saf kolaylık, verim bonusu yok.
+    static func setAutoResolvesEvents(_ enabled: Bool, _ state: GameState) -> GameState {
+        var next = state
+        next.autoResolvesEvents = enabled
+        return next
+    }
+
+    // MARK: - Müdürün işlettiği kurallar
+
+    /// Müdürün yaptığı tek bir iş — dönüş raporunda satır satır gösterilir.
+    struct AutomatedAction: Sendable, Equatable {
+        /// Hangi katta.
+        var sectorID: String
+        /// `hire` · `equip` · `branch` · `event`
+        var rule: String
+        /// Eleman kimliği, ekipman kimliği, şube sırası ya da olay seçimi.
+        var detail: String
+    }
+
+    struct RuleOutcome: Sendable, Equatable {
+        var state: GameState
+        var actions: [AutomatedAction]
+    }
+
+    /// Müdürlerin kurallarını işlet.
+    ///
+    /// `advance` içinde değil, ondan sonra çalışır: satın alma oranı değiştirir
+    /// ve bunu kapalı forma katmak `advance`'i döngüye çevirirdi. Müdür sen
+    /// dönünce raporunu verir.
+    ///
+    /// Alımlar kasada bir yedek bırakır — müdür oyuncunun biriktirdiği parayı
+    /// süpürmesin.
+    static func applyRules(_ state: GameState, config: BalanceConfig) -> RuleOutcome {
+        var current = normalised(state, config: config)
+        guard current.hasRoof else { return RuleOutcome(state: current, actions: []) }
+
+        var actions: [AutomatedAction] = []
+        var budget = max(0, config.process.maxActionsPerVisit)
+
+        while budget > 0, let step = nextAutomatedStep(current, config: config) {
+            budget -= 1
+            current = step.state
+            actions.append(step.action)
+        }
+
+        current.stats.automatedActions += actions.count
+        return RuleOutcome(state: current, actions: actions)
+    }
+
+    private struct AutomatedStep {
+        var state: GameState
+        var action: AutomatedAction
+    }
+
+    /// Sıradaki otomatik iş. Önce olay, sonra katlar sırayla.
+    private static func nextAutomatedStep(
+        _ state: GameState,
+        config: BalanceConfig
+    ) -> AutomatedStep? {
+        if state.autoResolvesEvents,
+           let event = pendingEvent(for: state, config: config),
+           let choice = bestChoice(for: event, state, config: config),
+           case .success(let resolved) = resolveEvent(event.id, choice: choice.id, state, config: config) {
+            return AutomatedStep(
+                state: resolved,
+                action: AutomatedAction(sectorID: "", rule: "event", detail: "\(event.id).\(choice.id)")
+            )
+        }
+
+        let reserve = productionRate(for: state, config: config) * max(0, config.process.reserveSeconds)
+
+        for (index, floor) in state.floors.enumerated() {
+            guard let spec = spec(for: floor, config: config) else { continue }
+            let rules = state.rules(for: floor.sectorID)
+
+            for rule in config.process.rules where rules.contains(rule.id) {
+                switch rule.id {
+                case "hire":
+                    if let cost = hireCost(for: floor, spec: spec),
+                       state.money - cost >= reserve,
+                       spec.staffPool.indices.contains(floor.staff.count),
+                       case .success(let next) = hireStaff(onFloor: index, state, config: config) {
+                        return AutomatedStep(
+                            state: next,
+                            action: AutomatedAction(
+                                sectorID: floor.sectorID,
+                                rule: rule.id,
+                                detail: spec.staffPool[floor.staff.count].id
+                            )
+                        )
+                    }
+                case "equip":
+                    let cheapest = spec.equipment
+                        .compactMap { item -> (String, Double)? in
+                            guard let cost = equipmentUpgradeCost(item.id, for: floor, spec: spec) else { return nil }
+                            return (item.id, cost)
+                        }
+                        .min { $0.1 < $1.1 }
+                    if let cheapest, state.money - cheapest.1 >= reserve,
+                       case .success(let next) = upgradeEquipment(cheapest.0, onFloor: index, state, config: config) {
+                        return AutomatedStep(
+                            state: next,
+                            action: AutomatedAction(sectorID: floor.sectorID, rule: rule.id, detail: cheapest.0)
+                        )
+                    }
+                case "branch":
+                    if let cost = availableBranchCost(onFloor: index, state, config: config),
+                       state.money - cost >= reserve,
+                       case .success(let next) = openBranch(onFloor: index, state, config: config) {
+                        return AutomatedStep(
+                            state: next,
+                            action: AutomatedAction(
+                                sectorID: floor.sectorID,
+                                rule: rule.id,
+                                detail: "\(branchCount(for: next.floors[index], spec: spec))"
+                            )
+                        )
+                    }
+                default:
+                    continue
+                }
+            }
+        }
+        return nil
+    }
+
+    /// Bir olayın en kârlı seçeneği. Müdür bunu seçer.
+    ///
+    /// Süreli etkinin değeri, taban orana göre fazladan kazandırdığı para;
+    /// anlık etkinin değeri doğrudan tutarı. İkisi de aynı birimde ölçülür.
+    static func bestChoice(
+        for spec: BalanceConfig.EventSpec,
+        _ state: GameState,
+        config: BalanceConfig
+    ) -> BalanceConfig.EventChoice? {
+        let rate = productionRate(for: state, config: config)
+        return spec.choices.max { left, right in
+            expectedValue(of: left, rate: rate) < expectedValue(of: right, rate: rate)
+        }
+    }
+
+    private static func expectedValue(of choice: BalanceConfig.EventChoice, rate: Double) -> Double {
+        var value = rate * choice.instantSeconds
+        if choice.durationSeconds > 0 {
+            value += rate * (choice.multiplier - 1) * choice.durationSeconds
+        }
+        return value
     }
 
     /// Panelin çalışacağı katı değiştir.
