@@ -29,6 +29,9 @@ final class GameStore {
     /// Kat açıldığı an. Yeni sektörün kimliğini taşır.
     var newFloorCelebration: String?
 
+    /// Karar bekleyen olay. Seans başına en fazla bir tane gösterilir.
+    var pendingEvent: BalanceConfig.EventSpec?
+
     /// Son başarısız eylemin sebebi. Kullanıcı bir şey yapınca temizlenir.
     private(set) var lastActionError: GameEngine.ActionError?
 
@@ -84,10 +87,9 @@ final class GameStore {
 
     // MARK: - Seçili kata bağlı
 
-    /// Elle bir satışın getirisi — ekipmanla birlikte büyür.
+    /// Elle bir satışın getirisi — ekipmanla ve süren olay etkisiyle birlikte büyür.
     var manualRevenue: Double {
-        guard let floor = currentFloor, let spec = currentSpec else { return 0 }
-        return GameEngine.manualRevenue(for: floor, spec: spec)
+        GameEngine.manualRevenue(onFloor: selectedFloor, state, config: config)
     }
 
     var hireCost: Double? {
@@ -119,9 +121,10 @@ final class GameStore {
         return GameEngine.branchCount(for: floor, spec: spec)
     }
 
+    /// Açılabilecek bir sonraki şubenin ücreti. Kat doluysa ya da pazar payı
+    /// yetmiyorsa `nil`.
     var branchCost: Double? {
-        guard let floor = currentFloor, let spec = currentSpec else { return nil }
-        return GameEngine.branchCost(for: floor, spec: spec)
+        GameEngine.availableBranchCost(onFloor: selectedFloor, state, config: config)
     }
 
     var maxBranches: Int { max(1, currentSpec?.branches.maxCount ?? 1) }
@@ -149,12 +152,48 @@ final class GameStore {
     /// Bina kaç kata kadar yükselecek — palet geçişi bunun üstünden hesaplanır.
     var plannedFloors: Int { max(1, config.building.paletteFloors) }
 
+    // MARK: - Olaylar ve pazar
+
+    /// Süren olay etkileri.
+    var modifiers: [ActiveModifier] { state.modifiers }
+    /// Süren etkilerin toplam çarpanı. 1 ise etki yok.
+    var eventMultiplier: Double { GameEngine.eventMultiplier(for: state) }
+
+    /// Bir etkinin bitmesine kalan oyun süresi.
+    func remainingSeconds(of modifier: ActiveModifier) -> TimeInterval {
+        max(0, modifier.endsAtGameSeconds - state.elapsedGameSeconds)
+    }
+
+    /// Bir olay seçeneğinin anında getireceği/götüreceği tutar.
+    /// Mevcut üretime oranlı olduğu için her çağda anlamlı kalır.
+    func eventInstantAmount(_ choice: BalanceConfig.EventChoice) -> Double {
+        GameEngine.productionRate(for: state, config: config) * choice.instantSeconds
+    }
+
+    var marketShare: Double { GameEngine.marketShare(for: state, config: config) }
+    var competitorShares: [GameEngine.CompetitorShare] {
+        GameEngine.competitorShares(for: state, config: config)
+    }
+
+    /// Pazar payının seçili katta açtığı hücre sayısı.
+    var branchSlots: Int {
+        guard let spec = currentSpec else { return 1 }
+        return GameEngine.branchSlots(for: spec, state: state, config: config)
+    }
+
+    /// Kat dolmadığı hâlde şube açılamıyorsa sebep rakiplerdir.
+    var isBranchBlockedByMarket: Bool {
+        GameEngine.isBranchBlockedByMarket(onFloor: selectedFloor, state, config: config)
+    }
+
     // MARK: - İç durum
 
     private let saves: SaveStore
     private let now: @Sendable () -> Date
     @ObservationIgnored private var ticker: Task<Void, Never>?
     @ObservationIgnored private var secondsSinceSave: TimeInterval = 0
+    /// Olay seans başına bir kez sunulur; uygulama arka plana gidince sıfırlanır.
+    @ObservationIgnored private var hasOfferedEventThisSession = false
 
     /// Otomatik kaydetme aralığı. Arka plana geçişte ayrıca kaydediliyor;
     /// bu, uygulama öldürülürse kaybı sınırlamak için.
@@ -196,6 +235,7 @@ final class GameStore {
             )
         }
 
+        offerEventIfDue()
         persist()
         startTicking()
     }
@@ -203,6 +243,8 @@ final class GameStore {
     /// Uygulama arka plana gidiyor: saati damgala, kaydet, zamanlayıcıyı durdur.
     func handleWillResignActive() {
         stopTicking()
+        // Yeni seans yeni bir olay hakkı demek.
+        hasOfferedEventThisSession = false
         // Ekranda görünen son saniyeleri de yazalım ki `lastSeenAt` tam olsun.
         let outcome = GameEngine.resume(state, at: now(), mode: .live, config: config)
         state = outcome.state
@@ -232,11 +274,23 @@ final class GameStore {
         let outcome = GameEngine.resume(state, at: now(), mode: .live, config: config)
         state = outcome.state
 
+        offerEventIfDue()
+
         secondsSinceSave += outcome.creditedSeconds
         if secondsSinceSave >= autosaveInterval {
             persist()
             secondsSinceSave = 0
         }
+    }
+
+    /// Sırası gelmiş bir olay varsa sun. Seans başına en fazla bir kez —
+    /// olay kısa seansa yakıt, angarya değil.
+    private func offerEventIfDue() {
+        guard pendingEvent == nil, !hasOfferedEventThisSession else { return }
+        guard let event = GameEngine.pendingEvent(for: state, config: config) else { return }
+        pendingEvent = event
+        hasOfferedEventThisSession = true
+        Haptics.play(.medium)
     }
 
     // MARK: - Eylemler
@@ -322,6 +376,29 @@ final class GameStore {
         }
     }
 
+    /// Olayın bir seçeneğini uygula.
+    func resolveEvent(_ eventID: String, choice choiceID: String) {
+        switch GameEngine.resolveEvent(eventID, choice: choiceID, state, config: config) {
+        case .success(let next):
+            state = next
+            pendingEvent = nil
+            lastActionError = nil
+            Haptics.play(.success)
+            persist()
+        case .failure(let error):
+            lastActionError = error
+            pendingEvent = nil
+            Haptics.play(.warning)
+        }
+    }
+
+    /// Olayı karara bağlamadan kapat.
+    func dismissEvent() {
+        state = GameEngine.dismissEvent(state, config: config)
+        pendingEvent = nil
+        persist()
+    }
+
     func dismissOfflineReport() {
         offlineReport = nil
     }
@@ -346,6 +423,8 @@ final class GameStore {
         offlineReport = nil
         firstHireCelebration = nil
         newFloorCelebration = nil
+        pendingEvent = nil
+        hasOfferedEventThisSession = false
         lastActionError = nil
         didRecoverFromBackup = false
         didFailToSave = false

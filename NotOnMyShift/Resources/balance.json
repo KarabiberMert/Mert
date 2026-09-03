@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "building": {
     "paletteFloors": 8
   },
@@ -259,5 +259,116 @@
   },
   "offline": {
     "minimumReportSeconds": 60
+  },
+  "events": {
+    "firstAfterSeconds": 900,
+    "gapSeconds": 21600,
+    "gapJitter": 0.4,
+    "specs": [
+      {
+        "id": "viral",
+        "weight": 1.0,
+        "choices": [
+          {
+            "id": "ride",
+            "multiplier": 3.0,
+            "durationSeconds": 1800,
+            "instantSeconds": 0.0
+          },
+          {
+            "id": "cashIn",
+            "multiplier": 1.0,
+            "durationSeconds": 0.0,
+            "instantSeconds": 900
+          }
+        ]
+      },
+      {
+        "id": "festival",
+        "weight": 1.0,
+        "choices": [
+          {
+            "id": "stayOpen",
+            "multiplier": 1.8,
+            "durationSeconds": 7200,
+            "instantSeconds": 0.0
+          },
+          {
+            "id": "sellStall",
+            "multiplier": 1.0,
+            "durationSeconds": 0.0,
+            "instantSeconds": 1500
+          }
+        ]
+      },
+      {
+        "id": "supplier",
+        "weight": 0.9,
+        "choices": [
+          {
+            "id": "payUp",
+            "multiplier": 1.0,
+            "durationSeconds": 0.0,
+            "instantSeconds": -600
+          },
+          {
+            "id": "switchBeans",
+            "multiplier": 0.85,
+            "durationSeconds": 2700,
+            "instantSeconds": 0.0
+          }
+        ]
+      },
+      {
+        "id": "inspection",
+        "weight": 0.8,
+        "choices": [
+          {
+            "id": "payFine",
+            "multiplier": 1.0,
+            "durationSeconds": 0.0,
+            "instantSeconds": -900
+          },
+          {
+            "id": "closeUp",
+            "multiplier": 0.5,
+            "durationSeconds": 1800,
+            "instantSeconds": 0.0
+          }
+        ]
+      },
+      {
+        "id": "apprentice",
+        "weight": 0.7,
+        "choices": [
+          {
+            "id": "teachThem",
+            "multiplier": 1.4,
+            "durationSeconds": 5400,
+            "instantSeconds": 0.0
+          }
+        ]
+      }
+    ]
+  },
+  "market": {
+    "startShare": 0.55,
+    "minimumShare": 0.2,
+    "driftPerSecond": 1.4e-06,
+    "sharePerPurchase": 0.035,
+    "competitors": [
+      {
+        "id": "cedar",
+        "weight": 1.4
+      },
+      {
+        "id": "mill",
+        "weight": 1.0
+      },
+      {
+        "id": "percolate",
+        "weight": 0.7
+      }
+    ]
   }
 }

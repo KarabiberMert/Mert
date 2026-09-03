@@ -9,6 +9,10 @@ struct CashHeaderView: View {
     let grossRate: Double
     let wageRate: Double
     let isAutomated: Bool
+    /// Süren olay etkilerinin toplam çarpanı. 1 ise etki yok.
+    let eventMultiplier: Double
+    /// En uzun süren etkiye kalan oyun süresi.
+    let eventRemaining: TimeInterval?
     /// Elle satışta kısa bir nefes. Oyuncunun eylemine cevap.
     let bumped: Bool
 
@@ -23,6 +27,10 @@ struct CashHeaderView: View {
                 .foregroundStyle(Palette.ink)
                 .scaleEffect(bumped ? 1.04 : 1, anchor: .leading)
                 .accessibilityLabel("\(L.cash): \(Money.text(money))")
+
+            if eventMultiplier != 1 {
+                eventBadge
+            }
 
             if isAutomated {
                 Text(L.perSecond(Money.preciseText(netRate)))
@@ -43,5 +51,24 @@ struct CashHeaderView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Süren olay etkisi. Hızlandıran fıstık yeşili, yavaşlatan mürekkep —
+    /// renk tek başına iyi mi kötü mü olduğunu söyler.
+    private var eventBadge: some View {
+        HStack(spacing: 6) {
+            Text(L.equipmentOutput(multiplierText(eventMultiplier)))
+            if let remaining = eventRemaining, remaining > 0 {
+                Text(L.eventRemaining(DurationText.text(remaining)))
+                    .foregroundStyle(Palette.inkFaint)
+            }
+        }
+        .font(Typography.label(13))
+        .foregroundStyle(eventMultiplier > 1 ? Palette.pistachio : Palette.inkSoft)
+        .padding(.top, 2)
+    }
+
+    private func multiplierText(_ value: Double) -> String {
+        value.formatted(.number.locale(Money.current.numberLocale).precision(.fractionLength(0...2)))
     }
 }

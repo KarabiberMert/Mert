@@ -22,6 +22,8 @@ struct RootView: View {
                     grossRate: store.grossRate,
                     wageRate: store.wageRate,
                     isAutomated: store.state.isAutomated,
+                    eventMultiplier: store.eventMultiplier,
+                    eventRemaining: store.modifiers.map { store.remainingSeconds(of: $0) }.max(),
                     bumped: cashBumped
                 )
                 .padding(.horizontal, 22)
@@ -67,7 +69,15 @@ struct RootView: View {
             OfflineReportView(report: report) { store.dismissOfflineReport() }
         }
         .overlay {
-            if let member = store.firstHireCelebration {
+            if let event = store.pendingEvent {
+                EventCardView(
+                    event: event,
+                    instantAmount: { store.eventInstantAmount($0) },
+                    onChoose: { store.resolveEvent(event.id, choice: $0) },
+                    onDismiss: { store.dismissEvent() }
+                )
+                .transition(.opacity)
+            } else if let member = store.firstHireCelebration {
                 MomentBannerView(
                     title: L.startedWork(L.staffName(member.id)),
                     highlight: L.staffTrait(member.id),
@@ -96,6 +106,10 @@ struct RootView: View {
         .animation(
             reduceMotion ? nil : .easeOut(duration: 0.2),
             value: store.newFloorCelebration
+        )
+        .animation(
+            reduceMotion ? nil : .easeOut(duration: 0.2),
+            value: store.pendingEvent?.id
         )
     }
 

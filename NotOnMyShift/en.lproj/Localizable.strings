@@ -143,3 +143,45 @@
 "equipment.mixer.note" = "Kneads in ten minutes what took an hour.";
 "equipment.case.name" = "Display case";
 "equipment.case.note" = "Nothing goes stale on the shelf any more.";
+
+/* Events */
+"event.viral.title" = "A video took off";
+"event.viral.body" = "Someone filmed your counter and half the town has seen it.";
+"event.viral.ride" = "Ride the wave";
+"event.viral.cashIn" = "Sell the moment";
+"event.festival.title" = "There is a festival on the street";
+"event.festival.body" = "They closed the road. Everyone is walking past your door.";
+"event.festival.stayOpen" = "Stay open late";
+"event.festival.sellStall" = "Rent out a stall";
+"event.supplier.title" = "The supplier put the price up";
+"event.supplier.body" = "Same beans, new invoice.";
+"event.supplier.payUp" = "Just pay it";
+"event.supplier.switchBeans" = "Switch suppliers";
+"event.inspection.title" = "Health inspection";
+"event.inspection.body" = "Everything is fine. The paperwork is not.";
+"event.inspection.payFine" = "Pay the fine";
+"event.inspection.closeUp" = "Close for the afternoon";
+"event.apprentice.title" = "Someone wants to learn";
+"event.apprentice.body" = "A kid keeps coming by and asking questions.";
+"event.apprentice.teachThem" = "Teach them";
+"event.unknown.title" = "Something came up";
+"event.unknown.body" = "It needs a decision, and only one.";
+"event.unknown.choice" = "Deal with it";
+"event.dismiss" = "Not now";
+"event.lasting" = "for %@";
+"event.now" = "%@ now";
+"event.remaining" = "%@ left";
+
+/* Competition */
+"market.title" = "Market share";
+"market.you" = "You";
+"market.blocked" = "The competition took the next unit. Invest and your share comes back.";
+"market.slots" = "Units unlocked: %lld";
+"competitor.cedar.name" = "Cedar Holdings";
+"competitor.cedar.quip" = "Their founder mentions his father in every interview.";
+"competitor.mill.name" = "Grindhouse Group";
+"competitor.mill.quip" = "Forty branches. Thirty-nine look identical.";
+"competitor.percolate.name" = "Percolate";
+"competitor.percolate.quip" = "An app-first coffee experience, whatever that means.";
+"competitor.unknown.name" = "Someone else";
+"competitor.unknown.quip" = "Quietly opening shops somewhere.";

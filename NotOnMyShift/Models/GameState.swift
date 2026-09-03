@@ -11,8 +11,12 @@ import Foundation
 struct GameState: Codable, Sendable, Equatable {
 
     /// 1 → Faz 0-1 · 2 → ilk eleman kutlaması · 3 → ekipman ve şubeler
-    /// 4 → kat kat bina (tek dükkân yerine `floors`)
-    static let currentSchemaVersion = 4
+    /// 4 → kat kat bina (tek dükkân yerine `floors`) · 5 → olaylar ve pazar
+    static let currentSchemaVersion = 5
+
+    /// `marketShare` ve `nextEventAtGameSeconds` için "henüz kurulmadı" işareti.
+    /// Kod çözücünün dengeye erişimi yok; ilk değerleri motor koyuyor.
+    static let unset: Double = -1
 
     /// Şema 4 öncesi kayıtlarda kat yoktu; eldeki dükkân zemin kattır.
     static let groundSectorID = "coffee"
@@ -53,6 +57,20 @@ struct GameState: Codable, Sendable, Equatable {
     /// Panelin üstünde çalıştığı kat. Sınır dışına çıkarsa kırpılır.
     var selectedFloor: Int
 
+    /// Süren olay etkileri. Üretim oranını çarparlar ve bitiş anları
+    /// `advance` için kırılım noktasıdır. (şema 5)
+    var modifiers: [ActiveModifier]
+
+    /// Sıradaki olayın çıkacağı oyun anı. `unset` ise motor planlar.
+    var nextEventAtGameSeconds: TimeInterval
+
+    /// Olay seçiminin deterministik tohumu. Motor saf kalsın diye rastgelelik
+    /// buradan türetilir, `Date()` ya da sistem RNG'sinden değil.
+    var eventSeed: UInt64
+
+    /// Oyuncunun pazar payı (0..1). `unset` ise motor başlangıç payını koyar.
+    var marketShare: Double
+
     var stats: Stats
 
     // MARK: - Yeni oyun
@@ -71,6 +89,10 @@ struct GameState: Codable, Sendable, Equatable {
             hasCelebratedFirstHire: false,
             floors: [FloorState(sectorID: sectorID)],
             selectedFloor: 0,
+            modifiers: [],
+            nextEventAtGameSeconds: unset,
+            eventSeed: Self.seed(from: now),
+            marketShare: unset,
             stats: Stats()
         )
     }
@@ -79,6 +101,12 @@ struct GameState: Codable, Sendable, Equatable {
 
     /// İş kendi kendine yürüyor mu? (Çağ 0 → Çağ 1 geçişi)
     var isAutomated: Bool { floors.contains { !$0.staff.isEmpty } }
+
+    /// Deterministik tohum. Kayıt başına sabit, kayıtlar arasında farklı.
+    static func seed(from date: Date) -> UInt64 {
+        let ticks = UInt64(bitPattern: Int64(date.timeIntervalSince1970 * 1_000))
+        return ticks == 0 ? 0x2545F4914F6CDD1D : ticks
+    }
 
     /// Sınır içine kırpılmış seçili kat indeksi.
     var safeSelectedFloor: Int {
@@ -97,6 +125,7 @@ struct GameState: Codable, Sendable, Equatable {
         case schemaVersion, characterID, money, lifetimeEarnings
         case elapsedGameSeconds, lastSeenAt, startedAt, warehouseLevel, stats
         case hasCelebratedFirstHire, floors, selectedFloor
+        case modifiers, nextEventAtGameSeconds, eventSeed, marketShare
         // Şema 3 ve öncesinden kalan düz alanlar — sadece göç için okunur.
         case staff, equipmentLevels, branchCount
     }
@@ -113,6 +142,10 @@ struct GameState: Codable, Sendable, Equatable {
         hasCelebratedFirstHire: Bool,
         floors: [FloorState],
         selectedFloor: Int,
+        modifiers: [ActiveModifier],
+        nextEventAtGameSeconds: TimeInterval,
+        eventSeed: UInt64,
+        marketShare: Double,
         stats: Stats
     ) {
         self.schemaVersion = schemaVersion
@@ -126,6 +159,10 @@ struct GameState: Codable, Sendable, Equatable {
         self.hasCelebratedFirstHire = hasCelebratedFirstHire
         self.floors = floors
         self.selectedFloor = selectedFloor
+        self.modifiers = modifiers
+        self.nextEventAtGameSeconds = nextEventAtGameSeconds
+        self.eventSeed = eventSeed
+        self.marketShare = marketShare
         self.stats = stats
     }
 
@@ -160,6 +197,16 @@ struct GameState: Codable, Sendable, Equatable {
 
         selectedFloor = try container.decodeIfPresent(Int.self, forKey: .selectedFloor) ?? 0
 
+        // Şema 5 öncesi kayıtlarda olay ve pazar yoktu. Eksik değerler
+        // `unset` kalır; ilk ilerlemede motor dengeden doldurur.
+        modifiers = try container.decodeIfPresent([ActiveModifier].self, forKey: .modifiers) ?? []
+        nextEventAtGameSeconds = try container.decodeIfPresent(
+            TimeInterval.self, forKey: .nextEventAtGameSeconds
+        ) ?? Self.unset
+        eventSeed = try container.decodeIfPresent(UInt64.self, forKey: .eventSeed)
+            ?? Self.seed(from: startedAt)
+        marketShare = try container.decodeIfPresent(Double.self, forKey: .marketShare) ?? Self.unset
+
         // Şema 1 kayıtlarında bu alan yok. Zaten eleman tutmuşsa kutlamayı
         // tekrar göstermeyelim — o an bir kez yaşanır.
         hasCelebratedFirstHire = try container.decodeIfPresent(Bool.self, forKey: .hasCelebratedFirstHire)
@@ -181,6 +228,10 @@ struct GameState: Codable, Sendable, Equatable {
         try container.encode(hasCelebratedFirstHire, forKey: .hasCelebratedFirstHire)
         try container.encode(floors, forKey: .floors)
         try container.encode(selectedFloor, forKey: .selectedFloor)
+        try container.encode(modifiers, forKey: .modifiers)
+        try container.encode(nextEventAtGameSeconds, forKey: .nextEventAtGameSeconds)
+        try container.encode(eventSeed, forKey: .eventSeed)
+        try container.encode(marketShare, forKey: .marketShare)
         try container.encode(stats, forKey: .stats)
     }
 }
@@ -235,6 +286,42 @@ struct FloorState: Codable, Sendable, Equatable, Identifiable {
     }
 
     var isAutomated: Bool { !staff.isEmpty }
+}
+
+// MARK: - Olay etkisi
+
+/// Süren bir olay etkisi. Bitiş anı oyun saniyesi cinsindendir; böylece
+/// çevrimdışı geçen sürede de doğru anda sona erer.
+struct ActiveModifier: Codable, Sendable, Equatable, Identifiable {
+
+    /// Hangi olaydan ve hangi seçimden geldiği — metni buradan çözülür.
+    var eventID: String
+    var choiceID: String
+    /// Üretim çarpanı.
+    var multiplier: Double
+    /// `elapsedGameSeconds` cinsinden bitiş anı.
+    var endsAtGameSeconds: TimeInterval
+
+    var id: String { "\(eventID).\(choiceID).\(endsAtGameSeconds)" }
+
+    private enum CodingKeys: String, CodingKey {
+        case eventID, choiceID, multiplier, endsAtGameSeconds
+    }
+
+    init(eventID: String, choiceID: String, multiplier: Double, endsAtGameSeconds: TimeInterval) {
+        self.eventID = eventID
+        self.choiceID = choiceID
+        self.multiplier = multiplier
+        self.endsAtGameSeconds = endsAtGameSeconds
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        eventID = try container.decodeIfPresent(String.self, forKey: .eventID) ?? "unknown"
+        choiceID = try container.decodeIfPresent(String.self, forKey: .choiceID) ?? "unknown"
+        multiplier = try container.decodeIfPresent(Double.self, forKey: .multiplier) ?? 1
+        endsAtGameSeconds = try container.decodeIfPresent(TimeInterval.self, forKey: .endsAtGameSeconds) ?? 0
+    }
 }
 
 // MARK: - Kadro
@@ -293,20 +380,26 @@ struct Stats: Codable, Sendable, Equatable {
     /// Depo tavanına takılıp yanan toplam saniye. Yükseltme motivasyonu bu sayıdan gelir.
     var wastedOfflineSeconds: TimeInterval
 
+    /// Karara bağlanan olay sayısı. (şema 5)
+    var eventsResolved: Int
+
     private enum CodingKeys: String, CodingKey {
         case manualSales, offlineReturns, lastOfflineEarnings, wastedOfflineSeconds
+        case eventsResolved
     }
 
     init(
         manualSales: Int = 0,
         offlineReturns: Int = 0,
         lastOfflineEarnings: Double = 0,
-        wastedOfflineSeconds: TimeInterval = 0
+        wastedOfflineSeconds: TimeInterval = 0,
+        eventsResolved: Int = 0
     ) {
         self.manualSales = manualSales
         self.offlineReturns = offlineReturns
         self.lastOfflineEarnings = lastOfflineEarnings
         self.wastedOfflineSeconds = wastedOfflineSeconds
+        self.eventsResolved = eventsResolved
     }
 
     init(from decoder: any Decoder) throws {
@@ -315,5 +408,6 @@ struct Stats: Codable, Sendable, Equatable {
         offlineReturns = try container.decodeIfPresent(Int.self, forKey: .offlineReturns) ?? 0
         lastOfflineEarnings = try container.decodeIfPresent(Double.self, forKey: .lastOfflineEarnings) ?? 0
         wastedOfflineSeconds = try container.decodeIfPresent(TimeInterval.self, forKey: .wastedOfflineSeconds) ?? 0
+        eventsResolved = try container.decodeIfPresent(Int.self, forKey: .eventsResolved) ?? 0
     }
 }

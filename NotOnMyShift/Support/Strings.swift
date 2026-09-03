@@ -281,6 +281,96 @@ enum L {
         String(localized: "firstHire.action", defaultValue: "Good", comment: "Dismiss the celebration")
     }
 
+    // MARK: - Olaylar
+
+    static func eventTitle(_ id: String) -> String {
+        switch id {
+        case "viral": String(localized: "event.viral.title", defaultValue: "A video took off", comment: "Event heading")
+        case "festival": String(localized: "event.festival.title", defaultValue: "There is a festival on the street", comment: "Event heading")
+        case "supplier": String(localized: "event.supplier.title", defaultValue: "The supplier put the price up", comment: "Event heading")
+        case "inspection": String(localized: "event.inspection.title", defaultValue: "Health inspection", comment: "Event heading")
+        case "apprentice": String(localized: "event.apprentice.title", defaultValue: "Someone wants to learn", comment: "Event heading")
+        default: String(localized: "event.unknown.title", defaultValue: "Something came up", comment: "Fallback event heading")
+        }
+    }
+
+    static func eventBody(_ id: String) -> String {
+        switch id {
+        case "viral": String(localized: "event.viral.body", defaultValue: "Someone filmed your counter and half the town has seen it.", comment: "Event description")
+        case "festival": String(localized: "event.festival.body", defaultValue: "They closed the road. Everyone is walking past your door.", comment: "Event description")
+        case "supplier": String(localized: "event.supplier.body", defaultValue: "Same beans, new invoice.", comment: "Event description")
+        case "inspection": String(localized: "event.inspection.body", defaultValue: "Everything is fine. The paperwork is not.", comment: "Event description")
+        case "apprentice": String(localized: "event.apprentice.body", defaultValue: "A kid keeps coming by and asking questions.", comment: "Event description")
+        default: String(localized: "event.unknown.body", defaultValue: "It needs a decision, and only one.", comment: "Fallback event description")
+        }
+    }
+
+    static func eventChoice(_ eventID: String, _ choiceID: String) -> String {
+        switch "\(eventID).\(choiceID)" {
+        case "viral.ride": String(localized: "event.viral.ride", defaultValue: "Ride the wave", comment: "Event choice")
+        case "viral.cashIn": String(localized: "event.viral.cashIn", defaultValue: "Sell the moment", comment: "Event choice")
+        case "festival.stayOpen": String(localized: "event.festival.stayOpen", defaultValue: "Stay open late", comment: "Event choice")
+        case "festival.sellStall": String(localized: "event.festival.sellStall", defaultValue: "Rent out a stall", comment: "Event choice")
+        case "supplier.payUp": String(localized: "event.supplier.payUp", defaultValue: "Just pay it", comment: "Event choice")
+        case "supplier.switchBeans": String(localized: "event.supplier.switchBeans", defaultValue: "Switch suppliers", comment: "Event choice")
+        case "inspection.payFine": String(localized: "event.inspection.payFine", defaultValue: "Pay the fine", comment: "Event choice")
+        case "inspection.closeUp": String(localized: "event.inspection.closeUp", defaultValue: "Close for the afternoon", comment: "Event choice")
+        case "apprentice.teachThem": String(localized: "event.apprentice.teachThem", defaultValue: "Teach them", comment: "Event choice")
+        default: String(localized: "event.unknown.choice", defaultValue: "Deal with it", comment: "Fallback event choice")
+        }
+    }
+
+    static var eventDismiss: String {
+        String(localized: "event.dismiss", defaultValue: "Not now", comment: "Close the event without deciding")
+    }
+    /// "for 30 minutes"
+    static func eventLasting(_ duration: String) -> String {
+        String(localized: "event.lasting", defaultValue: "for \(duration)", comment: "How long an event effect lasts")
+    }
+    /// "$120 now"
+    static func eventNow(_ amount: String) -> String {
+        String(localized: "event.now", defaultValue: "\(amount) now", comment: "Instant money from an event")
+    }
+    /// "12 minutes left"
+    static func eventRemaining(_ duration: String) -> String {
+        String(localized: "event.remaining", defaultValue: "\(duration) left", comment: "Time left on an active event effect")
+    }
+
+    // MARK: - Rakipler
+
+    static var marketTitle: String {
+        String(localized: "market.title", defaultValue: "Market share", comment: "Market section heading")
+    }
+    static var marketYou: String {
+        String(localized: "market.you", defaultValue: "You", comment: "The player's slice of the market")
+    }
+    static var marketBlocked: String {
+        String(localized: "market.blocked", defaultValue: "The competition took the next unit. Invest and your share comes back.",
+               comment: "Why a branch cannot be opened. Must read as a delay, never as a loss.")
+    }
+    /// Çoğul eki yok.
+    static func marketSlots(_ count: Int) -> String {
+        String(localized: "market.slots", defaultValue: "Units unlocked: \(count)", comment: "How many branch slots the share allows")
+    }
+
+    static func competitorName(_ id: String) -> String {
+        switch id {
+        case "cedar": String(localized: "competitor.cedar.name", defaultValue: "Cedar Holdings", comment: "Rival company name")
+        case "mill": String(localized: "competitor.mill.name", defaultValue: "Grindhouse Group", comment: "Rival company name")
+        case "percolate": String(localized: "competitor.percolate.name", defaultValue: "Percolate", comment: "Rival company name")
+        default: String(localized: "competitor.unknown.name", defaultValue: "Someone else", comment: "Fallback rival name")
+        }
+    }
+
+    static func competitorQuip(_ id: String) -> String {
+        switch id {
+        case "cedar": String(localized: "competitor.cedar.quip", defaultValue: "Their founder mentions his father in every interview.", comment: "Rival company joke")
+        case "mill": String(localized: "competitor.mill.quip", defaultValue: "Forty branches. Thirty-nine look identical.", comment: "Rival company joke")
+        case "percolate": String(localized: "competitor.percolate.quip", defaultValue: "An app-first coffee experience, whatever that means.", comment: "Rival company joke")
+        default: String(localized: "competitor.unknown.quip", defaultValue: "Quietly opening shops somewhere.", comment: "Fallback rival joke")
+        }
+    }
+
     // MARK: - Dönüş özeti
 
     static var welcomeBack: String {

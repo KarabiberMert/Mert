@@ -18,8 +18,9 @@ göre karar verme.
 `Views → GameStore → GameEngine → GameState + BalanceConfig`. Bağımlılık tek yönlü.
 
 - `GameEngine` saf kalır: `Date()`, `Timer`, `UserDefaults`, dosya erişimi yok.
-- `advance(by:)` kapalı formdur; tick döngüsüne dönüştürme. Kırılım noktası
-  gerekirse segment segment hesapla.
+- `advance(by:)` kapalı formdur; tick döngüsüne dönüştürme. Kırılım noktaları
+  (süren olay etkilerinin bitişi) arasında oran sabittir ve tek çarpma yapılır.
+  Yeni bir kırılım kaynağı eklerken `nextBreakpoint`'e ekle, döngüye çevirme.
 - Ekonomi her zaman `lastSeenAt` zaman damgasından türetilir. `Timer.publish`
   üstüne ekonomi kurma; zamanlayıcı sadece "ne zaman yeniden hesapla" der.
 - Denge sayıları `Resources/balance.json` içinde. View'a ya da Swift'e sayı gömme.
@@ -46,6 +47,27 @@ kârdaki katı aşağı çekmez ve oyuncu asla geri gitmez.
 - **Kat açmak sektöre girmektir.** Yeni kat boş gelir: kendi kadrosunu ve
   ekipmanını sıfırdan kurarsın. Bir sektörün ekipmanı başka katta çalışmaz.
 - Dengeden kalkmış bir sektörün katı sessizce sıfır üretir, çökmez.
+- Olay çarpanı **brüte** uygulanır, maaşa değil: yavaşlatan olayda maaş yine
+  ödenir, hızlandıranda maaş artmaz.
+- Olayların anlık etkisi mutlak para değil, **mevcut netin kaç saniyesi**
+  olarak yazılır — aynı olay Çağ 0'da da dört şubeli fırında da anlamlı kalır.
+  Kasa asla eksiye düşmez.
+
+## Rakipler — cezalandırmama kuralı
+
+Rapor §6'nın kuralı pazarlığa kapalı: **rakip oyuncunun mevcut gelirini asla
+düşürmez.** Sadece açılabilecek yeni hücre sayısını kısar.
+
+- Açılmış şube hiçbir zaman kapanmaz, üretim hiçbir zaman geri gitmez.
+- Pay zamanla rakiplere kayar, her yatırımda geri gelir.
+- Metin bunu "gecikme" olarak anlatır, "kayıp" olarak değil. `market.blocked`
+  anahtarını değiştirirken bu tonu koru.
+
+## Rastgelelik
+
+Motor saf kalmalı: sistem RNG'si ya da `Date()` kullanma. Rastgelelik kayıttaki
+`eventSeed`'den `GameEngine.DeterministicRandom` ile türetilir — aynı kayıt aynı
+olayları verir ve testler deterministik kalır.
 
 ## Diller
 
@@ -96,7 +118,7 @@ kurumsal katman. Hardal vurgusu iki palette de aynı — para hep aynı renk.
 
 ## Fazlar
 
-Faz 0 (bitti) → 1 (bitti) → 2 (bitti) → 3 (bitti): ikinci sektör ve kat açma → 4: olaylar ve rakipler → 5: süreç katmanı →
+Faz 0 (bitti) → 1 (bitti) → 2 (bitti) → 3 (bitti) → 4 (bitti): olaylar ve rakipler → 5: süreç katmanı →
 6: yumuşak prestij ve final → 7: monetizasyon ve App Store.
 
 Bir fazı bitirmeden sonrakine geçme. Her fazın sonunda proje temiz derlenmeli.

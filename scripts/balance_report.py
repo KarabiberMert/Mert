@@ -112,6 +112,40 @@ def main():
     warehouse_cost = sum(level["cost"] for level in config["warehouse"]["levels"])
     grand_total += warehouse_cost
 
+    events = config["events"]
+    market = config["market"]
+    reference_rate = peaks[0] if peaks else 1
+
+    print(f"\n{'=' * 62}\nOLAYLAR\n{'=' * 62}")
+    print(f"Ilk olay {human(events['firstAfterSeconds'])} sonra · aralik "
+          f"{human(events['gapSeconds'])} (+-%{events['gapJitter'] * 100:.0f}) "
+          f"→ gunde ~{86400 / events['gapSeconds']:.0f} firsat, seansta en fazla 1")
+    print(f"{'olay':<12} {'secenek':<14} {'carpan':>7} {'sure':>9}  {'anlik (zemin tepe)':>22}")
+    for spec in events["specs"]:
+        for index, choice in enumerate(spec["choices"]):
+            label = spec["id"] if index == 0 else ""
+            duration = human(choice["durationSeconds"]) if choice["durationSeconds"] else "-"
+            multiplier = f"x{choice['multiplier']:.2f}" if choice["multiplier"] != 1 else "-"
+            instant = choice["instantSeconds"] * reference_rate
+            money = f"{instant:+,.0f}" if choice["instantSeconds"] else "-"
+            print(f"{label:<12} {choice['id']:<14} {multiplier:>7} {duration:>9}  {money:>22}")
+
+    print(f"\n{'=' * 62}\nPAZAR\n{'=' * 62}")
+    drift_days = (market["startShare"] - market["minimumShare"]) / market["driftPerSecond"] / 86400
+    print(f"Baslangic %{market['startShare'] * 100:.0f} · taban %{market['minimumShare'] * 100:.0f}")
+    print(f"Kayma gunde {market['driftPerSecond'] * 86400 * 100:.1f} puan → tabana {drift_days:.1f} gunde iner")
+    print(f"Her yatirim +{market['sharePerPurchase'] * 100:.1f} puan "
+          f"→ tabandan basa {(market['startShare'] - market['minimumShare']) / market['sharePerPurchase']:.0f} yatirim")
+    for sector in config["sectors"]:
+        maximum = sector["branches"]["maxCount"]
+        span = 1 - market["minimumShare"]
+        needed = []
+        for slot in range(2, maximum + 1):
+            progress = (slot - 1 - 0.5) / (maximum - 1) if maximum > 1 else 0
+            needed.append(f"{slot}. hucre %{(market['minimumShare'] + progress * span) * 100:.0f}")
+        print(f"  {sector['id']:<8} {' · '.join(needed)}")
+    print("  Kural: rakip mevcut geliri asla dusurmez, sadece yeni hucreyi geciktirir.")
+
     print(f"\nDepo {warehouse_cost:,.0f}")
     print(f"Her seyin toplami: {grand_total:,.0f}")
     print(f"Tepe net {max(peaks):,.1f}/sn — ama yol boyunca oran cok daha dusuk")

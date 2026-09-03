@@ -8,9 +8,9 @@ kat yükseliyor.
 Tam tasarım dokümanı: [`docs/oyun-tasarim-raporu.md`](docs/oyun-tasarim-raporu.md)
 Geliştirme yönergesi: [`docs/claude-code-prompt.md`](docs/claude-code-prompt.md)
 
-**Durum: Faz 3 — ikinci sektör ve kat açma.**
-Bina artık kat kat yükseliyor: her kat bir sektör, kat içindeki hücreler o
-sektörün şubeleri. İki sektör açık (kahve, fırın).
+**Durum: Faz 4 — olaylar ve rakipler.**
+Bina kat kat yükseliyor, olaylar kısa seansa yakıt veriyor ve isimli rakipler
+pazar payı için yarışıyor.
 
 ---
 
@@ -71,7 +71,13 @@ Xcode içinden ⌘U.
     ona dokunmak satış yapar, başka bir kata dokunmak onu seçer.
 11. Üst katın paleti hafifçe soğuk: emaye mavi betona, hardal tezgâh cam griye
     kayar. Hardal vurgusu iki katta da aynı.
-12. Ayarlar → Erişilebilirlik → **Hareketi Azalt**'ı aç: süzülen rakam,
+12. Bir süre oynayınca **olay** kartı çıkar: bir ya da iki dokunuşluk bir
+    karar. Süreli bir etki seçersen kasa satırında çarpan ve kalan süre görünür.
+    "Şimdi değil" her zaman açık; olay seans başına en fazla bir kez çıkar.
+13. **Bina** şeridinde pazar payı çubuğu ve isimli rakipler var. Uzun süre
+    uğramazsan pay rakiplere kayar — **paran azalmaz**, sadece yeni hücre
+    açma hakkın daralır. Yatırım yapınca pay geri gelir.
+14. Ayarlar → Erişilebilirlik → **Hareketi Azalt**'ı aç: süzülen rakam,
     yerleşme ve bina yükselme animasyonu susar, oyun aynı çalışır.
 
 ### Dil kontrolü
@@ -167,7 +173,29 @@ Ekipman maaş ödemez, eleman öder — tasarım raporunun istediği seçim bura
 doğar: makine bir kez ödenir ve her şeyi çarpar. Şube ise kopyadır; kadroyu ve
 ekipmanı devralır, ayrı ayarı yoktur.
 
-`python3 scripts/balance_report.py` bu tablonun sayısal karşılığını yazar.
+`python3 scripts/balance_report.py` bu tablonun sayısal karşılığını, olay
+etkilerini ve pazar eşiklerini yazar.
+
+### Olaylar
+
+Süren bir olay etkisi üretim oranını kırar, dolayısıyla `advance` artık
+**segment segment kapalı form**: kırılım noktaları arasında oran sabit olduğu
+için her segmentte tek çarpma yapılır. Etki yoksa tek segment kalır. Adım sayısı
+etki sayısı + 1'i geçemez — tick döngüsü değil.
+
+Olay çarpanı brüte uygulanır, maaşa değil. Anlık etkiler mutlak para değil
+"mevcut netin kaç saniyesi" olarak yazılır; böylece aynı olay her çağda anlamlı
+kalır. Kasa asla eksiye düşmez.
+
+Olay seçimi kayıttaki tohumdan türetilir (`GameEngine.DeterministicRandom`) —
+motor saf kalır, aynı kayıt aynı olayları verir.
+
+### Rakipler
+
+Tasarım raporunun cezalandırmama kuralı (§6) koda gömülü: **rakip mevcut geliri
+asla düşürmez.** Pazar payı yalnızca *yeni* hücre açma hakkını belirler; açılmış
+şube kapanmaz. Pay zamanla rakiplere kayar ve her yatırımda geri gelir, yani
+kaçırılan şey para değil fırsattır.
 
 ### Bina, katlar ve şubeler
 

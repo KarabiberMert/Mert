@@ -30,6 +30,31 @@ enum GameEngine {
         case unknownSector
         /// Bütün katlar açıldı.
         case allFloorsOpen
+        /// Dengede böyle bir olay ya da seçenek yok.
+        case unknownEvent
+        /// Pazar payı yeni bir hücreye yetmiyor. Rakipler payı kaptı.
+        case marketShareTooLow
+    }
+
+    // MARK: - Deterministik rastgelelik
+
+    /// SplitMix64. Motor saf kalsın diye rastgelelik sistem RNG'sinden değil,
+    /// kayıtta duran tohumdan türetilir — aynı kayıt aynı olayları verir.
+    struct DeterministicRandom {
+        var seed: UInt64
+
+        mutating func next() -> UInt64 {
+            seed &+= 0x9E37_79B9_7F4A_7C15
+            var z = seed
+            z = (z ^ (z >> 30)) &* 0xBF58_476D_1CE4_E5B9
+            z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
+            return z ^ (z >> 31)
+        }
+
+        /// 0..<1
+        mutating func unit() -> Double {
+            Double(next() >> 11) * (1.0 / 9_007_199_254_740_992.0)
+        }
     }
 
     // MARK: - Kat başına türetilenler
@@ -106,10 +131,84 @@ enum GameEngine {
         sum(state, config) { floorWages($0, spec: $1) }
     }
 
+    /// Süren olay etkilerinin çarpımı. Etki yoksa 1.
+    static func eventMultiplier(for state: GameState) -> Double {
+        state.modifiers.reduce(1.0) { $0 * max(0, $1.multiplier) }
+    }
+
     /// Kasaya giren saniyelik net — katların netlerinin toplamı.
     /// Zarardaki bir kat kârdaki katı aşağı çekmez.
+    ///
+    /// Olay çarpanı brüte uygulanır, maaşa değil: yavaşlatan bir olayda maaş
+    /// yine ödenir, hızlandıran bir olayda maaş artmaz.
     static func productionRate(for state: GameState, config: BalanceConfig) -> Double {
-        sum(state, config) { floorNet($0, spec: $1) }
+        let buff = eventMultiplier(for: state)
+        return sum(state, config) { floor, spec in
+            max(0, floorGross(floor, spec: spec) * buff - floorWages(floor, spec: spec))
+        }
+    }
+
+    // MARK: - Pazar
+
+    /// Oyuncunun pazar payı. Kayıt kurulmamışsa dengedeki başlangıç payı.
+    static func marketShare(for state: GameState, config: BalanceConfig) -> Double {
+        clampShare(state.marketShare < 0 ? config.market.startShare : state.marketShare, config: config)
+    }
+
+    private static func clampShare(_ value: Double, config: BalanceConfig) -> Double {
+        min(max(value, max(0, config.market.minimumShare)), 1)
+    }
+
+    struct CompetitorShare: Sendable, Equatable, Identifiable {
+        let id: String
+        var share: Double
+    }
+
+    /// Kalan payın rakipler arasındaki dağılımı.
+    static func competitorShares(for state: GameState, config: BalanceConfig) -> [CompetitorShare] {
+        let remaining = max(0, 1 - marketShare(for: state, config: config))
+        let total = config.market.competitors.reduce(0.0) { $0 + max(0, $1.weight) }
+        guard total > 0 else { return [] }
+        return config.market.competitors.map {
+            CompetitorShare(id: $0.id, share: remaining * max(0, $0.weight) / total)
+        }
+    }
+
+    /// Pazar payının açtığı hücre sayısı.
+    ///
+    /// Tasarım raporunun cezalandırmama kuralı: rakip **mevcut geliri asla
+    /// düşürmez**. Açılmış şube kapanmaz; pay düşünce yalnızca *yeni* hücre
+    /// açma hakkı daralır. Kayıp gecikme olarak hissedilir, geri gitme olarak değil.
+    static func branchSlots(for spec: BalanceConfig.SectorSpec, state: GameState, config: BalanceConfig) -> Int {
+        let maxCount = max(1, spec.branches.maxCount)
+        guard maxCount > 1 else { return 1 }
+        let floorShare = max(0, config.market.minimumShare)
+        let span = max(0.0001, 1 - floorShare)
+        let progress = min(max((marketShare(for: state, config: config) - floorShare) / span, 0), 1)
+        // En yakına yuvarlıyoruz: son hücre için tam pay şart olmasın.
+        return min(maxCount, 1 + Int((progress * Double(maxCount - 1)).rounded()))
+    }
+
+    /// Yatırım payı geri kazandırır. Her satın alımda uygulanır.
+    private static func rewardingShare(_ state: GameState, config: BalanceConfig) -> GameState {
+        var next = state
+        next.marketShare = clampShare(
+            marketShare(for: state, config: config) + max(0, config.market.sharePerPurchase),
+            config: config
+        )
+        return next
+    }
+
+    /// Kod çözücünün dengeye erişimi yok; `unset` alanları burada dolduruyoruz.
+    static func normalised(_ state: GameState, config: BalanceConfig) -> GameState {
+        var next = state
+        if next.marketShare < 0 {
+            next.marketShare = clampShare(config.market.startShare, config: config)
+        }
+        if next.nextEventAtGameSeconds < 0 {
+            next.nextEventAtGameSeconds = next.elapsedGameSeconds + max(0, config.events.firstAfterSeconds)
+        }
+        return next
     }
 
     /// Deponun tuttuğu çevrimdışı süre. Bunun ötesindeki süre yanar.
@@ -149,12 +248,40 @@ enum GameEngine {
         return max(0, item.levels[next].cost)
     }
 
-    /// Bir sonraki şubenin ücreti. Kat doluysa `nil`.
+    /// Bir sonraki şubenin ham ücreti. Kat doluysa `nil`.
     /// `cost(n) = baseCost * costGrowth^(n-1)` — n açılacak şubenin sırası.
     static func branchCost(for floor: FloorState, spec: BalanceConfig.SectorSpec) -> Double? {
         let current = branchCount(for: floor, spec: spec)
         guard current < max(1, spec.branches.maxCount) else { return nil }
         return max(0, spec.branches.baseCost * pow(max(1, spec.branches.costGrowth), Double(current - 1)))
+    }
+
+    /// Şube açılabilir mi, açılabilirse kaça? Pazar payı yetmiyorsa `nil` döner
+    /// ve `isBranchBlockedByMarket` bunun sebebini söyler.
+    static func availableBranchCost(
+        onFloor index: Int,
+        _ state: GameState,
+        config: BalanceConfig
+    ) -> Double? {
+        guard state.floors.indices.contains(index),
+              let spec = spec(for: state.floors[index], config: config),
+              let cost = branchCost(for: state.floors[index], spec: spec) else { return nil }
+        guard branchCount(for: state.floors[index], spec: spec)
+            < branchSlots(for: spec, state: state, config: config) else { return nil }
+        return cost
+    }
+
+    /// Kat dolmadığı hâlde şube açılamıyorsa sebep rakiplerdir.
+    static func isBranchBlockedByMarket(
+        onFloor index: Int,
+        _ state: GameState,
+        config: BalanceConfig
+    ) -> Bool {
+        guard state.floors.indices.contains(index),
+              let spec = spec(for: state.floors[index], config: config),
+              branchCost(for: state.floors[index], spec: spec) != nil else { return false }
+        return branchCount(for: state.floors[index], spec: spec)
+            >= branchSlots(for: spec, state: state, config: config)
     }
 
     /// Bir sonraki depo seviyesinin ücreti. Son seviyedeyse `nil`.
@@ -180,20 +307,67 @@ enum GameEngine {
         max(0, spec.manual.revenuePerSale) * equipmentMultiplier(for: floor, spec: spec)
     }
 
+    /// Elle satışın olay çarpanı dahil getirisi — ekranda gösterilen değer.
+    static func manualRevenue(
+        onFloor index: Int,
+        _ state: GameState,
+        config: BalanceConfig
+    ) -> Double {
+        guard state.floors.indices.contains(index),
+              let spec = spec(for: state.floors[index], config: config) else { return 0 }
+        return manualRevenue(for: state.floors[index], spec: spec) * eventMultiplier(for: state)
+    }
+
     // MARK: - Zamanı ilerlet
 
     /// Ekonomiyi `seconds` kadar ilerletir.
     ///
-    /// **Kapalı form** — döngü yok. Üretim oranı bu faz için sabit olduğundan
-    /// 8 saatlik fark da 1 saniyelik fark da tek çarpma. Faz 4+'ta kırılım
-    /// noktası (olay süresi, vardiya bitişi) geldiğinde burası segmentlere
-    /// bölünecek; asla tick döngüsüne dönmeyecek.
+    /// **Segment segment kapalı form** — tick döngüsü değil. Süren olay
+    /// etkilerinin bitiş anları oranı kırar; her kırılım noktası arasında oran
+    /// sabit olduğu için tek çarpma yeter. Etki yoksa tek segment kalır, yani
+    /// 8 saatlik fark da 1 saniyelik fark da tek çarpma.
+    ///
+    /// Döngü sınırlıdır: her adımda en az bir etki sona erer, dolayısıyla
+    /// adım sayısı etki sayısı + 1'i geçmez.
     ///
     /// Saat okumaz, tavan uygulamaz. Tavan `resume(_:at:mode:config:)` işidir.
     static func advance(_ state: GameState, by seconds: TimeInterval, config: BalanceConfig) -> GameState {
-        guard seconds.isFinite, seconds > 0 else { return state }
+        let start = normalised(state, config: config)
+        guard seconds.isFinite, seconds > 0 else { return start }
 
+        var current = start
+        var remaining = seconds
+        var steps = current.modifiers.count + 1
+
+        while remaining > 0, steps > 0 {
+            steps -= 1
+            let step = min(remaining, nextBreakpoint(in: current) ?? remaining)
+            guard step > 0 else { break }
+            current = advanceSegment(current, by: step, config: config)
+            remaining -= step
+        }
+        if remaining > 0 {
+            current = advanceSegment(current, by: remaining, config: config)
+        }
+        return current
+    }
+
+    /// Bir sonraki oran kırılımına kalan süre. Süren etki yoksa `nil`.
+    private static func nextBreakpoint(in state: GameState) -> TimeInterval? {
+        state.modifiers
+            .map { $0.endsAtGameSeconds - state.elapsedGameSeconds }
+            .filter { $0 > 0 }
+            .min()
+    }
+
+    /// Oranın sabit olduğu tek segment: bir çarpma.
+    private static func advanceSegment(
+        _ state: GameState,
+        by seconds: TimeInterval,
+        config: BalanceConfig
+    ) -> GameState {
         let earned = productionRate(for: state, config: config) * seconds
+        let share = marketShare(for: state, config: config)
 
         var next = state
         next.elapsedGameSeconds += seconds
@@ -201,6 +375,11 @@ enum GameEngine {
             next.money += earned
             next.lifetimeEarnings += earned
         }
+        // Pazar payı zamanla rakiplere kayar. Gelir düşmez, sadece yeni hücre
+        // açma hakkı daralır.
+        next.marketShare = clampShare(share - max(0, config.market.driftPerSecond) * seconds, config: config)
+        // Süresi dolan etkiler burada düşer; döngünün ilerlemesini bu sağlar.
+        next.modifiers.removeAll { $0.endsAtGameSeconds <= next.elapsedGameSeconds }
         return next
     }
 
@@ -306,10 +485,11 @@ enum GameEngine {
 
         switch change(floor, spec) {
         case .success(let purchase):
-            var next = state
+            var next = normalised(state, config: config)
             next.floors[index] = purchase.floor
             next.money -= purchase.cost
-            return .success(next)
+            // Yatırım pazar payı kazandırır: rakiplere kayan pay geri gelir.
+            return .success(rewardingShare(next, config: config))
         case .failure(let error):
             return .failure(error)
         }
@@ -320,7 +500,7 @@ enum GameEngine {
         guard state.floors.indices.contains(index),
               let spec = spec(for: state.floors[index], config: config) else { return state }
 
-        let revenue = manualRevenue(for: state.floors[index], spec: spec)
+        let revenue = manualRevenue(for: state.floors[index], spec: spec) * eventMultiplier(for: state)
         var next = state
         next.money += revenue
         next.lifetimeEarnings += revenue
@@ -377,6 +557,9 @@ enum GameEngine {
     ) -> Result<GameState, ActionError> {
         onFloor(index, state, config) { floor, spec in
             guard let cost = branchCost(for: floor, spec: spec) else { return .failure(.branchLimitReached) }
+            guard branchCount(for: floor, spec: spec) < branchSlots(for: spec, state: state, config: config) else {
+                return .failure(.marketShareTooLow)
+            }
             guard state.money >= cost else { return .failure(.insufficientFunds) }
 
             var updated = floor
@@ -393,10 +576,10 @@ enum GameEngine {
             return .failure(.maxLevelReached)
         }
         guard state.money >= cost else { return .failure(.insufficientFunds) }
-        var next = state
+        var next = normalised(state, config: config)
         next.money -= cost
         next.warehouseLevel += 1
-        return .success(next)
+        return .success(rewardingShare(next, config: config))
     }
 
     /// Faz 3: bir üst katı aç. Kat açmak yeni bir sektöre girmektir.
@@ -408,12 +591,106 @@ enum GameEngine {
         let cost = max(0, sector.unlockCost)
         guard state.money >= cost else { return .failure(.insufficientFunds) }
 
-        var next = state
+        var next = normalised(state, config: config)
         next.money -= cost
         next.floors.append(FloorState(sectorID: sector.id))
         // Yeni kat hemen seçilsin: oyuncu açtığı şeyin başında olsun.
         next.selectedFloor = next.floors.count - 1
-        return .success(next)
+        return .success(rewardingShare(next, config: config))
+    }
+
+    // MARK: - Olaylar
+
+    /// Şu an karar bekleyen olay. Yoksa `nil`.
+    ///
+    /// Aynı durum için hep aynı olayı verir: seçim kayıttaki tohumdan
+    /// türetilir, sistem rastgeleliğinden değil.
+    static func pendingEvent(for state: GameState, config: BalanceConfig) -> BalanceConfig.EventSpec? {
+        let ready = normalised(state, config: config)
+        guard ready.elapsedGameSeconds >= ready.nextEventAtGameSeconds else { return nil }
+        guard !config.events.specs.isEmpty else { return nil }
+
+        var random = DeterministicRandom(seed: ready.eventSeed &+ 1)
+        return weightedPick(config.events.specs, weight: { max(0, $0.weight) }, using: &random)
+    }
+
+    /// Bir olayın seçeneğini uygula.
+    ///
+    /// Anında etki **mevcut saniyelik netin katı** olarak hesaplanır; böylece
+    /// aynı olay Çağ 0'da da, dört şubeli fırında da anlamlı kalır.
+    /// Kasa asla eksiye düşmez — oyuncu geri gitmez.
+    static func resolveEvent(
+        _ eventID: String,
+        choice choiceID: String,
+        _ state: GameState,
+        config: BalanceConfig
+    ) -> Result<GameState, ActionError> {
+        guard let spec = config.events.spec(id: eventID),
+              let choice = spec.choices.first(where: { $0.id == choiceID }) else {
+            return .failure(.unknownEvent)
+        }
+
+        var next = normalised(state, config: config)
+
+        if choice.instantSeconds != 0 {
+            let amount = productionRate(for: next, config: config) * choice.instantSeconds
+            if amount >= 0 {
+                next.money += amount
+                next.lifetimeEarnings += amount
+            } else {
+                next.money = max(0, next.money + amount)
+            }
+        }
+
+        if choice.durationSeconds > 0, choice.multiplier != 1 {
+            next.modifiers.append(
+                ActiveModifier(
+                    eventID: spec.id,
+                    choiceID: choice.id,
+                    multiplier: max(0, choice.multiplier),
+                    endsAtGameSeconds: next.elapsedGameSeconds + choice.durationSeconds
+                )
+            )
+        }
+
+        next.stats.eventsResolved += 1
+        return .success(schedulingNextEvent(next, config: config))
+    }
+
+    /// Olayı karara bağlamadan kapat. Etki yok, sadece sıradakine geçilir.
+    static func dismissEvent(_ state: GameState, config: BalanceConfig) -> GameState {
+        schedulingNextEvent(normalised(state, config: config), config: config)
+    }
+
+    /// Sıradaki olayı planlar ve tohumu ilerletir.
+    private static func schedulingNextEvent(_ state: GameState, config: BalanceConfig) -> GameState {
+        var random = DeterministicRandom(seed: state.eventSeed)
+        let spread = min(max(config.events.gapJitter, 0), 0.9)
+        let jitter = 1 + (random.unit() * 2 - 1) * spread
+
+        var next = state
+        next.eventSeed = random.seed
+        next.nextEventAtGameSeconds = state.elapsedGameSeconds
+            + max(60, max(60, config.events.gapSeconds) * jitter)
+        return next
+    }
+
+    /// Ağırlıklı seçim. Ağırlık toplamı sıfırsa ilk öge.
+    private static func weightedPick<Item>(
+        _ items: [Item],
+        weight: (Item) -> Double,
+        using random: inout DeterministicRandom
+    ) -> Item? {
+        guard let first = items.first else { return nil }
+        let total = items.reduce(0.0) { $0 + weight($1) }
+        guard total > 0 else { return first }
+
+        var roll = random.unit() * total
+        for item in items {
+            roll -= weight(item)
+            if roll <= 0 { return item }
+        }
+        return items.last
     }
 
     /// Panelin çalışacağı katı değiştir.

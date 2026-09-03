@@ -13,6 +13,8 @@ struct BalanceConfig: Codable, Sendable, Equatable {
     var sectors: [SectorSpec]
     var warehouse: Warehouse
     var offline: Offline
+    var events: Events
+    var market: Market
 
     // MARK: - Bina
 
@@ -119,6 +121,66 @@ struct BalanceConfig: Codable, Sendable, Equatable {
         /// Bu süreden kısa ayrılıklarda dönüş özeti gösterilmez.
         /// Uygulama değiştirici / bildirim merkezi gibi anlık kesintiler için.
         var minimumReportSeconds: TimeInterval
+    }
+
+    // MARK: - Olaylar
+
+    /// Kısa seansa yakıt: günde birkaç kez, seansta en fazla bir kez bir karar.
+    /// Her olay bir ya da iki dokunuşluk bir seçim sunar.
+    struct Events: Codable, Sendable, Equatable {
+        /// İlk olay bu kadar oyun saniyesinden önce çıkmaz — oyuncu önce
+        /// Çağ 0'ı geçsin.
+        var firstAfterSeconds: TimeInterval
+        /// Olaylar arası ortalama oyun süresi.
+        var gapSeconds: TimeInterval
+        /// Aralığa eklenen rastgelelik payı (0..1). 0,4 → ±%40.
+        var gapJitter: Double
+        var specs: [EventSpec]
+
+        func spec(id: String) -> EventSpec? { specs.first { $0.id == id } }
+    }
+
+    struct EventSpec: Codable, Sendable, Equatable, Identifiable {
+        var id: String
+        /// Ağırlıklı seçimde payı.
+        var weight: Double
+        /// Bir ya da iki seçenek. Metinleri dil dosyalarında.
+        var choices: [EventChoice]
+    }
+
+    struct EventChoice: Codable, Sendable, Equatable, Identifiable {
+        var id: String
+        /// Üretim çarpanı. 1,0 etkisiz.
+        var multiplier: Double
+        /// Çarpanın süresi (oyun saniyesi). 0 ise çarpan uygulanmaz.
+        var durationSeconds: TimeInterval
+        /// Anında kasaya giren/çıkan: **mevcut saniyelik netin kaç saniyesi**
+        /// kadar. Oransal olduğu için her sektörde ve her çağda anlamlı kalır.
+        /// Negatif değer giderdir; kasa asla eksiye düşmez.
+        var instantSeconds: Double
+    }
+
+    // MARK: - Pazar
+
+    /// Rakipler. Tasarım raporunun cezalandırmama kuralı (§6) burada yaşıyor:
+    /// **rakip oyuncunun mevcut gelirini asla düşürmez.** Sadece açılabilecek
+    /// yeni şube sayısını kısar. Açılmış şube hiçbir zaman kapanmaz.
+    struct Market: Codable, Sendable, Equatable {
+        /// Oyuncunun başlangıç payı.
+        var startShare: Double
+        /// Payın inebileceği taban. Buranın altına düşmez.
+        var minimumShare: Double
+        /// Oyun saniyesi başına rakiplere kayan pay.
+        var driftPerSecond: Double
+        /// Her yatırımın geri kazandırdığı pay.
+        var sharePerPurchase: Double
+        var competitors: [CompetitorSpec]
+    }
+
+    struct CompetitorSpec: Codable, Sendable, Equatable, Identifiable {
+        var id: String
+        /// Kalan payın bu rakibe düşen ağırlığı.
+        var weight: Double
     }
 
     // MARK: - Arama

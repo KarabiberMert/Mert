@@ -104,7 +104,30 @@ enum BalanceFixture {
                 .init(capacitySeconds: 28_800, cost: 500),     // 8 saat
                 .init(capacitySeconds: 86_400, cost: 1_500)    // 24 saat
             ]),
-            offline: .init(minimumReportSeconds: minimumReportSeconds)
+            offline: .init(minimumReportSeconds: minimumReportSeconds),
+            // Jitter 0: testlerde olay aralığı tam olarak gapSeconds.
+            events: .init(
+                firstAfterSeconds: 100,
+                gapSeconds: 1_000,
+                gapJitter: 0,
+                specs: [
+                    .init(id: "boostEvent", weight: 1, choices: [
+                        .init(id: "boost", multiplier: 3, durationSeconds: 60, instantSeconds: 0),
+                        .init(id: "cash", multiplier: 1, durationSeconds: 0, instantSeconds: 10)
+                    ]),
+                    .init(id: "costEvent", weight: 1, choices: [
+                        .init(id: "fine", multiplier: 1, durationSeconds: 0, instantSeconds: -10),
+                        .init(id: "slow", multiplier: 0.5, durationSeconds: 60, instantSeconds: 0)
+                    ])
+                ]
+            ),
+            market: .init(
+                startShare: 0.5,
+                minimumShare: 0.2,
+                driftPerSecond: 0.001,
+                sharePerPurchase: 0.1,
+                competitors: [.init(id: "cedar", weight: 1), .init(id: "mill", weight: 1)]
+            )
         )
     }
 
@@ -140,6 +163,10 @@ enum BalanceFixture {
         }
         state.floors = [ground] + extraFloors
         state.selectedFloor = selectedFloor
+        // Testler dengedeki başlangıç payıyla başlasın; `unset` bırakmak
+        // motorun normalleştirmesine bırakırdı ve ölçüm bulanıklaşırdı.
+        state.marketShare = config.market.startShare
+        state.nextEventAtGameSeconds = config.events.firstAfterSeconds
         return state
     }
 

@@ -188,6 +188,10 @@ struct ActionPanelView: View {
                 action: { store.openBranch() }
             )
             note(L.branchInherits)
+        } else if store.isBranchBlockedByMarket {
+            // Rakip kapıyı kapatmadı, geciktirdi: yatırım payı geri getirir.
+            note(L.marketBlocked)
+            note(L.branchesRunning(store.branchCount))
         } else {
             note(L.branchesFull)
             note(L.branchesRunning(store.branchCount))
@@ -218,6 +222,14 @@ struct ActionPanelView: View {
             enabled: store.warehouseUpgradeCost.map { store.state.money >= $0 } ?? false,
             action: { store.upgradeWarehouse() }
         )
+
+        MarketShareView(
+            share: store.marketShare,
+            competitors: store.competitorShares,
+            unlockedSlots: store.branchSlots,
+            isBlocked: store.isBranchBlockedByMarket
+        )
+        .padding(.top, 2)
 
         ForEach(Array(store.floors.enumerated()), id: \.element.id) { entry in
             HStack(spacing: 10) {

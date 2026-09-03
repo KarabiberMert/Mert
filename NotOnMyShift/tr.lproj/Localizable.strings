@@ -145,3 +145,45 @@
 "equipment.mixer.note" = "Bir saatlik yoğurmayı on dakikada bitirir.";
 "equipment.case.name" = "Teşhir dolabı";
 "equipment.case.note" = "Rafta hiçbir şey bayatlamıyor artık.";
+
+/* Olaylar */
+"event.viral.title" = "Bir video tuttu";
+"event.viral.body" = "Biri tezgâhını çekmiş, mahallenin yarısı görmüş.";
+"event.viral.ride" = "Dalgaya bin";
+"event.viral.cashIn" = "Anı nakde çevir";
+"event.festival.title" = "Sokakta festival var";
+"event.festival.body" = "Yolu kapattılar. Herkes kapının önünden geçiyor.";
+"event.festival.stayOpen" = "Geç saate kadar açık kal";
+"event.festival.sellStall" = "Tezgâh kirala";
+"event.supplier.title" = "Tedarikçi zam yaptı";
+"event.supplier.body" = "Aynı çekirdek, yeni fatura.";
+"event.supplier.payUp" = "Öde gitsin";
+"event.supplier.switchBeans" = "Tedarikçi değiştir";
+"event.inspection.title" = "Sağlık denetimi";
+"event.inspection.body" = "Her şey yolunda. Evrak değil.";
+"event.inspection.payFine" = "Cezayı öde";
+"event.inspection.closeUp" = "Öğleden sonra kapat";
+"event.apprentice.title" = "Biri öğrenmek istiyor";
+"event.apprentice.body" = "Bir çocuk sürekli uğrayıp soru soruyor.";
+"event.apprentice.teachThem" = "Öğret";
+"event.unknown.title" = "Bir şey çıktı";
+"event.unknown.body" = "Bir karar istiyor, sadece bir tane.";
+"event.unknown.choice" = "Halledelim";
+"event.dismiss" = "Şimdi değil";
+"event.lasting" = "%@ boyunca";
+"event.now" = "hemen %@";
+"event.remaining" = "%@ kaldı";
+
+/* Rakipler */
+"market.title" = "Pazar payı";
+"market.you" = "Sen";
+"market.blocked" = "Sıradaki hücreyi rakipler kaptı. Yatırım yap, payın geri gelir.";
+"market.slots" = "Açık hücre: %lld";
+"competitor.cedar.name" = "Çınar Holding";
+"competitor.cedar.quip" = "Kurucusu her röportajda babasından bahsediyor.";
+"competitor.mill.name" = "Değirmen Grup";
+"competitor.mill.quip" = "Kırk şube. Otuz dokuzu birbirinin aynısı.";
+"competitor.percolate.name" = "Percolate";
+"competitor.percolate.quip" = "Uygulama öncelikli kahve deneyimi, her ne demekse.";
+"competitor.unknown.name" = "Bir başkası";
+"competitor.unknown.quip" = "Sessiz sedasız bir yerlerde dükkân açıyor.";

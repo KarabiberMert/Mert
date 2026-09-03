@@ -37,6 +37,10 @@ final class PersistenceTests: XCTestCase {
         )
         original = GameEngine.advance(original, by: 90, config: config)
         original.stats.manualSales = 17
+        original.stats.eventsResolved = 4
+        original.modifiers = [
+            ActiveModifier(eventID: "viral", choiceID: "ride", multiplier: 3, endsAtGameSeconds: 500)
+        ]
 
         try store.save(original)
 
@@ -179,6 +183,37 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(state.selectedFloor, 0)
     }
 
+    func testSchemaFourSaveGetsAMarketAndAnEventClock() throws {
+        // Faz 3 kaydında olay ve pazar yoktu. Eksik alanlar `unset` kalır ve
+        // motorun ilk normalleştirmesinde dengeden dolar.
+        let json = """
+        {
+          "schemaVersion": 4,
+          "money": 800.0,
+          "lastSeenAt": 1700000000.0,
+          "floors": [ { "sectorID": "coffee", "branchCount": 1 } ]
+        }
+        """
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .secondsSince1970
+
+        let state = try decoder.decode(GameState.self, from: Data(json.utf8))
+        XCTAssertEqual(state.marketShare, GameState.unset)
+        XCTAssertEqual(state.nextEventAtGameSeconds, GameState.unset)
+        XCTAssertTrue(state.modifiers.isEmpty)
+        XCTAssertNotEqual(state.eventSeed, 0, "Tohum sıfır olmamalı")
+
+        let config = BalanceFixture.config()
+        let ready = GameEngine.normalised(state, config: config)
+        XCTAssertEqual(ready.marketShare, config.market.startShare, accuracy: 1e-9)
+        XCTAssertEqual(
+            ready.nextEventAtGameSeconds,
+            state.elapsedGameSeconds + config.events.firstAfterSeconds, accuracy: 1e-9
+        )
+        // Eski kayıt açılır açılmaz olayla karşılaşmasın.
+        XCTAssertNil(GameEngine.pendingEvent(for: ready, config: config))
+    }
+
     func testSavesAreWrittenWithTheCurrentSchemaOnly() throws {
         // Göç alanları geri yazılmamalı; kayıt her zaman güncel şemayla çıkar.
         let original = BalanceFixture.state(money: 10, staffCount: 1)
@@ -192,6 +227,8 @@ final class PersistenceTests: XCTestCase {
 
         XCTAssertNotNil(object["floors"])
         XCTAssertEqual(object["schemaVersion"] as? Int, GameState.currentSchemaVersion)
+        XCTAssertNotNil(object["marketShare"])
+        XCTAssertNotNil(object["eventSeed"])
         // Şema 3'ün düz alanları kök seviyede kalmamalı — kat içinde yaşıyorlar.
         for legacy in ["staff", "equipmentLevels", "branchCount"] {
             XCTAssertNil(object[legacy], "'\(legacy)' kök seviyede yazılmamalı")
@@ -253,6 +290,13 @@ final class PersistenceTests: XCTestCase {
             XCTAssertEqual(left.branchCount, right.branchCount, file: file, line: line)
         }
         XCTAssertEqual(actual.selectedFloor, expected.selectedFloor, file: file, line: line)
+        XCTAssertEqual(actual.marketShare, expected.marketShare, accuracy: 1e-6, file: file, line: line)
+        XCTAssertEqual(actual.eventSeed, expected.eventSeed, file: file, line: line)
+        XCTAssertEqual(
+            actual.nextEventAtGameSeconds, expected.nextEventAtGameSeconds,
+            accuracy: 1e-6, file: file, line: line
+        )
+        XCTAssertEqual(actual.modifiers, expected.modifiers, file: file, line: line)
         XCTAssertEqual(actual.stats, expected.stats, file: file, line: line)
         XCTAssertEqual(
             actual.lastSeenAt.timeIntervalSince1970,
