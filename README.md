@@ -154,9 +154,14 @@ gerçek fiyat App Store Connect'te belirlenir, kodda durmaz.
 kullanılmayan bir izin metniyle App Review'a çıkmak demektir. Mimari buna
 kapalı değil: reklam sağlayıcısı zaten `RewardedAds` protokolünün arkasında.
 
-**Yayın öncesi elle yapılacaklar:** mağaza açıklaması ve anahtar kelimeler,
-üç dilde ekran görüntüleri, yaş derecelendirmesi (uygulama içi satın alma
-var, reklam yok), destek ve gizlilik politikası bağlantıları.
+**Mağaza metinleri** üç dilde hazır:
+[`docs/app-store-metadata.md`](docs/app-store-metadata.md). Ad, alt başlık,
+tanıtım metni, anahtar kelimeler, açıklama ve sürüm notları — hepsi
+`scripts/check_store_copy.py` ile App Store Connect sınırlarına göre ölçülüyor.
+
+**Yayın öncesi elle yapılacaklar:** üç dilde ekran görüntüleri (6,7" ve 6,9"
+iPhone zorunlu), yaş derecelendirmesi, destek ve gizlilik politikası
+bağlantıları, App Store Connect'te ürünün oluşturulup fiyatının verilmesi.
 
 ## Tipografi kontrolü
 
@@ -405,6 +410,7 @@ python3 scripts/build_fonts.py       # Archivo kesitlerini yeniden üretir (font
 ./scripts/check_rules.sh             # pazarlığa kapalı kuralları tarar
 python3 scripts/make_app_icon.py     # 1024×1024 ikonu yeniden üretir
 python3 scripts/lint_pbxproj.py      # project.pbxproj yapısını doğrular
+python3 scripts/check_store_copy.py  # mağaza metinlerini App Store sınırlarına göre ölçer
 ```
 
 Hiçbiri uygulamaya üçüncü parti bağımlılık sokmaz. `balance_report.py` bir
@@ -437,9 +443,14 @@ gerçek fiyat App Store Connect'te belirlenir, kodda durmaz.
 kullanılmayan bir izin metniyle App Review'a çıkmak demektir. Mimari buna
 kapalı değil: reklam sağlayıcısı zaten `RewardedAds` protokolünün arkasında.
 
-**Yayın öncesi elle yapılacaklar:** mağaza açıklaması ve anahtar kelimeler,
-üç dilde ekran görüntüleri, yaş derecelendirmesi (uygulama içi satın alma
-var, reklam yok), destek ve gizlilik politikası bağlantıları.
+**Mağaza metinleri** üç dilde hazır:
+[`docs/app-store-metadata.md`](docs/app-store-metadata.md). Ad, alt başlık,
+tanıtım metni, anahtar kelimeler, açıklama ve sürüm notları — hepsi
+`scripts/check_store_copy.py` ile App Store Connect sınırlarına göre ölçülüyor.
+
+**Yayın öncesi elle yapılacaklar:** üç dilde ekran görüntüleri (6,7" ve 6,9"
+iPhone zorunlu), yaş derecelendirmesi, destek ve gizlilik politikası
+bağlantıları, App Store Connect'te ürünün oluşturulup fiyatının verilmesi.
 
 ## Tipografi
 
