@@ -18,6 +18,128 @@ büyüdüğünde holding halka arz oluyor. İsteğe bağlı ödüller ve tek sef
 
 ---
 
+## Neler yapıldı
+
+Yedi faz, her biri kendi başına çalışan bir katman. Sıra rastgele değil: her
+faz bir öncekinin üstüne biniyor ve hiçbiri yarım bırakılmadı.
+
+| Faz | Ne geldi |
+|---|---|
+| 0 | Motor, kayıt, sahne fazı. `advance` kapalı form, `GameEngine` saf. |
+| 1 | Zemin katın görsel kimliği, elle üretim, ilk eleman ve çevrimdışı kazancın açılışı |
+| 2 | Ekipman, maaşlar ve şubeler — "makine mi eleman mı" seçimi buradan doğuyor |
+| 3 | İkinci sektör, kat açma, kat kat yükselen bina ve soğuyan palet |
+| 4 | Olaylar ve isimli rakipler; rakip geliri düşürmez, sadece yeni hücreyi geciktirir |
+| 5 | Çatıdaki yönetim katı: müdürler ve sabit kurallar. Kural koymayan tam verimle çalışır. |
+| 6 | Yumuşak prestij: olgunlaşan sektörü sat, kat yatırım katına dönüşsün; final ve yeni şehir |
+| 7 | İsteğe bağlı ödüller, tek seferlik "Reklamsız" alımı, App Store hazırlığı |
+
+Ayrıca üç dil (İngilizce kaynak, Türkçe ve İspanyolca çeviri; para birimi ve
+isimler dile bağlı), beş denetleme betiği, üç dilde mağaza metinleri ve
+maket ekran görüntüleri.
+
+Rakamla: 33 Swift dosyası (~7.200 satır), 191 test, 212 dil anahtarı.
+
+**Ama proje hiç derlenmedi.** Geliştirme Swift araç zinciri olmayan bir
+konteynerde yapıldı; doğrulama denetleme betikleri, sembol çözümü ve Python
+simülasyonlarıyla yürüdü. Sıradaki iş bunu bir Mac'te gerçeğe çevirmek.
+
+---
+
+## Local'e çekince
+
+Aşağıdakilerin hepsi **Claude Code oturumundan** yapılabilir — Xcode'u elle
+açmaya gerek yok. Sırayla git; her adım bir öncekine bağlı.
+
+### 0. Hazırlık
+
+```bash
+git clone <repo> && cd Mert
+git checkout claude/ekdeki-promtu-uygula-g776lw
+xcodebuild -version          # Xcode 16+ olmalı
+xcrun simctl list devices available | grep iPhone
+```
+
+Denetleme betikleri Mac'te de çalışır, önce onları geçir:
+
+```bash
+./scripts/check_rules.sh && python3 scripts/check_localization.py   && python3 scripts/lint_pbxproj.py && python3 scripts/check_store_copy.py
+```
+
+### 1. Derle
+
+```bash
+xcodebuild -project NotOnMyShift.xcodeproj -scheme NotOnMyShift            -destination 'platform=iOS Simulator,name=iPhone 16 Pro Max' build
+```
+
+En riskli adım bu. Beklenen Swift 6 izolasyon hataları ve ilk bakılacak beş
+yer [`docs/xcode-devir.md`](docs/xcode-devir.md) §4'te tablo hâlinde.
+
+Claude'a: *"derle, çıkan hataları düzelt, `CLAUDE.md`'deki kuralları bozma"*.
+Özellikle force unwrap ekleyerek ya da `@unchecked Sendable` serperek hata
+susturma — kurallar pazarlığa kapalı ve `check_rules.sh` bunu yakalar.
+
+### 2. Testleri koştur
+
+```bash
+xcodebuild -project NotOnMyShift.xcodeproj -scheme NotOnMyShift            -destination 'platform=iOS Simulator,name=iPhone 16 Pro Max' test
+```
+
+191 test. Kırılan olursa önce testin kendi kurulumuna bak: motor mantığı
+kâğıt üstünde defalarca doğrulandı, ama testlerin hiçbiri çalıştırılmadı.
+
+### 3. Simülatörde aç ve gez
+
+```bash
+xcrun simctl boot "iPhone 16 Pro Max"
+xcodebuild -project NotOnMyShift.xcodeproj -scheme NotOnMyShift            -destination 'platform=iOS Simulator,name=iPhone 16 Pro Max'            -derivedDataPath build/dd build
+xcrun simctl install booted build/dd/Build/Products/Debug-iphonesimulator/NotOnMyShift.app
+xcrun simctl launch booted com.karabibermert.notonmyshift
+xcrun simctl io booted screenshot /tmp/ekran.png     # Claude bunu okuyabilir
+```
+
+Claude ekran görüntüsünü okuyup düzeni yorumlayabilir. Aşağıdaki **Elle
+doğrulama** listesindeki 27 madde sırayla geçilecek. Kör düzeltilmiş üç yere
+özellikle bakılsın (devir dokümanı §5): sponsor arası sahnesinin katmanı,
+beş sekmeli şeritte başlıkların sığması, binanın dikey dengesi.
+
+### 4. Satın almayı dene
+
+StoreKit yapılandırması şemaya **zaten bağlı**
+(`Config/NotOnMyShift.storekit`), ek ayar gerekmiyor. Reklamsız rozetine bas,
+satın al; rozetin kaybolduğunu, dönüş özetinde katlamanın sorulmadan
+uygulandığını ve vardiya patlamasının sahnesiz geldiğini doğrula.
+
+### 5. Gerçek ekran görüntülerini çek
+
+```bash
+xcrun simctl status_bar booted override --time 9:41   --batteryState charged --batteryLevel 100     # temiz durum çubuğu
+xcrun simctl io booted screenshot kare-1.png
+```
+
+Hangi karede hangi oyun durumuna gelinmesi gerektiği
+[`docs/app-store-screenshots.md`](docs/app-store-screenshots.md)'de yazıyor;
+`build/mockups/` altındaki maketler kompozisyon şablonu. Üç dil için ayrı ayrı
+(dili simülatör ayarlarından değiştir), 6,9" ve 6,7" boyutlarında.
+
+> Karelere gelmek uzun sürüyorsa Claude'a bir hata ayıklama kısayolu
+> yazdırmak mantıklı: `#if DEBUG` altında kaydı doğrudan istenen duruma kuran
+> bir işlev. Motor saf olduğu için bu kolay ve oyunu kirletmez.
+
+### 6. Sana kalanlar
+
+Claude'un yapamayacağı, hesap gerektiren işler: App Store Connect'te uygulama
+kaydı, `com.karabibermert.notonmyshift.noads` ürününün oluşturulup fiyatının
+verilmesi, yaş derecelendirmesi, destek ve gizlilik politikası bağlantıları,
+TestFlight ve inceleme.
+
+Bir de kimsenin senin yerine yapamayacağı iş: **oyunu oynayıp dengenin nasıl
+hissettirdiğine karar vermek.** Sayılar tabloda tutuyor; devir dokümanı §6'da
+iki tanesi işaretli — dördüncü hücrenin pratikte açılıp açılamadığı ve
+deponun geç oyunda anlamsızlaşması.
+
+---
+
 ## Çalıştırma
 
 Xcode 16 veya üstü gerekiyor (Swift 6 dil kipi ve senkron klasör grupları için).
@@ -111,10 +233,9 @@ Xcode içinden ⌘U.
     hiçbir şey de eksilmez. Seans başına bir kez.
 24. Uzun bir süre sonra dön: dönüş özetinde **"… yap"** düğmesi çıkar. Sahneyi
     izle, tutar iki katına çıkar ve yanında "Katlandı" yazar.
-25. Sağ üstteki **Reklamsız** rozetine bas: fiyat App Store'dan gelir, satın
-    alma ve **geri yükleme** aynı sayfadadır. (Simülatörde test etmek için
-    şemaya `Config/NotOnMyShift.storekit` dosyasını StoreKit yapılandırması
-    olarak bağla.)
+25. Sağ üstteki **Reklamsız** rozetine bas: fiyat mağazadan gelir, satın alma
+    ve **geri yükleme** aynı sayfadadır. Simülatörde fiyat `2,99` görünür —
+    StoreKit yapılandırması paylaşılan şemaya bağlı.
 26. Satın aldıktan sonra rozet kaybolur; dönüş özetinde katlama **sorulmadan**
     uygulanır ve vardiya patlaması sahnesiz gelir. Para veren, reklam
     izleyenden yavaş kalmamalı.
@@ -129,52 +250,7 @@ gerekenler: arayüz metni, **kadronun isimleri**, dükkânın tabelası ve
 `1,2 K €`. Mevcut kadro da yeni dilde görünmeli; kayıtta isim değil kimlik
 saklanıyor.
 
-### App Store
-
-Faz 0'da kurulan, Faz 7'de tamamlanan liste:
-
-| | Durum |
-|---|---|
-| Bundle ID | `com.karabibermert.notonmyshift` |
-| Görünen ad | Not On My Shift |
-| Sürüm | `MARKETING_VERSION 1.0` · `CURRENT_PROJECT_VERSION 1` |
-| Dağıtım hedefi | iOS 17.0, yalnızca portre, arm64 |
-| Gizlilik bildirimi | `PrivacyInfo.xcprivacy` — hiçbir veri toplanmıyor, izleme yok |
-| İkon | `Assets.xcassets/AppIcon` (tek 1024×1024 yeterli) |
-| Açılış ekranı | `UILaunchScreen` + `LaunchBackground` rengi — beyaz flaş yok |
-| Şifreleme beyanı | `ITSAppUsesNonExemptEncryption = false` |
-| Diller | `en` (kaynak), `tr`, `es` — `CFBundleLocalizations` içinde |
-| Uygulama içi satın alma | `com.karabibermert.notonmyshift.noads`, tek seferlik, tüketilmeyen |
-| Geri yükleme | "Reklamsız" sayfasında — App Review bunu şart koşar |
-
-**Yerel test:** şemaya (Run → Options → StoreKit Configuration)
-`Config/NotOnMyShift.storekit` dosyasını bağla. Fiyat orada 2,99 görünür;
-gerçek fiyat App Store Connect'te belirlenir, kodda durmaz.
-
-**Henüz eklenmedi, bilerek:** ATT izni (`NSUserTrackingUsageDescription`) ve
-`SKAdNetworkItems`. Gerçek bir reklam SDK'sı gelmeden bunları koymak,
-kullanılmayan bir izin metniyle App Review'a çıkmak demektir. Mimari buna
-kapalı değil: reklam sağlayıcısı zaten `RewardedAds` protokolünün arkasında.
-
-**Mağaza metinleri** üç dilde hazır:
-
-- [`docs/app-store-metadata.md`](docs/app-store-metadata.md) — ad, alt başlık,
-  tanıtım metni, anahtar kelimeler, açıklama, sürüm notları
-- [`docs/app-store-screenshots.md`](docs/app-store-screenshots.md) — altı kare
-  için başlık ve alt satır, her karede ekranda ne olması gerektiğiyle birlikte.
-  `scripts/render_mockups.py` bu kareleri üç dilde çizer — ama **maket**:
-  ölçüleri, paleti ve metinleri kaynaktan okur, gerçek uygulamadan alınmaz.
-  Mağazaya yüklenecek görüntüler Xcode'da çekilmeli.
-
-`scripts/check_store_copy.py` ikisini de ayrıştırıp her alanı sınırına göre
-ölçüyor; yazılı karakter sayısı metinle uyuşmazsa da hata veriyor.
-
-**Yayın öncesi elle yapılacaklar:** ekran görüntülerinin kendisi (6,7" ve 6,9"
-iPhone zorunlu, üç dilde ayrı), yaş derecelendirmesi, destek ve gizlilik
-politikası bağlantıları, App Store Connect'te ürünün oluşturulup fiyatının
-verilmesi.
-
-## Tipografi kontrolü
+### Tipografi kontrolü
 
 Ekranda `ığüşöçİĞÜŞÖÇ` ve `₺` doğru görünüyor mu? Rakamlar sayaç artarken
 zıplıyor mu? Zıplıyorsa özel font yüklenmemiştir — `Typography.hasCustomFonts`
@@ -446,9 +522,9 @@ Faz 0'da kurulan, Faz 7'de tamamlanan liste:
 | Uygulama içi satın alma | `com.karabibermert.notonmyshift.noads`, tek seferlik, tüketilmeyen |
 | Geri yükleme | "Reklamsız" sayfasında — App Review bunu şart koşar |
 
-**Yerel test:** şemaya (Run → Options → StoreKit Configuration)
-`Config/NotOnMyShift.storekit` dosyasını bağla. Fiyat orada 2,99 görünür;
-gerçek fiyat App Store Connect'te belirlenir, kodda durmaz.
+**Yerel test:** `Config/NotOnMyShift.storekit` paylaşılan şemaya zaten bağlı
+(Run → Options → StoreKit Configuration). Fiyat orada 2,99 görünür; gerçek
+fiyat App Store Connect'te belirlenir, kodda durmaz.
 
 **Henüz eklenmedi, bilerek:** ATT izni (`NSUserTrackingUsageDescription`) ve
 `SKAdNetworkItems`. Gerçek bir reklam SDK'sı gelmeden bunları koymak,

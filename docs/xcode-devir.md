@@ -60,9 +60,9 @@ defalarca doğruladı.
 **3. Simülatörde aç.** iPhone 16 Pro Max, portre. İlk bakılacaklar:
 `README.md`'deki "Elle doğrulama" listesi, 27 madde, sırayla.
 
-**4. StoreKit'i bağla.** Şema → Run → Options → StoreKit Configuration →
-`Config/NotOnMyShift.storekit`. Satın al, sonra Reklamsız rozetinin kaybolduğunu
-ve dönüş özetinde katlamanın sorulmadan uygulandığını gör.
+**4. Satın almayı dene.** StoreKit yapılandırması paylaşılan şemaya bağlı,
+ek ayar yok. Satın al, sonra Reklamsız rozetinin kaybolduğunu ve dönüş
+özetinde katlamanın sorulmadan uygulandığını gör.
 
 **5. Ekran görüntülerini çek.** `docs/app-store-screenshots.md` her karede
 hangi oyun durumuna gelmen gerektiğini yazıyor. `build/mockups/` altındaki
@@ -149,7 +149,7 @@ tutuyor; oyunun tamamı ~10,4M. Yani bir noktadan sonra tavan hiç dolmuyor ve
 
 1. Derle, testleri koştur, simülatörde 27 maddeyi geç
 2. Cihazda dene — özellikle çevrimdışı kazanç (uygulamayı kapat, saati ileri al)
-3. StoreKit'i şemadan bağlayıp satın alma ve geri yüklemeyi dene
+3. Satın alma ve geri yüklemeyi dene (StoreKit yapılandırması şemada hazır)
 4. Ekran görüntülerini üç dilde çek (6,9" ve 6,7")
 5. App Store Connect: uygulama kaydı, `com.karabibermert.notonmyshift.noads`
    ürününü oluştur ve fiyatını ver
