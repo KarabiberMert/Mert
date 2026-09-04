@@ -20,3 +20,7 @@ xcuserdata/
 # Faz 7'de eklenecek
 *.mobileprovision
 *.p12
+
+# Python
+__pycache__/
+*.pyc

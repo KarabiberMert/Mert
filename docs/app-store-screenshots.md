@@ -70,6 +70,30 @@ Zorunlu boyutlar: 6,9" ve 6,7" iPhone. Üç dilde ayrı ayrı yüklenir.
 | tr | Sen kapalıyken de çalışır `25` | Döndüğünde deponun biriktirdiğini alırsın. `42` |
 | es-ES | Funciona con la app cerrada `27` | Vuelve y recoge lo que juntó el almacén. `40` |
 
+## Maketler
+
+`python3 scripts/render_mockups.py` bu altı kareyi üç dilde
+`build/mockups/<dil>/` altına çizer (1320×2868, 6,9" boyutu).
+
+**Bunlar gerçek ekran görüntüsü değil.** Kompozisyonu görmek, metnin karede
+nasıl durduğunu denemek ve çerçeve düzenini kurmak içindir. Mağazaya
+yüklenecek kareler Xcode'da gerçek uygulamadan alınmalı — Apple da bunu
+şart koşuyor.
+
+Maket yine de uydurma değil; her girdi kaynağından okunuyor:
+
+| Ne | Nereden |
+|---|---|
+| Bant ölçüleri, çatı, kepenk | `FloorGeometry.swift` |
+| Palet ve kat kat soğuma | `Palette.swift` |
+| Tabela, buton, satır metinleri | `<dil>.lproj/Localizable.strings` |
+| Para ve süre biçimi | `Money` / `DurationText` ile aynı kural |
+| Çarpan, süre gibi sayılar | `balance.json` |
+| Tipografi | paketteki Archivo kesitleri |
+
+Kod değişince maket de değişir. Ekrandaki sayılar (kasa, oran) temsilîdir:
+oyunun eğrisinden alınmış makul değerler, motordan hesaplanmış değil.
+
 ## Yazarken
 
 - Başlık bir iddia, alt satır onun kanıtı. İkisi aynı şeyi söylemesin.

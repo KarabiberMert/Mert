@@ -159,7 +159,10 @@ kapalı değil: reklam sağlayıcısı zaten `RewardedAds` protokolünün arkas�
 - [`docs/app-store-metadata.md`](docs/app-store-metadata.md) — ad, alt başlık,
   tanıtım metni, anahtar kelimeler, açıklama, sürüm notları
 - [`docs/app-store-screenshots.md`](docs/app-store-screenshots.md) — altı kare
-  için başlık ve alt satır, her karede ekranda ne olması gerektiğiyle birlikte
+  için başlık ve alt satır, her karede ekranda ne olması gerektiğiyle birlikte.
+  `scripts/render_mockups.py` bu kareleri üç dilde çizer — ama **maket**:
+  ölçüleri, paleti ve metinleri kaynaktan okur, gerçek uygulamadan alınmaz.
+  Mağazaya yüklenecek görüntüler Xcode'da çekilmeli.
 
 `scripts/check_store_copy.py` ikisini de ayrıştırıp her alanı sınırına göre
 ölçüyor; yazılı karakter sayısı metinle uyuşmazsa da hata veriyor.
@@ -417,6 +420,7 @@ python3 scripts/build_fonts.py       # Archivo kesitlerini yeniden üretir (font
 python3 scripts/make_app_icon.py     # 1024×1024 ikonu yeniden üretir
 python3 scripts/lint_pbxproj.py      # project.pbxproj yapısını doğrular
 python3 scripts/check_store_copy.py  # mağaza ve ekran görüntüsü metinlerini ölçer
+python3 scripts/render_mockups.py    # mağaza kareleri için ekran maketi çizer (maket, gerçek değil)
 ```
 
 Hiçbiri uygulamaya üçüncü parti bağımlılık sokmaz. `balance_report.py` bir
@@ -454,7 +458,10 @@ kapalı değil: reklam sağlayıcısı zaten `RewardedAds` protokolünün arkas�
 - [`docs/app-store-metadata.md`](docs/app-store-metadata.md) — ad, alt başlık,
   tanıtım metni, anahtar kelimeler, açıklama, sürüm notları
 - [`docs/app-store-screenshots.md`](docs/app-store-screenshots.md) — altı kare
-  için başlık ve alt satır, her karede ekranda ne olması gerektiğiyle birlikte
+  için başlık ve alt satır, her karede ekranda ne olması gerektiğiyle birlikte.
+  `scripts/render_mockups.py` bu kareleri üç dilde çizer — ama **maket**:
+  ölçüleri, paleti ve metinleri kaynaktan okur, gerçek uygulamadan alınmaz.
+  Mağazaya yüklenecek görüntüler Xcode'da çekilmeli.
 
 `scripts/check_store_copy.py` ikisini de ayrıştırıp her alanı sınırına göre
 ölçüyor; yazılı karakter sayısı metinle uyuşmazsa da hata veriyor.
