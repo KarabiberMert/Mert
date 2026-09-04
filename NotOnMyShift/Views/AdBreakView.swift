@@ -104,3 +104,35 @@ struct AdBreakView: View {
         .accessibilityLabel("\(L.adBreakTitle), \(L.adBreakCountdown(Int(remaining.rounded(.up))))")
     }
 }
+
+/// Sponsor arasını doğru katmana yerleştirir.
+///
+/// Bir sayfa (`.sheet`) açıkken kök görünümün üstüne çizilen katman onun
+/// **altında** kalır — oyuncu ödülü isteyip hiçbir şey görmez. Bu yüzden
+/// ödülün istendiği her yer sahneyi kendi katmanında taşır; aynı anda yalnızca
+/// biri takılı olur.
+struct AdBreakLayer: ViewModifier {
+
+    let store: GameStore
+    /// Sahneyi çizmek bu katmanın işi mi? Üstte bir sayfa varsa kök katman
+    /// devreden çıkar, sahneyi sayfanınki taşır.
+    let isActive: Bool
+
+    func body(content: Content) -> some View {
+        content.overlay {
+            if isActive, let house = store.houseAds, house.isPresenting {
+                AdBreakView(seconds: house.seconds) { rewarded in
+                    house.finish(rewarded: rewarded)
+                }
+                .transition(.opacity)
+            }
+        }
+    }
+}
+
+extension View {
+    /// Sponsor arası sahnesini bu katmana ekler.
+    func adBreak(_ store: GameStore, isActive: Bool = true) -> some View {
+        modifier(AdBreakLayer(store: store, isActive: isActive))
+    }
+}

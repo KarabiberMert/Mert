@@ -271,6 +271,13 @@ final class RewardTests: XCTestCase {
             .map(\.durationSeconds)
             .max() ?? 0
         XCTAssertLessThanOrEqual(config.rewards.boostSeconds, longestEvent * 2)
+
+        // Patlama olay etkisi makinesini `boost` kimliğiyle kullanıyor.
+        // Dengede aynı kimlikte bir olay olursa patlama onu silerdi.
+        XCTAssertFalse(
+            config.events.specs.contains { $0.id == GameEngine.boostID },
+            "'\(GameEngine.boostID)' kimliği vardiya patlamasına ayrılmış"
+        )
     }
 
     // MARK: - Yardımcı

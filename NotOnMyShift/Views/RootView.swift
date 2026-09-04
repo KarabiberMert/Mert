@@ -42,7 +42,6 @@ struct RootView: View {
                                 )
                         }
                         .buttonStyle(.plain)
-                        .padding(.trailing, 22)
                     }
                 }
 
@@ -96,16 +95,11 @@ struct RootView: View {
                 onDouble: { store.claimOfflineDouble() },
                 onDismiss: { store.dismissOfflineReport() }
             )
+            // Katlama buradan isteniyor; sahne de burada görünmeli.
+            .adBreak(store)
         }
         .overlay {
-            // Sponsor arası her şeyin üstünde: oyuncu ödülü beklerken
-            // başka bir kart araya girmesin.
-            if let house = store.houseAds, house.isPresenting {
-                AdBreakView(seconds: house.seconds) { rewarded in
-                    house.finish(rewarded: rewarded)
-                }
-                .transition(.opacity)
-            } else if let finale = store.finale {
+            if let finale = store.finale {
                 FinaleView(summary: finale) { store.dismissFinale() }
                     .transition(.opacity)
             } else if let event = store.pendingEvent {
@@ -153,6 +147,9 @@ struct RootView: View {
                 .transition(.opacity)
             }
         }
+        // Sahne en üstte: sıra kartların üstünde olmalı, altında değil.
+        // Dönüş özeti açıkken sahneyi onun katmanı taşır — iki kopya olmasın.
+        .adBreak(store, isActive: store.offlineReport == nil)
         .animation(
             reduceMotion ? nil : .easeOut(duration: 0.2),
             value: store.firstHireCelebration?.id
