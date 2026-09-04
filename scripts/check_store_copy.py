@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
-"""Mağaza metinlerini App Store Connect sınırlarına göre doğrular.
+"""Mağaza metinlerini karakter sınırlarına göre doğrular.
 
-Kaynak `docs/app-store-metadata.md`. Metni elle düzenle, sonra bunu çalıştır:
-başlıktaki karakter sayısını yeniden hesaplar ve sınırı aşanı söyler.
+İki kaynak var:
+  - `docs/app-store-metadata.md`  → App Store Connect alanları
+  - `docs/app-store-screenshots.md` → ekran görüntüsü başlık ve alt satırları
+
+Metni elle düzenle, sonra bunu çalıştır: yazılı karakter sayısını yeniden
+hesaplar ve sınırı aşanı söyler.
 
     python3 scripts/check_store_copy.py
 """
@@ -13,6 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DOC = ROOT / "docs/app-store-metadata.md"
+SHOTS = ROOT / "docs/app-store-screenshots.md"
 
 # App Store Connect alan sınırları.
 LIMITS = {
@@ -37,6 +42,52 @@ def limit_for(label):
         if field.lower() in label.lower():
             return field, cap
     return None, None
+
+
+# "| en-US | Başlık `29` | Alt satır `45` |"
+SHOT_ROW = re.compile(
+    r"^\|\s*(?P<lang>en-US|tr|es-ES)\s*\|"
+    r"\s*(?P<head>.+?)\s*`(?P<head_len>\d+)`\s*\|"
+    r"\s*(?P<sub>.+?)\s*`(?P<sub_len>\d+)`\s*\|\s*$",
+    re.M,
+)
+# "| Dil | Başlık (≤32) | Alt satır (≤60) |"
+SHOT_CAPS = re.compile(r"Başlık\s*\(≤(?P<head>\d+)\).*?Alt satır\s*\(≤(?P<sub>\d+)\)")
+
+
+def check_screenshots():
+    """Ekran görüntüsü metinleri. Sınırlar dosyanın kendi tablo başlığından."""
+    if not SHOTS.exists():
+        return [f"{SHOTS.relative_to(ROOT)} yok"]
+
+    text = SHOTS.read_text(encoding="utf-8")
+    caps = SHOT_CAPS.search(text)
+    if caps is None:
+        return ["ekran görüntüsü tablosunun başlığında sınır yazmıyor"]
+    head_cap, sub_cap = int(caps.group("head")), int(caps.group("sub"))
+
+    rows = list(SHOT_ROW.finditer(text))
+    shots = len(re.findall(r"^##\s+\d+\.", text, re.M))
+    print(f"\n{SHOTS.relative_to(ROOT)}: {shots} kare · {len(rows)} satır "
+          f"(başlık ≤{head_cap}, alt ≤{sub_cap})")
+    if not rows:
+        return ["hiç ekran görüntüsü satırı bulunamadı"]
+
+    problems = []
+    for row in rows:
+        for part, cap in (("head", head_cap), ("sub", sub_cap)):
+            body = row.group(part)
+            stated = int(row.group(f"{part}_len"))
+            actual = len(body)
+            where = f"{row.group('lang')} · {'başlık' if part == 'head' else 'alt satır'}"
+            if actual > cap:
+                problems.append(f"{where}: {actual}/{cap} — {actual - cap} fazla ({body!r})")
+            if stated != actual:
+                problems.append(f"{where}: yazıda {stated} ama metin {actual} karakter ({body!r})")
+
+    if 3 * shots != len(rows):
+        problems.append(f"{shots} kare için {len(rows)} satır var, 3 dil × {shots} = {3 * shots} olmalı")
+    return problems
 
 
 def main():
@@ -87,7 +138,7 @@ def main():
         print(f"{flag} {label:<34} {actual:>5}/{cap}")
 
     print(f"\nDiller: {len(locales)}")
-    return problems
+    return problems + check_screenshots()
 
 
 if __name__ == "__main__":
@@ -97,4 +148,4 @@ if __name__ == "__main__":
         for issue in issues:
             print(" -", issue)
         sys.exit(1)
-    print("Mağaza metinleri sınırların içinde.")
+    print("\nMağaza metinleri sınırların içinde.")

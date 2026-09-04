@@ -203,7 +203,8 @@ Lleva el carrito de café a mano, monta la plantilla, equipa el mostrador y abre
 ## Elle doldurulacaklar
 
 - Destek ve gizlilik politikası bağlantıları (Apple ikisini de şart koşuyor)
-- Üç dilde ekran görüntüleri: 6,7" ve 6,9" iPhone zorunlu
+- Üç dilde ekran görüntüleri: 6,7" ve 6,9" iPhone zorunlu.
+  Kare metinleri hazır: [`app-store-screenshots.md`](app-store-screenshots.md)
 - Yaş derecelendirmesi: uygulama içi satın alma **var**; üçüncü parti reklam
   **yok** (ara sahneyi oyunun kendisi çiziyor), kullanıcı içeriği yok.
   Gerçek bir reklam ağı eklenirse bu cevap değişir.

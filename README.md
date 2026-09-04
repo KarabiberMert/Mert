@@ -155,13 +155,19 @@ kullanılmayan bir izin metniyle App Review'a çıkmak demektir. Mimari buna
 kapalı değil: reklam sağlayıcısı zaten `RewardedAds` protokolünün arkasında.
 
 **Mağaza metinleri** üç dilde hazır:
-[`docs/app-store-metadata.md`](docs/app-store-metadata.md). Ad, alt başlık,
-tanıtım metni, anahtar kelimeler, açıklama ve sürüm notları — hepsi
-`scripts/check_store_copy.py` ile App Store Connect sınırlarına göre ölçülüyor.
 
-**Yayın öncesi elle yapılacaklar:** üç dilde ekran görüntüleri (6,7" ve 6,9"
-iPhone zorunlu), yaş derecelendirmesi, destek ve gizlilik politikası
-bağlantıları, App Store Connect'te ürünün oluşturulup fiyatının verilmesi.
+- [`docs/app-store-metadata.md`](docs/app-store-metadata.md) — ad, alt başlık,
+  tanıtım metni, anahtar kelimeler, açıklama, sürüm notları
+- [`docs/app-store-screenshots.md`](docs/app-store-screenshots.md) — altı kare
+  için başlık ve alt satır, her karede ekranda ne olması gerektiğiyle birlikte
+
+`scripts/check_store_copy.py` ikisini de ayrıştırıp her alanı sınırına göre
+ölçüyor; yazılı karakter sayısı metinle uyuşmazsa da hata veriyor.
+
+**Yayın öncesi elle yapılacaklar:** ekran görüntülerinin kendisi (6,7" ve 6,9"
+iPhone zorunlu, üç dilde ayrı), yaş derecelendirmesi, destek ve gizlilik
+politikası bağlantıları, App Store Connect'te ürünün oluşturulup fiyatının
+verilmesi.
 
 ## Tipografi kontrolü
 
@@ -410,7 +416,7 @@ python3 scripts/build_fonts.py       # Archivo kesitlerini yeniden üretir (font
 ./scripts/check_rules.sh             # pazarlığa kapalı kuralları tarar
 python3 scripts/make_app_icon.py     # 1024×1024 ikonu yeniden üretir
 python3 scripts/lint_pbxproj.py      # project.pbxproj yapısını doğrular
-python3 scripts/check_store_copy.py  # mağaza metinlerini App Store sınırlarına göre ölçer
+python3 scripts/check_store_copy.py  # mağaza ve ekran görüntüsü metinlerini ölçer
 ```
 
 Hiçbiri uygulamaya üçüncü parti bağımlılık sokmaz. `balance_report.py` bir
@@ -444,13 +450,19 @@ kullanılmayan bir izin metniyle App Review'a çıkmak demektir. Mimari buna
 kapalı değil: reklam sağlayıcısı zaten `RewardedAds` protokolünün arkasında.
 
 **Mağaza metinleri** üç dilde hazır:
-[`docs/app-store-metadata.md`](docs/app-store-metadata.md). Ad, alt başlık,
-tanıtım metni, anahtar kelimeler, açıklama ve sürüm notları — hepsi
-`scripts/check_store_copy.py` ile App Store Connect sınırlarına göre ölçülüyor.
 
-**Yayın öncesi elle yapılacaklar:** üç dilde ekran görüntüleri (6,7" ve 6,9"
-iPhone zorunlu), yaş derecelendirmesi, destek ve gizlilik politikası
-bağlantıları, App Store Connect'te ürünün oluşturulup fiyatının verilmesi.
+- [`docs/app-store-metadata.md`](docs/app-store-metadata.md) — ad, alt başlık,
+  tanıtım metni, anahtar kelimeler, açıklama, sürüm notları
+- [`docs/app-store-screenshots.md`](docs/app-store-screenshots.md) — altı kare
+  için başlık ve alt satır, her karede ekranda ne olması gerektiğiyle birlikte
+
+`scripts/check_store_copy.py` ikisini de ayrıştırıp her alanı sınırına göre
+ölçüyor; yazılı karakter sayısı metinle uyuşmazsa da hata veriyor.
+
+**Yayın öncesi elle yapılacaklar:** ekran görüntülerinin kendisi (6,7" ve 6,9"
+iPhone zorunlu, üç dilde ayrı), yaş derecelendirmesi, destek ve gizlilik
+politikası bağlantıları, App Store Connect'te ürünün oluşturulup fiyatının
+verilmesi.
 
 ## Tipografi
 
