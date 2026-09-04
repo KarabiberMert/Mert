@@ -7,6 +7,8 @@ kat yükseliyor.
 
 Tam tasarım dokümanı: [`docs/oyun-tasarim-raporu.md`](docs/oyun-tasarim-raporu.md)
 Geliştirme yönergesi: [`docs/claude-code-prompt.md`](docs/claude-code-prompt.md)
+**Xcode'a devir:** [`docs/xcode-devir.md`](docs/xcode-devir.md) — proje hiç
+derlenmedi; Mac'te ilk oturumda ne yapılacağı ve neyin açık kaldığı orada.
 
 **Durum: Faz 7 — monetizasyon ve App Store hazırlığı. Yedi faz da bitti.**
 Bina kat kat yükseliyor, çatıdaki müdürler koyduğun kurallarla işi sen yokken
