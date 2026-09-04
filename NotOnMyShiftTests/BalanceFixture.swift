@@ -93,7 +93,10 @@ enum BalanceFixture {
         investmentShare: Double = 0.1,
         pointsPerSale: Int = 1,
         pointsPerCity: Int = 2,
-        multiplierPerPoint: Double = 0.5
+        multiplierPerPoint: Double = 0.5,
+        offlineRewardMultiplier: Double = 2,
+        boostMultiplier: Double = 3,
+        boostSeconds: Double = 60
     ) -> BalanceConfig {
         BalanceConfig(
             version: 1,
@@ -157,6 +160,12 @@ enum BalanceFixture {
                 pointsPerSale: pointsPerSale,
                 pointsPerCity: pointsPerCity,
                 multiplierPerPoint: multiplierPerPoint
+            ),
+            // Ödüller isteğe bağlı: hiçbiri alınmazsa oyun tam çalışır.
+            rewards: .init(
+                offlineMultiplier: offlineRewardMultiplier,
+                boostMultiplier: boostMultiplier,
+                boostSeconds: boostSeconds
             )
         )
     }

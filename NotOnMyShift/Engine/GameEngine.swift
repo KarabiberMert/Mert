@@ -1100,6 +1100,65 @@ enum GameEngine {
         return .success(next)
     }
 
+    // MARK: - Ödüller (rapor §8)
+
+    /// Vardiya patlamasının olay kimliği. Metni ve rozeti buradan çözülür;
+    /// aynı kimlik iki kez binmesin diye eskisi önce düşülür.
+    static let boostID = "boost"
+
+    /// Çevrimdışı kazancı katla.
+    ///
+    /// `resume` dokunulmadan kalır: özet zaten hesaplanmış olur, buradaki iş
+    /// farkı kasaya eklemek. Böylece ödül reddedilirse hiçbir şey geri
+    /// alınmaz — oyuncu asla eksiye düşmez.
+    static func grantOfflineBonus(
+        _ state: GameState,
+        earned: Double,
+        config: BalanceConfig
+    ) -> GameState {
+        let extra = max(0, earned) * max(0, config.rewards.offlineMultiplier - 1)
+        guard extra > 0, extra.isFinite else { return state }
+
+        var next = state
+        next.money += extra
+        next.lifetimeEarnings += extra
+        next.stats.rewardsClaimed += 1
+        return next
+    }
+
+    /// Vardiya patlaması: kısa süreli üretim çarpanı.
+    ///
+    /// Olay etkisiyle aynı makineyi kullanır, dolayısıyla `advance` yine kapalı
+    /// form kalır — bitişi bir kırılım noktasıdır, tick döngüsü değil.
+    static func grantShiftBoost(_ state: GameState, config: BalanceConfig) -> GameState {
+        let multiplier = max(1, config.rewards.boostMultiplier)
+        let duration = max(0, config.rewards.boostSeconds)
+        guard multiplier > 1, duration > 0 else { return state }
+
+        var next = normalised(state, config: config)
+        // Üst üste basmak süreyi uzatmaz, baştan başlatır.
+        next.modifiers.removeAll { $0.eventID == boostID }
+        next.modifiers.append(
+            ActiveModifier(
+                eventID: boostID,
+                choiceID: boostID,
+                multiplier: multiplier,
+                endsAtGameSeconds: next.elapsedGameSeconds + duration
+            )
+        )
+        next.stats.rewardsClaimed += 1
+        return next
+    }
+
+    /// Süren vardiya patlamasına kalan süre. Yoksa `nil`.
+    static func boostRemaining(in state: GameState) -> TimeInterval? {
+        state.modifiers
+            .filter { $0.eventID == boostID }
+            .map { $0.endsAtGameSeconds - state.elapsedGameSeconds }
+            .filter { $0 > 0 }
+            .max()
+    }
+
     /// Panelin çalışacağı katı değiştir.
     static func selectFloor(_ index: Int, _ state: GameState) -> GameState {
         guard state.floors.indices.contains(index) else { return state }

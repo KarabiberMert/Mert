@@ -11,6 +11,7 @@ struct NotOnMyShiftApp: App {
             switch bootstrap {
             case .ready(let store):
                 RootView(store: store)
+                    .task { store.prepareStore() }
             case .failed(let message):
                 BootFailureView(message: message)
             }
@@ -41,7 +42,16 @@ enum Bootstrap {
         do {
             let config = try BalanceConfig.load()
             let saves = try SaveStore.applicationSupport()
-            return .ready(GameStore(config: config, saves: saves))
+            // Sınırlar burada bağlanır: StoreKit gerçek, reklam sahnesi
+            // oyunun kendi çizdiği "sponsor arası". SDK gelirse tek satır.
+            return .ready(
+                GameStore(
+                    config: config,
+                    saves: saves,
+                    purchases: StoreKitPurchases(),
+                    ads: HouseAds()
+                )
+            )
         } catch {
             return .failed(String(describing: error))
         }

@@ -382,23 +382,3 @@ final class GameStoreTests: XCTestCase {
         try body(directory)
     }
 }
-
-/// Testlerde saati elle ileri almak için. Üretimde `Date()` kullanılıyor.
-private final class TestClock: @unchecked Sendable {
-
-    private let lock = NSLock()
-    private var storedDate: Date
-
-    init(_ date: Date) {
-        storedDate = date
-    }
-
-    var date: Date {
-        get { lock.withLock { storedDate } }
-        set { lock.withLock { storedDate = newValue } }
-    }
-
-    var provider: @Sendable () -> Date {
-        { [self] in date }
-    }
-}

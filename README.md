@@ -8,10 +8,11 @@ kat yükseliyor.
 Tam tasarım dokümanı: [`docs/oyun-tasarim-raporu.md`](docs/oyun-tasarim-raporu.md)
 Geliştirme yönergesi: [`docs/claude-code-prompt.md`](docs/claude-code-prompt.md)
 
-**Durum: Faz 6 — yumuşak prestij ve final.**
+**Durum: Faz 7 — monetizasyon ve App Store hazırlığı. Yedi faz da bitti.**
 Bina kat kat yükseliyor, çatıdaki müdürler koyduğun kurallarla işi sen yokken
-yürütüyor, olgunlaşan sektörü satıp holding puanı biriktiriyorsun ve son kat da
-büyüdüğünde holding halka arz olup sonraki şehir açılıyor.
+yürütüyor, olgunlaşan sektörü satıp holding puanı biriktiriyorsun, son kat da
+büyüdüğünde holding halka arz oluyor. İsteğe bağlı ödüller ve tek seferlik
+"Reklamsız" alımı yerinde; hiçbiri oynamak için gerekli değil.
 
 ---
 
@@ -102,7 +103,20 @@ Xcode içinden ⌘U.
 22. Bütün katlar büyüdüğünde **Holdingi halka arz et** satırı belirir. Bas:
     final sahnesi biten şehrin rakamlarını yazar ve sonraki şehir açılır.
     Puanların, depon ve istatistiklerin seninle gelir; bina sıfırlanır.
-23. Ayarlar → Erişilebilirlik → **Hareketi Azalt**'ı aç: süzülen rakam,
+23. Kasa sayacının altındaki **vardiya patlaması** şeridine bas: kısa bir
+    "sponsor arası" sahnesi çıkar, geri sayım bitince ödülü alırsın ve kasa
+    satırında 30 dakikalık ×3 çarpanı görünür. Erken geçersen ödül yok ama
+    hiçbir şey de eksilmez. Seans başına bir kez.
+24. Uzun bir süre sonra dön: dönüş özetinde **"… yap"** düğmesi çıkar. Sahneyi
+    izle, tutar iki katına çıkar ve yanında "Katlandı" yazar.
+25. Sağ üstteki **Reklamsız** rozetine bas: fiyat App Store'dan gelir, satın
+    alma ve **geri yükleme** aynı sayfadadır. (Simülatörde test etmek için
+    şemaya `Config/NotOnMyShift.storekit` dosyasını StoreKit yapılandırması
+    olarak bağla.)
+26. Satın aldıktan sonra rozet kaybolur; dönüş özetinde katlama **sorulmadan**
+    uygulanır ve vardiya patlaması sahnesiz gelir. Para veren, reklam
+    izleyenden yavaş kalmamalı.
+27. Ayarlar → Erişilebilirlik → **Hareketi Azalt**'ı aç: süzülen rakam,
     yerleşme ve bina yükselme animasyonu susar, oyun aynı çalışır.
 
 ### Dil kontrolü
@@ -113,7 +127,38 @@ gerekenler: arayüz metni, **kadronun isimleri**, dükkânın tabelası ve
 `1,2 K €`. Mevcut kadro da yeni dilde görünmeli; kayıtta isim değil kimlik
 saklanıyor.
 
-### Tipografi kontrolü
+### App Store
+
+Faz 0'da kurulan, Faz 7'de tamamlanan liste:
+
+| | Durum |
+|---|---|
+| Bundle ID | `com.karabibermert.notonmyshift` |
+| Görünen ad | Not On My Shift |
+| Sürüm | `MARKETING_VERSION 1.0` · `CURRENT_PROJECT_VERSION 1` |
+| Dağıtım hedefi | iOS 17.0, yalnızca portre, arm64 |
+| Gizlilik bildirimi | `PrivacyInfo.xcprivacy` — hiçbir veri toplanmıyor, izleme yok |
+| İkon | `Assets.xcassets/AppIcon` (tek 1024×1024 yeterli) |
+| Açılış ekranı | `UILaunchScreen` + `LaunchBackground` rengi — beyaz flaş yok |
+| Şifreleme beyanı | `ITSAppUsesNonExemptEncryption = false` |
+| Diller | `en` (kaynak), `tr`, `es` — `CFBundleLocalizations` içinde |
+| Uygulama içi satın alma | `com.karabibermert.notonmyshift.noads`, tek seferlik, tüketilmeyen |
+| Geri yükleme | "Reklamsız" sayfasında — App Review bunu şart koşar |
+
+**Yerel test:** şemaya (Run → Options → StoreKit Configuration)
+`Config/NotOnMyShift.storekit` dosyasını bağla. Fiyat orada 2,99 görünür;
+gerçek fiyat App Store Connect'te belirlenir, kodda durmaz.
+
+**Henüz eklenmedi, bilerek:** ATT izni (`NSUserTrackingUsageDescription`) ve
+`SKAdNetworkItems`. Gerçek bir reklam SDK'sı gelmeden bunları koymak,
+kullanılmayan bir izin metniyle App Review'a çıkmak demektir. Mimari buna
+kapalı değil: reklam sağlayıcısı zaten `RewardedAds` protokolünün arkasında.
+
+**Yayın öncesi elle yapılacaklar:** mağaza açıklaması ve anahtar kelimeler,
+üç dilde ekran görüntüleri, yaş derecelendirmesi (uygulama içi satın alma
+var, reklam yok), destek ve gizlilik politikası bağlantıları.
+
+## Tipografi kontrolü
 
 Ekranda `ığüşöçİĞÜŞÖÇ` ve `₺` doğru görünüyor mu? Rakamlar sayaç artarken
 zıplıyor mu? Zıplıyorsa özel font yüklenmemiştir — `Typography.hasCustomFonts`
@@ -276,6 +321,41 @@ ayrıca `pointsPerCity` puan ekler; "hızlandırılmış eğri" budur.
 `scripts/balance_report.py` satışın kurulum bedeline oranını ve bir şehri
 bitirmenin kaç puan ettiğini yazar.
 
+### Ödüller ve satın alma
+
+Rapor §8'in iki kuralı koda gömülü:
+
+| | Kural |
+|---|---|
+| Ödül zorunlu değil | Hiç izlemeyen, hiç ödemeyen oyuncu oyunu baştan sona oynar |
+| Alan otomatik alır | Çevrimdışı katlama hep açık, vardiya patlaması sahnesiz |
+
+İkincisi olmadan para veren oyuncu reklam izleyenden yavaş ilerler — raporun
+"en hızlı geri ödeme talebi sebebi" dediği durum. Bu yüzden `hasRemovedAds`
+oyuncuya hiç sormaz: dönüş özeti açıldığı anda katlama uygulanmış olur.
+
+Çevrimdışı katlama `resume`'a dokunmaz; özet hesaplandıktan sonra farkı ekler,
+yani ödül reddedilirse geri alınacak bir şey olmaz. Vardiya patlaması olay
+etkisi makinesini kullanır: `advance` kapalı form kalır ve patlamanın bitişi
+sadece bir kırılım noktasıdır.
+
+İki sınır da protokoldür ve oyun kodu ikisinin de arkasını bilmez:
+
+```
+GameStore
+   ├── Purchases      → StoreKitPurchases (gerçek) · MemoryPurchases (test)
+   └── RewardedAds    → HouseAds (oyunun kendi sahnesi) · NoAds (kapalı)
+```
+
+Bu sürümde gerçek bir reklam SDK'sı **yok** — proje sıfır üçüncü parti
+bağımlılıkla çalışıyor. `HouseAds` oyunun kendi çizdiği "sponsor arası"dır:
+burada reklam olmadığını dürüstçe söyler, geri sayımı işletir ve ödülü
+gerçekten verir. Böylece akış baştan sona test edilebilir. Bir sağlayıcı
+gelirse `NotOnMyShiftApp` içindeki tek satır değişir, oyun kodu değişmez.
+
+Satın alma hakkı kayda yazılmaz; kaynak StoreKit'tir. Bu yüzden "sıfırdan
+başla" bir hakkı silemez ve cihaz değiştiren oyuncu geri yükleyebilir.
+
 ### Bina, katlar ve şubeler
 
 Kat geniş ve alçak bir **bant**. Bandın yapısı (döşeme, duvar, çini lambri,
@@ -329,6 +409,37 @@ python3 scripts/lint_pbxproj.py      # project.pbxproj yapısını doğrular
 
 Hiçbiri uygulamaya üçüncü parti bağımlılık sokmaz. `balance_report.py` bir
 sayıyı değiştirdikten sonra eğrinin nereye gittiğini oyunu açmadan gösterir.
+
+## App Store
+
+Faz 0'da kurulan, Faz 7'de tamamlanan liste:
+
+| | Durum |
+|---|---|
+| Bundle ID | `com.karabibermert.notonmyshift` |
+| Görünen ad | Not On My Shift |
+| Sürüm | `MARKETING_VERSION 1.0` · `CURRENT_PROJECT_VERSION 1` |
+| Dağıtım hedefi | iOS 17.0, yalnızca portre, arm64 |
+| Gizlilik bildirimi | `PrivacyInfo.xcprivacy` — hiçbir veri toplanmıyor, izleme yok |
+| İkon | `Assets.xcassets/AppIcon` (tek 1024×1024 yeterli) |
+| Açılış ekranı | `UILaunchScreen` + `LaunchBackground` rengi — beyaz flaş yok |
+| Şifreleme beyanı | `ITSAppUsesNonExemptEncryption = false` |
+| Diller | `en` (kaynak), `tr`, `es` — `CFBundleLocalizations` içinde |
+| Uygulama içi satın alma | `com.karabibermert.notonmyshift.noads`, tek seferlik, tüketilmeyen |
+| Geri yükleme | "Reklamsız" sayfasında — App Review bunu şart koşar |
+
+**Yerel test:** şemaya (Run → Options → StoreKit Configuration)
+`Config/NotOnMyShift.storekit` dosyasını bağla. Fiyat orada 2,99 görünür;
+gerçek fiyat App Store Connect'te belirlenir, kodda durmaz.
+
+**Henüz eklenmedi, bilerek:** ATT izni (`NSUserTrackingUsageDescription`) ve
+`SKAdNetworkItems`. Gerçek bir reklam SDK'sı gelmeden bunları koymak,
+kullanılmayan bir izin metniyle App Review'a çıkmak demektir. Mimari buna
+kapalı değil: reklam sağlayıcısı zaten `RewardedAds` protokolünün arkasında.
+
+**Yayın öncesi elle yapılacaklar:** mağaza açıklaması ve anahtar kelimeler,
+üç dilde ekran görüntüleri, yaş derecelendirmesi (uygulama içi satın alma
+var, reklam yok), destek ve gizlilik politikası bağlantıları.
 
 ## Tipografi
 

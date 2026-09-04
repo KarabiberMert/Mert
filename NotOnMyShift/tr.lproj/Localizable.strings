@@ -248,3 +248,26 @@
 "finale.byHand" = "Kendi elinle yaptığın satış";
 "finale.newCity" = "Sonraki şehre başla";
 "finale.newCityNote" = "Yeni sokak, yeni işler. Puanların ve depon seninle geliyor.";
+
+/* İsteğe bağlı ödüller. Asla zorunlu, asla cezalandırıcı değil. */
+"reward.boost" = "%@ boyunca ×%@";
+"reward.boostTake" = "Al";
+"reward.boostWatch" = "İzle ve al";
+"reward.double" = "%@ yap";
+"reward.doubled" = "Katlandı";
+"adbreak.title" = "Yan dükkândan bir duyuru";
+"adbreak.body" = "Burada henüz gerçek bir reklam yok. Ödül gerçek ama.";
+"adbreak.countdown" = "%lld saniye kaldı";
+"adbreak.skip" = "Geç — ödül yok";
+"adbreak.claim" = "Ödülü al";
+
+/* Tek seferlik satın alma */
+"support.title" = "Reklamsız";
+"support.open" = "Reklamsız";
+"support.body" = "Tek ödeme, bir daha reklam yok. Reklamın verdiği her şeyi zaten alırsın — döndüğünde depo iki katı öder, vardiya patlaması tek dokunuş.";
+"support.buy" = "Satın al";
+"support.owned" = "Teşekkürler. Reklamlar temelli kapandı.";
+"support.restore" = "Satın alımı geri yükle";
+"support.close" = "Kapat";
+"support.failed" = "Bu iş olmadı. Hesabından bir şey çekilmedi.";
+"support.noPrice" = "Fiyat görünmüyor";

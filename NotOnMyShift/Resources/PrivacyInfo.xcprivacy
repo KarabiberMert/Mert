@@ -2,7 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- MVP: hiçbir veri toplanmıyor, hiçbir izleme yok, ağ bağlantısı yok. -->
+	<!-- Hiçbir veri toplanmıyor, hiçbir izleme yok, analitik yok.
+	     Oyun kendi adına hiçbir ağ isteği yapmaz; tek istisna satın alma
+	     akışında StoreKit'in Apple ile konuşmasıdır. Satın alma verisini
+	     Apple tutar, biz toplamayız ve hiçbir yere göndermeyiz.
+	     Reklam SDK'sı yok, dolayısıyla izleme alanı da boş kalır. -->
 	<key>NSPrivacyTracking</key>
 	<false/>
 	<key>NSPrivacyTrackingDomains</key>

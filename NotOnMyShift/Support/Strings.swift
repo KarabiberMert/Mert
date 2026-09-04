@@ -566,6 +566,77 @@ enum L {
                comment: "What carries over to the next city")
     }
 
+    // MARK: - Ödüller ve destek (rapor §8)
+
+    /// Ödül asla zorunlu değil: metin de öyle konuşur.
+    /// "30 minutes at 3x"
+    static func boostOffer(_ duration: String, _ multiplier: String) -> String {
+        String(localized: "reward.boost", defaultValue: "\(duration) at ×\(multiplier)", comment: "The shift boost reward")
+    }
+    static var boostTake: String {
+        String(localized: "reward.boostTake", defaultValue: "Take it", comment: "Claim the boost without an ad break")
+    }
+    static var boostWatch: String {
+        String(localized: "reward.boostWatch", defaultValue: "Watch and take it", comment: "Claim the boost after an ad break")
+    }
+    /// "Make it $1.2K"
+    static func doubleOffline(_ amount: String) -> String {
+        String(localized: "reward.double", defaultValue: "Make it \(amount)", comment: "Double the offline earnings")
+    }
+    static var doubled: String {
+        String(localized: "reward.doubled", defaultValue: "Doubled", comment: "The offline earnings were doubled")
+    }
+
+    // MARK: - Sponsor arası
+
+    static var adBreakTitle: String {
+        String(localized: "adbreak.title", defaultValue: "A word from the shop next door", comment: "House ad break heading")
+    }
+    static var adBreakBody: String {
+        String(localized: "adbreak.body", defaultValue: "There is no real advert here yet. The reward is, though.", comment: "What the house ad break is")
+    }
+    /// Çoğul eki yok: 1 ve 5 için aynı çalışmalı.
+    static func adBreakCountdown(_ seconds: Int) -> String {
+        String(localized: "adbreak.countdown", defaultValue: "\(seconds) seconds left", comment: "Countdown. Must read correctly for 1 as well.")
+    }
+    static var adBreakSkip: String {
+        String(localized: "adbreak.skip", defaultValue: "Skip — no reward", comment: "Close the ad break early")
+    }
+    static var adBreakClaim: String {
+        String(localized: "adbreak.claim", defaultValue: "Take the reward", comment: "Finish the ad break and collect")
+    }
+
+    // MARK: - Reklamsız
+
+    static var support: String {
+        String(localized: "support.title", defaultValue: "No adverts", comment: "The purchase screen heading")
+    }
+    static var supportOpen: String {
+        String(localized: "support.open", defaultValue: "No adverts", comment: "Button that opens the purchase screen")
+    }
+    static var supportBody: String {
+        String(localized: "support.body", defaultValue: "One payment, no adverts ever. Everything the adverts give you, you get anyway — the store room pays double when you come back, and the shift boost is one tap.",
+               comment: "What the purchase gives. Buyers must never end up slower than ad watchers.")
+    }
+    static var supportBuy: String {
+        String(localized: "support.buy", defaultValue: "Buy", comment: "Purchase button")
+    }
+    static var supportOwned: String {
+        String(localized: "support.owned", defaultValue: "Thank you. The adverts are gone for good.", comment: "Already purchased")
+    }
+    static var supportRestore: String {
+        String(localized: "support.restore", defaultValue: "Restore a purchase", comment: "Restore purchases button")
+    }
+    static var supportClose: String {
+        String(localized: "support.close", defaultValue: "Close", comment: "Dismiss the purchase screen")
+    }
+    static var purchaseFailed: String {
+        String(localized: "support.failed", defaultValue: "That did not go through. Nothing was charged.", comment: "Purchase or restore failed")
+    }
+    static var priceUnavailable: String {
+        String(localized: "support.noPrice", defaultValue: "Price unavailable", comment: "The store could not be reached")
+    }
+
     // MARK: - Dönüş özeti
 
     static var welcomeBack: String {

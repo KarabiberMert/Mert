@@ -1,0 +1,43 @@
+{
+  "identifier" : "6E3A1C40",
+  "nonRenewingSubscriptions" : [
+  ],
+  "products" : [
+    {
+      "displayPrice" : "2.99",
+      "familyShareable" : false,
+      "internalID" : "A1F2B3C4",
+      "localizations" : [
+        {
+          "description" : "One payment, no adverts ever. The store room pays double when you come back and the shift boost is one tap.",
+          "displayName" : "No adverts",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "Tek ödeme, bir daha reklam yok. Döndüğünde depo iki katı öder, vardiya patlaması tek dokunuş.",
+          "displayName" : "Reklamsız",
+          "locale" : "tr_TR"
+        },
+        {
+          "description" : "Un pago y se acabaron los anuncios. El almacén paga el doble al volver y el impulso de turno es un toque.",
+          "displayName" : "Sin anuncios",
+          "locale" : "es_ES"
+        }
+      ],
+      "productID" : "com.karabibermert.notonmyshift.noads",
+      "referenceName" : "No adverts",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "NotOnMyShift",
+    "_developerTeamID" : "",
+    "_lastSynchronizedDate" : 0
+  },
+  "subscriptionGroups" : [
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

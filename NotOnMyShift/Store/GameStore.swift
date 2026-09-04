@@ -253,14 +253,133 @@ final class GameStore {
         GameEngine.isBranchBlockedByMarket(onFloor: selectedFloor, state, config: config)
     }
 
+    // MARK: - Ödüller ve satın alma (rapor §8)
+
+    /// "Reklamsız" alındı mı?
+    var hasRemovedAds: Bool { purchases.hasRemovedAds }
+
+    /// Ödül düğmeleri hiç görünmesin mi? Ne reklam var ne alım — sessiz oyun.
+    var showsRewards: Bool { ads.isReady || hasRemovedAds }
+
+    /// Vardiya patlaması bu seansta alınabilir mi?
+    var canBoost: Bool { showsRewards && !hasBoostedThisSession && boostRemaining == nil }
+    /// Süren vardiya patlamasına kalan süre.
+    var boostRemaining: TimeInterval? { GameEngine.boostRemaining(in: state) }
+    var boostMultiplier: Double { max(1, config.rewards.boostMultiplier) }
+    var boostSeconds: TimeInterval { max(0, config.rewards.boostSeconds) }
+    var offlineMultiplier: Double { max(1, config.rewards.offlineMultiplier) }
+
+    /// Dönüş özetindeki katlama teklifi hâlâ açık mı?
+    /// Satın alan oyuncuya hiç sorulmaz; katlama zaten uygulanmıştır.
+    var canDoubleOffline: Bool {
+        guard let report = offlineReport else { return false }
+        return ads.isReady && !hasRemovedAds && !hasDoubledThisReturn && report.earned > 0
+    }
+
+    /// Çevrimdışı kazancı katla. Reklamsız oyuncuda dönüşte kendiliğinden olur.
+    ///
+    /// View'ın çağırdığı hâli beklemez; asıl iş `claimingOfflineDouble()`
+    /// içinde durur ki testler sonucu deterministik olarak bekleyebilsin.
+    func claimOfflineDouble() {
+        Task { [weak self] in
+            await self?.claimingOfflineDouble()
+        }
+    }
+
+    func claimingOfflineDouble() async {
+        guard let report = offlineReport, !hasDoubledThisReturn, !hasRemovedAds else { return }
+        guard await ads.present() else { return }
+        applyOfflineDouble(earned: report.earned)
+    }
+
+    /// Vardiya patlamasını al. Alan oyuncu sahneyi görmez, doğrudan alır.
+    func claimBoost() {
+        Task { [weak self] in
+            await self?.claimingBoost()
+        }
+    }
+
+    func claimingBoost() async {
+        guard canBoost else { return }
+        // Rapor §8: para veren, reklam izleyenden yavaş kalmamalı.
+        guard !hasRemovedAds else {
+            applyBoost()
+            return
+        }
+        guard await ads.present() else { return }
+        applyBoost()
+    }
+
+    private func applyOfflineDouble(earned: Double) {
+        guard !hasDoubledThisReturn else { return }
+        hasDoubledThisReturn = true
+        state = GameEngine.grantOfflineBonus(state, earned: earned, config: config)
+        if var report = offlineReport {
+            report.earned *= offlineMultiplier
+            report.wasDoubled = true
+            offlineReport = report
+        }
+        Haptics.play(.success)
+        persist()
+    }
+
+    private func applyBoost() {
+        guard !hasBoostedThisSession else { return }
+        hasBoostedThisSession = true
+        state = GameEngine.grantShiftBoost(state, config: config)
+        Haptics.play(.success)
+        persist()
+    }
+
+    /// Mağazayı hazırla ve hakları tazele. Açılışta bir kez.
+    func prepareStore() {
+        Task { [weak self] in
+            await self?.purchases.refresh()
+        }
+    }
+
+    func buyRemoveAds() {
+        Task { [weak self] in
+            await self?.buyingRemoveAds()
+        }
+    }
+
+    func buyingRemoveAds() async {
+        await purchases.buy()
+        // Alım anında dönüş özeti açıksa katlamayı hemen uygula: oyuncu
+        // parayı verip ödülü kaçırmasın.
+        if purchases.hasRemovedAds, let report = offlineReport, !hasDoubledThisReturn {
+            applyOfflineDouble(earned: report.earned)
+        }
+    }
+
+    func restorePurchases() {
+        Task { [weak self] in
+            await self?.purchases.restore()
+        }
+    }
+
     // MARK: - İç durum
 
     private let saves: SaveStore
     private let now: @Sendable () -> Date
+
+    /// Satın alma sınırı. StoreKit'i yalnızca bu tip bilir.
+    let purchases: any Purchases
+    /// Ödüllü reklam sınırı. Bugün ev yapımı sahne, yarın bir SDK.
+    let ads: any RewardedAds
+
+    /// Sahneyi oyunun kendisi çiziyorsa onu çizecek nesne.
+    /// Gerçek bir SDK bağlanınca `nil` olur ve `AdBreakView` hiç görünmez.
+    var houseAds: HouseAds? { ads as? HouseAds }
     @ObservationIgnored private var ticker: Task<Void, Never>?
     @ObservationIgnored private var secondsSinceSave: TimeInterval = 0
     /// Olay seans başına bir kez sunulur; uygulama arka plana gidince sıfırlanır.
     @ObservationIgnored private var hasOfferedEventThisSession = false
+    /// Vardiya patlaması da seans başına bir kez. Aynı yerden sıfırlanır.
+    @ObservationIgnored private var hasBoostedThisSession = false
+    /// Çevrimdışı katlama, dönüş özetinde bir kez sunulur.
+    @ObservationIgnored private var hasDoubledThisReturn = false
 
     /// Otomatik kaydetme aralığı. Arka plana geçişte ayrıca kaydediliyor;
     /// bu, uygulama öldürülürse kaybı sınırlamak için.
@@ -269,10 +388,18 @@ final class GameStore {
     // MARK: - Kurulum
 
     /// - Parameter now: Saat kaynağı. Testlerde sahte saat verilebilsin diye enjekte edilir.
-    init(config: BalanceConfig, saves: SaveStore, now: @escaping @Sendable () -> Date = { Date() }) {
+    init(
+        config: BalanceConfig,
+        saves: SaveStore,
+        now: @escaping @Sendable () -> Date = { Date() },
+        purchases: any Purchases = MemoryPurchases(),
+        ads: any RewardedAds = NoAds()
+    ) {
         self.config = config
         self.saves = saves
         self.now = now
+        self.purchases = purchases
+        self.ads = ads
 
         let groundSector = config.sectors.first?.id ?? GameState.groundSectorID
         switch saves.load() {
@@ -293,6 +420,7 @@ final class GameStore {
         let outcome = GameEngine.resume(state, at: now(), mode: .awayFromApp, config: config)
         state = outcome.state
 
+        hasDoubledThisReturn = false
         if outcome.shouldShowReport {
             offlineReport = OfflineReport(
                 awaySeconds: outcome.elapsedSeconds,
@@ -300,6 +428,11 @@ final class GameStore {
                 earned: outcome.earned,
                 didFillWarehouse: outcome.didFillWarehouse
             )
+            // Rapor §8'in kritik detayı: satın alan oyuncu ödülü **otomatik**
+            // alır. Aksi hâlde para veren, reklam izleyenden yavaş ilerlerdi.
+            if purchases.hasRemovedAds {
+                applyOfflineDouble(earned: outcome.earned)
+            }
         }
 
         runManagerRules(reporting: true)
@@ -311,8 +444,9 @@ final class GameStore {
     /// Uygulama arka plana gidiyor: saati damgala, kaydet, zamanlayıcıyı durdur.
     func handleWillResignActive() {
         stopTicking()
-        // Yeni seans yeni bir olay hakkı demek.
+        // Yeni seans yeni bir olay hakkı demek. Vardiya patlaması da öyle.
         hasOfferedEventThisSession = false
+        hasBoostedThisSession = false
         // Ekranda görünen son saniyeleri de yazalım ki `lastSeenAt` tam olsun.
         let outcome = GameEngine.resume(state, at: now(), mode: .live, config: config)
         state = outcome.state
@@ -601,6 +735,8 @@ final class GameStore {
         sectorSaleCelebration = nil
         finale = nil
         hasOfferedEventThisSession = false
+        hasBoostedThisSession = false
+        hasDoubledThisReturn = false
         lastActionError = nil
         didRecoverFromBackup = false
         didFailToSave = false
@@ -660,4 +796,6 @@ struct OfflineReport: Identifiable, Equatable {
     var creditedSeconds: TimeInterval
     var earned: Double
     var didFillWarehouse: Bool
+    /// Ödül alındı mı? Alındıysa `earned` katlanmış tutarı gösterir.
+    var wasDoubled = false
 }

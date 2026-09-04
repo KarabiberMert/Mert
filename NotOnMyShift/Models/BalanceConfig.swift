@@ -17,6 +17,7 @@ struct BalanceConfig: Codable, Sendable, Equatable {
     var market: Market
     var process: Process
     var prestige: Prestige
+    var rewards: Rewards
 
     // MARK: - Bina
 
@@ -240,6 +241,22 @@ struct BalanceConfig: Codable, Sendable, Equatable {
         var pointsPerCity: Int
         /// Her puanın brüte kattığı oran. Kalıcıdır, hiç geri alınmaz.
         var multiplierPerPoint: Double
+    }
+
+    // MARK: - Ödüller (rapor §8)
+
+    /// Ödüllü reklamın ve "Reklamsız" alımının verdikleri.
+    ///
+    /// Rapor §8'in kritik detayı: **satın alan oyuncu bu ödülleri otomatik
+    /// alır.** Aksi hâlde para veren, reklam izleyenden yavaş ilerler.
+    /// Ödüller isteğe bağlıdır; hiçbiri alınmazsa oyun tam çalışır.
+    struct Rewards: Codable, Sendable, Equatable {
+        /// Çevrimdışı kazancın çarpanı. Reklamsız oyuncuda hep açık.
+        var offlineMultiplier: Double
+        /// Vardiya patlamasının üretim çarpanı.
+        var boostMultiplier: Double
+        /// Vardiya patlamasının süresi.
+        var boostSeconds: Double
     }
 
     // MARK: - Arama

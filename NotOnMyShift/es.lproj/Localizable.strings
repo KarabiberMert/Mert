@@ -245,3 +245,26 @@
 "finale.byHand" = "Ventas hechas por ti";
 "finale.newCity" = "Empieza la siguiente ciudad";
 "finale.newCityNote" = "Calle nueva, oficios nuevos. Tus puntos y tu almacén se vienen contigo.";
+
+/* Recompensas opcionales. Nunca obligatorias, nunca un castigo. */
+"reward.boost" = "%@ a ×%@";
+"reward.boostTake" = "Cógela";
+"reward.boostWatch" = "Míralo y cógela";
+"reward.double" = "Que sean %@";
+"reward.doubled" = "Duplicado";
+"adbreak.title" = "Unas palabras de la tienda de al lado";
+"adbreak.body" = "Aquí todavía no hay un anuncio de verdad. La recompensa sí.";
+"adbreak.countdown" = "Quedan %lld segundos";
+"adbreak.skip" = "Sáltalo — sin recompensa";
+"adbreak.claim" = "Coge la recompensa";
+
+/* La compra única */
+"support.title" = "Sin anuncios";
+"support.open" = "Sin anuncios";
+"support.body" = "Un pago y se acabaron los anuncios. Todo lo que dan los anuncios lo tienes igual: el almacén paga el doble al volver y el impulso de turno es un toque.";
+"support.buy" = "Comprar";
+"support.owned" = "Gracias. Los anuncios se acabaron para siempre.";
+"support.restore" = "Restaurar la compra";
+"support.close" = "Cerrar";
+"support.failed" = "No ha salido. No se te ha cobrado nada.";
+"support.noPrice" = "Precio no disponible";

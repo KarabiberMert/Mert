@@ -10,6 +10,7 @@ struct RootView: View {
 
     @State private var cashBumped = false
     @State private var tab: ActionPanelView.Tab = .crew
+    @State private var showsSupport = false
 
     var body: some View {
         ZStack {
@@ -28,6 +29,25 @@ struct RootView: View {
                 )
                 .padding(.horizontal, 22)
                 .padding(.top, 6)
+                .overlay(alignment: .topTrailing) {
+                    if !store.hasRemovedAds {
+                        Button { showsSupport = true } label: {
+                            Text(L.supportOpen)
+                                .font(Typography.label(12))
+                                .foregroundStyle(Palette.enamel)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(
+                                    Capsule().stroke(Palette.enamel.opacity(0.35), lineWidth: 1)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.trailing, 22)
+                    }
+                }
+
+                rewardStrip
+                    .padding(.horizontal, 22)
 
                 if !store.state.isAutomated {
                     Text(L.tapToSell)
@@ -66,12 +86,26 @@ struct RootView: View {
                 #endif
             }
         }
+        .sheet(isPresented: $showsSupport) {
+            SupportView(store: store) { showsSupport = false }
+        }
         .sheet(item: $store.offlineReport) { report in
-            OfflineReportView(report: report) { store.dismissOfflineReport() }
+            OfflineReportView(
+                report: report,
+                doubledEarnings: store.canDoubleOffline ? report.earned * store.offlineMultiplier : nil,
+                onDouble: { store.claimOfflineDouble() },
+                onDismiss: { store.dismissOfflineReport() }
+            )
         }
         .overlay {
-            // Final her şeyin üstünde: sahne bittiğinde başka bir kart çıkmasın.
-            if let finale = store.finale {
+            // Sponsor arası her şeyin üstünde: oyuncu ödülü beklerken
+            // başka bir kart araya girmesin.
+            if let house = store.houseAds, house.isPresenting {
+                AdBreakView(seconds: house.seconds) { rewarded in
+                    house.finish(rewarded: rewarded)
+                }
+                .transition(.opacity)
+            } else if let finale = store.finale {
                 FinaleView(summary: finale) { store.dismissFinale() }
                     .transition(.opacity)
             } else if let event = store.pendingEvent {
@@ -143,6 +177,44 @@ struct RootView: View {
             reduceMotion ? nil : .easeOut(duration: 0.25),
             value: store.finale?.id
         )
+    }
+
+    // MARK: - Ödül şeridi
+
+    /// Vardiya patlaması teklifi. İsteğe bağlı: alınmazsa hiçbir şey eksilmez,
+    /// alındığında da yalnızca hızlandırır. Seans başına bir kez.
+    @ViewBuilder
+    private var rewardStrip: some View {
+        if let remaining = store.boostRemaining {
+            Text(L.eventRemaining(DurationText.text(remaining)))
+                .font(Typography.label(13))
+                .foregroundStyle(Palette.pistachio)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 6)
+        } else if store.canBoost {
+            Button { store.claimBoost() } label: {
+                HStack(spacing: 8) {
+                    Text(L.boostOffer(
+                        DurationText.text(store.boostSeconds),
+                        multiplierText(store.boostMultiplier)
+                    ))
+                    .foregroundStyle(Palette.ink)
+                    Spacer(minLength: 8)
+                    Text(store.hasRemovedAds ? L.boostTake : L.boostWatch)
+                        .foregroundStyle(Palette.mustardDeep)
+                }
+                .font(Typography.label(14))
+                .padding(.horizontal, 12)
+                .frame(maxWidth: .infinity, minHeight: 38)
+                .background(Palette.mustard.opacity(0.16), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 6)
+        }
+    }
+
+    private func multiplierText(_ value: Double) -> String {
+        value.formatted(.number.locale(Money.current.numberLocale).precision(.fractionLength(0...2)))
     }
 
     // MARK: - Uyarılar

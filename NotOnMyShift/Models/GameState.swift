@@ -472,9 +472,13 @@ struct Stats: Codable, Sendable, Equatable {
     /// Tamamlanıp halka arz edilen şehir sayısı.
     var citiesCompleted: Int
 
+    /// Alınan isteğe bağlı ödül sayısı (çevrimdışı katlama, vardiya patlaması).
+    var rewardsClaimed: Int
+
     private enum CodingKeys: String, CodingKey {
         case manualSales, offlineReturns, lastOfflineEarnings, wastedOfflineSeconds
         case eventsResolved, automatedActions, sectorsSold, citiesCompleted
+        case rewardsClaimed
     }
 
     init(
@@ -485,7 +489,8 @@ struct Stats: Codable, Sendable, Equatable {
         eventsResolved: Int = 0,
         automatedActions: Int = 0,
         sectorsSold: Int = 0,
-        citiesCompleted: Int = 0
+        citiesCompleted: Int = 0,
+        rewardsClaimed: Int = 0
     ) {
         self.manualSales = manualSales
         self.offlineReturns = offlineReturns
@@ -495,6 +500,7 @@ struct Stats: Codable, Sendable, Equatable {
         self.automatedActions = automatedActions
         self.sectorsSold = sectorsSold
         self.citiesCompleted = citiesCompleted
+        self.rewardsClaimed = rewardsClaimed
     }
 
     init(from decoder: any Decoder) throws {
@@ -507,5 +513,6 @@ struct Stats: Codable, Sendable, Equatable {
         automatedActions = try container.decodeIfPresent(Int.self, forKey: .automatedActions) ?? 0
         sectorsSold = try container.decodeIfPresent(Int.self, forKey: .sectorsSold) ?? 0
         citiesCompleted = try container.decodeIfPresent(Int.self, forKey: .citiesCompleted) ?? 0
+        rewardsClaimed = try container.decodeIfPresent(Int.self, forKey: .rewardsClaimed) ?? 0
     }
 }

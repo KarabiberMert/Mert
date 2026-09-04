@@ -118,6 +118,33 @@ düşürmez.** Sadece açılabilecek yeni hücre sayısını kısar.
 - Metin bunu "gecikme" olarak anlatır, "kayıp" olarak değil. `market.blocked`
   anahtarını değiştirirken bu tonu koru.
 
+## Monetizasyon
+
+Rapor §8'in iki kuralı pazarlığa kapalı:
+
+1. **Ödül asla zorunlu değildir.** Hiç reklam izlemeyen, hiç para vermeyen
+   oyuncu oyunu baştan sona oynar. Ödül yalnızca hızlandırır.
+2. **Satın alan oyuncu ödülleri otomatik alır.** Çevrimdışı katlama alan
+   oyuncuda hep açıktır, vardiya patlaması sahnesiz gelir. Para veren, reklam
+   izleyenden yavaş kalırsa en hızlı geri ödeme talebi budur.
+
+- Ödül sayıları `balance.json`'daki `rewards` altındadır. View'a gömme.
+- Çevrimdışı katlama `resume`'a dokunmaz: özet hesaplandıktan sonra farkı
+  ekler. Ödül reddedilirse hiçbir şey geri alınmaz.
+- Vardiya patlaması olay etkisi makinesini kullanır — `advance` kapalı form
+  kalır, bitişi bir kırılım noktasıdır. Üst üste basmak süreyi uzatmaz.
+- Reklam ve satın alma birer **protokol**tür (`RewardedAds`, `Purchases`).
+  Oyun kodu StoreKit'i de reklam sağlayıcısını da bilmez. SDK gelirse
+  `NotOnMyShiftApp` içindeki tek satır değişir.
+- Bu sürümde reklam SDK'sı yok (sıfır bağımlılık kuralı). `HouseAds` oyunun
+  kendi çizdiği "sponsor arası"dır ve ödülü gerçekten verir. Sahneye ait
+  `isPresenting` / `finish(rewarded:)` protokolde değil — bir SDK'nın böyle
+  bir kancaya ihtiyacı olmaz.
+- Satın alma hakkı **kayda yazılmaz**: kaynak StoreKit'tir. `startOver` bir
+  hakkı silemez.
+- ATT ve `SKAdNetworkItems` henüz yok; gerçek reklam gelmeden eklenmez.
+  Kullanılmayan izin metni App Review'da soru işareti yaratır.
+
 ## Rastgelelik
 
 Motor saf kalmalı: sistem RNG'si ya da `Date()` kullanma. Rastgelelik kayıttaki
@@ -178,6 +205,9 @@ kurumsal katman. Hardal vurgusu iki palette de aynı — para hep aynı renk.
 ## Fazlar
 
 Faz 0 (bitti) → 1 (bitti) → 2 (bitti) → 3 (bitti) → 4 (bitti) → 5 (bitti) →
-6 (bitti): yumuşak prestij ve final → 7: monetizasyon ve App Store.
+6 (bitti) → 7 (bitti): monetizasyon ve App Store hazırlığı.
+
+Yedi faz da bitti. Bundan sonrası derleme/App Store turu ve rapor §9'da açık
+bırakılan seçenekler (yeni sektörler, sezonlar).
 
 Bir fazı bitirmeden sonrakine geçme. Her fazın sonunda proje temiz derlenmeli.

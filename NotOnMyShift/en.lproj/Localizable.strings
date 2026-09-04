@@ -246,3 +246,26 @@
 "finale.byHand" = "Sales you made yourself";
 "finale.newCity" = "Start the next city";
 "finale.newCityNote" = "New street, new trades. Your points and your store room come with you.";
+
+/* Optional rewards. Never required, never punishing. */
+"reward.boost" = "%@ at ×%@";
+"reward.boostTake" = "Take it";
+"reward.boostWatch" = "Watch and take it";
+"reward.double" = "Make it %@";
+"reward.doubled" = "Doubled";
+"adbreak.title" = "A word from the shop next door";
+"adbreak.body" = "There is no real advert here yet. The reward is, though.";
+"adbreak.countdown" = "%lld seconds left";
+"adbreak.skip" = "Skip — no reward";
+"adbreak.claim" = "Take the reward";
+
+/* The one-time purchase */
+"support.title" = "No adverts";
+"support.open" = "No adverts";
+"support.body" = "One payment, no adverts ever. Everything the adverts give you, you get anyway — the store room pays double when you come back, and the shift boost is one tap.";
+"support.buy" = "Buy";
+"support.owned" = "Thank you. The adverts are gone for good.";
+"support.restore" = "Restore a purchase";
+"support.close" = "Close";
+"support.failed" = "That did not go through. Nothing was charged.";
+"support.noPrice" = "Price unavailable";

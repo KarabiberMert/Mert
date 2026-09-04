@@ -231,6 +231,8 @@ final class PersistenceTests: XCTestCase {
         XCTAssertNotNil(object["eventSeed"])
         XCTAssertNotNil(object["holdingPoints"])
         XCTAssertNotNil(object["cityNumber"])
+        // Ödül sayacı istatistiğin içinde durur, kökte değil.
+        XCTAssertNil(object["rewardsClaimed"], "'rewardsClaimed' kök seviyede yazılmamalı")
         // Şema 3'ün düz alanları kök seviyede kalmamalı — kat içinde yaşıyorlar.
         for legacy in ["staff", "equipmentLevels", "branchCount"] {
             XCTAssertNil(object[legacy], "'\(legacy)' kök seviyede yazılmamalı")

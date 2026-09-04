@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "building": {
     "paletteFloors": 8
   },
@@ -397,5 +397,10 @@
     "pointsPerSale": 1,
     "pointsPerCity": 2,
     "multiplierPerPoint": 0.12
+  },
+  "rewards": {
+    "offlineMultiplier": 2.0,
+    "boostMultiplier": 3.0,
+    "boostSeconds": 1800
   }
 }
