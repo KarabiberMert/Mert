@@ -264,6 +264,35 @@ saniye uzaktaydın · 93 ₺" ve altında katlama düğmesi.
 - Yan doğrulama: kasa 1000 ₺'yi geçince "1,0 B ₺" yazıyor — bu oturumda
   eklenen `format.scaleSeparator` cihazda çalışıyor.
 
+**Oturum 2 — `#if DEBUG` durum kurucusu:**
+
+Ürün sahibi onayladı; çalışma sayfasının adım 6'da önerdiği yol. `GameStore`
+içinde (aynı dosyada, çünkü `state` ve `persist()` dosyaya özel) beş senaryo:
+para ver · üst katı aç · çatı + müdür · katı olgunlaştır · halka arza hazırla.
+Düğmeleri "Motor" panelinde, zaten var olan `#if DEBUG` bölümünde.
+
+Durum **elle uydurulmuyor**: her adım gerçek mağaza eylemini çağırıyor
+(`hireStaff`, `upgradeEquipment`, `openBranch`, `unlockNextFloor`,
+`unlockRoof`, `hireManager`, `sellSector`), yalnızca para dışarıdan veriliyor.
+Yani motorun kabul etmeyeceği bir kayıt buradan çıkamaz. Döngüler sayaçla
+sınırlı — pazar payı şube açmayı engellerse takılmıyor.
+
+Küçük tuzak: `Button`'ın etiketi düz metin olduğu için vuruş alanı yazı kadardı,
+satırın boşluğuna basınca çalışmıyordu. `.contentShape(Rectangle())` eklendi.
+
+**Kurucuyla doğrulanan maddeler**
+
+- Madde 7 geçti: ekipman hem saniyelik geliri hem elle satışı büyütüyor
+  (+4 ₺ → +29 ₺), kasa satırında `brüt · maaş` görünüyor.
+- Madde 8 geçti: dört hücre açıldı, her biri aynı kadro ve ekipmanı devraldı,
+  patron yalnızca ilk hücrede duruyor.
+- Madde 18 geçti: kat olgunlaşınca "Bu işi sat · 1,1 Mn ₺" ve "Büyüdü,
+  satılmaya hazır" çıkıyor; satılan katın kalacak oranı da yazıyor
+  ("Saniyede 31,5 ₺ kazandırmaya devam eder").
+- Rakamlar `balance_report.py` ile birebir tutuyor: tam kadro + tam ekipman +
+  tüm şubelerde `brüt 216 ₺ · maaş 7,2 ₺ · net 209 ₺`; rapor 216,97 / 7,20 /
+  209,77 diyor. Fırın katı açılışı 250 B ₺ — `balance.json` ile aynı.
+
 **Kaldı:**
 
 - **Adım 3'ün ikinci kutusu (27 maddelik elle doğrulama) ve adım 4, 5, 6.**

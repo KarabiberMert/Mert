@@ -261,6 +261,17 @@ struct RootView: View {
                 row(L.totalPlayed, DurationText.text(store.state.elapsedGameSeconds))
                 row(L.manualSales, "\(store.state.stats.manualSales)")
                 row(L.lifetime, Money.text(store.state.lifetimeEarnings))
+                // Elle ulaşması uzun süren durumlar. Yalnızca DEBUG.
+                ForEach(GameStore.DebugScenario.allCases) { scenario in
+                    Button(scenario.title) { store.applyDebugScenario(scenario) }
+                        .font(Typography.label(13))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        // Etiket düz metin: vuruş alanı yoksa satırın sadece
+                        // yazı kadarı basılabiliyor.
+                        .contentShape(Rectangle())
+                }
+                .padding(.top, 2)
+
                 Button(L.startOver, role: .destructive) { store.startOver() }
                     .font(Typography.label(13))
                     .padding(.top, 4)

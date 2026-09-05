@@ -808,3 +808,102 @@ struct OfflineReport: Identifiable, Equatable {
     /// Ödül alındı mı? Alındıysa `earned` katlanmış tutarı gösterir.
     var wasDoubled = false
 }
+
+#if DEBUG
+/// Elle ulaşması çok uzun süren oyun durumları.
+///
+/// Çalışma sayfası (adım 6) bunu öneriyor: kareler ve ileri oyun maddeleri
+/// gerçek zamanda oynanarak bitmiyor — fırın katı tek başına 250.000 ₺.
+///
+/// Durum **elle uydurulmuyor**: her adım gerçek mağaza eylemini çağırıyor,
+/// yani motorun kabul etmeyeceği bir kayıt buradan çıkamaz. Yalnızca para
+/// dışarıdan veriliyor. Aynı dosyada duruyor çünkü `state` ve `persist()`
+/// dosyaya özel.
+extension GameStore {
+
+    enum DebugScenario: String, CaseIterable, Identifiable {
+        case rich
+        case secondFloor
+        case roof
+        case matureFloor
+        case readyToIPO
+
+        var id: String { rawValue }
+
+        /// Geliştirici düğmesi — arayüz metni değil, dil dosyasına girmiyor.
+        var title: String {
+            switch self {
+            case .rich:        "Para ver"
+            case .secondFloor: "Üst katı aç"
+            case .roof:        "Çatı + müdür"
+            case .matureFloor: "Katı olgunlaştır"
+            case .readyToIPO:  "Halka arza hazırla"
+            }
+        }
+    }
+
+    func applyDebugScenario(_ scenario: DebugScenario) {
+        switch scenario {
+        case .rich:
+            grantDebugMoney()
+        case .secondFloor:
+            grantDebugMoney()
+            unlockNextFloor()
+        case .roof:
+            grantDebugMoney()
+            unlockRoof()
+            hireManager()
+        case .matureFloor:
+            grantDebugMoney()
+            matureSelectedFloor()
+        case .readyToIPO:
+            // İki sektör var; hepsini olgunlaştırıp sat, halka arz açılsın.
+            for _ in 0..<8 {
+                grantDebugMoney()
+                matureSelectedFloor()
+                sellSector()
+                dismissSectorSaleCelebration()
+                guard GameEngine.nextFloorCost(for: state, config: config) != nil else { break }
+                unlockNextFloor()
+            }
+        }
+        clearDebugCelebrations()
+        persist()
+    }
+
+    /// Her şeye yetecek kadar. Kazanç istatistiğini şişirmemek için yalnızca
+    /// kasaya yazılıyor, `lifetimeEarnings`'e değil.
+    private func grantDebugMoney() {
+        state.money += 1_000_000_000
+    }
+
+    /// Seçili katı olgunlaştır: tam kadro, tam ekipman, tüm hücreler.
+    /// Döngüler sayaçla sınırlı — pazar payı şube açmayı engellerse takılmasın.
+    private func matureSelectedFloor() {
+        var adim = 0
+        while hireCost != nil, adim < 50 {
+            hireStaff()
+            adim += 1
+        }
+        adim = 0
+        while let row = equipmentRows.first(where: { $0.upgradeCost != nil }), adim < 50 {
+            upgradeEquipment(row.id)
+            adim += 1
+        }
+        adim = 0
+        while branchCost != nil, adim < 50 {
+            openBranch()
+            adim += 1
+        }
+    }
+
+    /// Toplu kurulum sırasında biriken kutlama ekranlarını temizle; yoksa
+    /// üst üste yığılıp doğrulamayı zorlaştırıyorlar.
+    private func clearDebugCelebrations() {
+        dismissFirstHireCelebration()
+        dismissNewFloorCelebration()
+        dismissSectorSaleCelebration()
+        dismissManagerReport()
+    }
+}
+#endif
