@@ -293,6 +293,30 @@ satırın boşluğuna basınca çalışmıyordu. `.contentShape(Rectangle())` ek
   tüm şubelerde `brüt 216 ₺ · maaş 7,2 ₺ · net 209 ₺`; rapor 216,97 / 7,20 /
   209,77 diyor. Fırın katı açılışı 250 B ₺ — `balance.json` ile aynı.
 
+**Oturum 2 bulgusu — iki kattan sonra kat değiştirilemiyordu (düzeltildi):**
+
+Madde 10 doğrulanırken çıktı ve bu oturumun en ağır hatasıydı. Alt kata
+dokunmak onu seçmiyordu; hiçbir şey olmuyor sanılıyordu. "Motor" panelindeki
+`Elle satış` sayacı gerçeği söyledi: 38 → 41, yani alt kata yaptığım üç
+dokunuşun üçü de **üst katta satış** yapmış.
+
+Sebep `BuildingView`'da modifier sırası: `.contentShape(Rectangle())` ve
+`.onTapGesture`, `.position()`'dan **sonra** geliyordu. `.position` görünümü
+ebeveynin tamamı kadar büyütüyor, dolayısıyla her katın dokunma alanı binanın
+tümü oluyordu ve ZStack'te en son çizilen kat (en yüksek indeks) bütün
+dokunuşları yutuyordu.
+
+Etkisi: ikinci kat açıldığı anda oyuncu alt kata **bir daha hiç dönemiyordu** —
+kadro, ekipman, şube, satış, hepsi erişilemez hale geliyordu. Madde 10, 13, 19,
+21 ve çok katlı oyunun tamamı buna bağlı.
+
+Düzeltme: `.position` en sona alındı, dokunma alanı katın kendi çerçevesinde
+kuruluyor. Ekranda doğrulandı: alt kata dokununca seçiliyor, keyline ve satış
+düğmesi ("Kahve sat +29 ₺") o kata geçiyor, patron da o kata taşınıyor.
+
+Not: bu SwiftUI yerleşim sırası hatası birim testiyle yakalanmıyor; koda
+sebebini anlatan bir yorum bırakıldı.
+
 **Kaldı:**
 
 - **Adım 3'ün ikinci kutusu (27 maddelik elle doğrulama) ve adım 4, 5, 6.**

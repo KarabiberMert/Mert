@@ -68,7 +68,11 @@ struct BuildingView: View {
                         }
                     }
                     .opacity(index == selectedFloor || floors.count == 1 ? 1 : 0.78)
-                    .position(x: frame.midX, y: frame.midY)
+                    // Dokunma alanı `.position`'dan **önce** kurulmalı:
+                    // `.position` görünümü ebeveynin tamamı kadar büyütür, o
+                    // yüzden sonrasına konan `contentShape` bütün binayı
+                    // kaplıyordu ve en üstteki kat her dokunuşu yutuyordu —
+                    // iki kat açıldıktan sonra alt kat seçilemiyordu.
                     .contentShape(Rectangle())
                     .onTapGesture {
                         // Yatırım katında tezgâh yok: dokunmak sahte bir rakam
@@ -91,6 +95,7 @@ struct BuildingView: View {
                             onSelect(index)
                         }
                     }
+                    .position(x: frame.midX, y: frame.midY)
                 }
 
                 ForEach(gains) { gain in
