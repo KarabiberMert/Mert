@@ -351,6 +351,44 @@ sebebini anlatan bir yorum bırakıldı.
 koymuştum, oysa `Button`'ın basılabilir bölgesini etiketi belirliyor. Etiketin
 içine taşındı; artık satırın tamamı basılabilir.
 
+**Oturum 2 — son tur**
+
+- Madde 23 geçti: vardiya patlaması şeridine basınca sponsor arası çıkıyor,
+  ödül alınınca kasa satırında "Üretim ×3" ve oran 35,2 → **105 ₺/sn** (×3).
+- Madde 21'in son parçası da göründü: yatırım katı seçilince kadro/ekipman
+  yerine "Burayı sattın. Kapıda hâlâ senin adın var, kira da işlemeye devam
+  ediyor." çıkıyor ve satış düğmesi yok.
+- Madde 27 kod tarafında tam: `accessibilityReduceMotion` animasyonu olan
+  sekiz görünümün hepsinde kontrol ediliyor. Kritik nokta süzülen rakam:
+  hareket azaltmada animasyon çalışmıyor ama rakamı silen şey 850 ms'lik bir
+  `Task`, animasyonun bitişi değil — yani ekranda takılı kalmıyor.
+
+**Yeni bulgu — vardiya patlaması sürerken kalan süre iki kez yazılıyor:**
+
+Kasa satırı şöyle görünüyor:
+
+    Üretim ×3   27 dakika 23 saniye kaldı
+    saniyede 105 ₺
+    27 dakika 23 saniye kaldı
+
+Üstteki `CashHeaderView.eventBadge`'den, alttaki `RootView.rewardStrip`'ten
+geliyor; ikisi de `L.eventRemaining` yazıyor. Vardiya patlaması olay etkisi
+makinesini kullandığı için (CLAUDE.md'nin istediği gibi) rozet de yanıyor ve
+şerit de kalan süreyi gösteriyor. Normal bir olayda çakışma olmuyor, çünkü
+o zaman `boostRemaining` nil ve şerit teklifi gösteriyor.
+
+Düzeltmedim: hangisinin kalacağı bir metin/yerleşim kararı ve şeridi boş
+bırakmak düzeni oynatıyor. Ürün sahibinin kararı.
+
+**Madde 25-26 bu yolla doğrulanamıyor:** destek sayfası açılıyor ama fiyat
+yerine "Fiyat görünmüyor" yazıyor. Sebep ürün değil, başlatma yöntemi:
+`Config/NotOnMyShift.storekit` paylaşılan şemaya doğru bağlanmış
+(`../../../Config/NotOnMyShift.storekit`, ürün `...noads`, 2.99) ama StoreKit
+yapılandırmasını yalnızca Xcode'un Run eylemi uyguluyor; `simctl launch` ile
+açılan uygulamada devrede olmuyor. `xcrun simctl`'de storekit alt komutu yok.
+Xcode'dan ⌘R ile açmak ya da `StoreKitTest`/`SKTestSession` ile test yazmak
+gerekiyor.
+
 **Kaldı:**
 
 - **Adım 3'ün ikinci kutusu (27 maddelik elle doğrulama) ve adım 4, 5, 6.**
