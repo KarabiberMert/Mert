@@ -40,6 +40,44 @@ final class GameStoreTests: XCTestCase {
         }
     }
 
+    /// Gerçek sahne fazı sırası: `.background → .inactive → .active`.
+    /// Dönüşteki `.inactive` de `handleWillResignActive()` tetikliyor; bu
+    /// `lastSeenAt`'i şimdiye damgalarsa `.active` sıfır saniye görür ve
+    /// dönüş özeti hiç çıkmaz. Ekranda görülen hata buydu.
+    func testReturnSummarySurvivesTheInactivePhaseOnTheWayBack() async throws {
+        try await withTemporaryDirectory { directory in
+            let config = BalanceFixture.config()
+            let clock = TestClock(BalanceFixture.epoch)
+            let store = GameStore(
+                config: config,
+                saves: SaveStore(containerDirectory: directory),
+                now: clock.provider
+            )
+
+            for _ in 0..<10 { store.sellManually() }
+            store.hireStaff()
+
+            // Ayrılırken: .inactive, ardından .background — ikisi de aynı çağrı.
+            store.handleWillResignActive()
+            store.handleWillResignActive()
+
+            clock.date = BalanceFixture.epoch.addingTimeInterval(300)
+
+            // Dönerken: önce .inactive, sonra .active.
+            store.handleWillResignActive()
+            store.handleBecameActive()
+
+            XCTAssertEqual(store.state.money, 300, accuracy: 1e-6)
+            XCTAssertNotNil(
+                store.offlineReport,
+                "Dönüşteki .inactive uzakta geçen süreyi silmemeli"
+            )
+            XCTAssertEqual(store.offlineReport?.earned ?? 0, 300, accuracy: 1e-6)
+
+            store.handleWillResignActive()
+        }
+    }
+
     func testProgressSurvivesRelaunch() async throws {
         try await withTemporaryDirectory { directory in
             let config = BalanceFixture.config()

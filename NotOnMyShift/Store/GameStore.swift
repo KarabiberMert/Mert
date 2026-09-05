@@ -380,6 +380,10 @@ final class GameStore {
     @ObservationIgnored private var hasBoostedThisSession = false
     /// Çevrimdışı katlama, dönüş özetinde bir kez sunulur.
     @ObservationIgnored private var hasDoubledThisReturn = false
+    /// Zaten arka planda mıyız? Sahne fazı geri dönerken de `.inactive`
+    /// veriyor; ikinci kez damgalarsak uzakta geçen süre `.active`'e hiç
+    /// ulaşmaz ve dönüş özeti çıkmaz.
+    @ObservationIgnored private var isResigned = false
 
     /// Otomatik kaydetme aralığı. Arka plana geçişte ayrıca kaydediliyor;
     /// bu, uygulama öldürülürse kaybı sınırlamak için.
@@ -417,6 +421,7 @@ final class GameStore {
 
     /// Uygulama öne geldi: uzakta geçen süreyi depo tavanıyla birlikte işle.
     func handleBecameActive() {
+        isResigned = false
         let outcome = GameEngine.resume(state, at: now(), mode: .awayFromApp, config: config)
         state = outcome.state
 
@@ -443,6 +448,10 @@ final class GameStore {
 
     /// Uygulama arka plana gidiyor: saati damgala, kaydet, zamanlayıcıyı durdur.
     func handleWillResignActive() {
+        // Ayrılırken `.inactive` ve `.background` peş peşe gelir, dönerken de
+        // `.inactive` bir kez daha. Yalnızca ilki saati damgalasın.
+        guard !isResigned else { return }
+        isResigned = true
         stopTicking()
         // Yeni seans yeni bir olay hakkı demek. Vardiya patlaması da öyle.
         hasOfferedEventThisSession = false

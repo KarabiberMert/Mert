@@ -44,6 +44,13 @@ struct RootView: View {
                         .buttonStyle(.plain)
                     }
                 }
+                // Bu sayfa bilerek burada duruyor, kökte değil: SwiftUI'da aynı
+                // görünüme iki `.sheet` zincirlenirse yalnızca biri sunulur ve
+                // kökte dönüş özeti var. Düğmeye değil başlığa bağlı, çünkü
+                // satın alınca düğme kayboluyor; sayfa altından çekilmesin.
+                .sheet(isPresented: $showsSupport) {
+                    SupportView(store: store) { showsSupport = false }
+                }
 
                 rewardStrip
                     .padding(.horizontal, 22)
@@ -84,9 +91,6 @@ struct RootView: View {
                     .padding(.top, 4)
                 #endif
             }
-        }
-        .sheet(isPresented: $showsSupport) {
-            SupportView(store: store) { showsSupport = false }
         }
         .sheet(item: $store.offlineReport) { report in
             OfflineReportView(

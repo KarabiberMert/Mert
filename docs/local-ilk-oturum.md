@@ -104,7 +104,7 @@ Ekran görüntüsünü oku ve düzeni gözle kontrol et.
 Bunlar bu konteynerde ekran görülmeden düzeltildi. Gerçekten çalıştığını ilk
 kez burada göreceğiz.
 
-- [ ] **Sponsor arası sahnesinin katmanı.** Dönüş özeti bir `.sheet`; katlama
+- [x] **Sponsor arası sahnesinin katmanı.** Dönüş özeti bir `.sheet`; katlama
       düğmesine basınca geri sayım sayfanın **üstünde** çıkmalı, arkasında değil.
 - [ ] **Beş sekmeli şerit.** Çatı açıkken sekme başlıkları sığıyor mu,
       `minimumScaleFactor` devreye giriyor mu?
@@ -183,6 +183,80 @@ derlendi, 191 testin hepsi geçti, uygulama simülatörde açıldı.
     eklendi, **beklenen çıktıların hiçbiri değişmedi.**
 - Ekran ilk açılışta doğru: kasa `0 ₺`, tek kişi tezgâhın arkasında, "Kahve sat
   +4 ₺", şerit dört sekmeli (Kadro · Ekipman · Şubeler · Bina). Tabela okunuyor.
+
+**Oturum 2 bulgusu — patron ilk eleman tutulunca kayboluyor:**
+
+README madde 3 "sen tezgâhtan çekilip salonda izlemeye başlarsın" diyor.
+Ekranda olan bu değil: eleman tutulduğu anda patron figürü hiç çizilmiyor.
+İki ayrı sebep var, ikisi de kodda:
+
+- `FloorBandView.figure(...)` bütün figürleri `standing: false` ile çiziyor.
+  `ShopFigureView`'ın `standing` parametresine hiçbir yerde `true` geçilmiyor,
+  yani "salonda duran patronun bacakları" dalı ölü kod. Dosyanın kendi
+  başlığı bu çizimi tarif ediyor.
+- `visibleFigures = max(1, unitWidth / pointsPerFigure - 1)` bu bantta 1
+  dönüyor. `ownerInRow = showsOwner && (visible < capacity || staff.isEmpty)`
+  koşulu ilk elemandan sonra `1 < 1` → false oluyor; patron tezgâh sırasında
+  eleman ile yer yarışına giriyor ve kaybediyor.
+
+Doğrusu muhtemelen patronu sıradan çıkarıp salona `standing: true` ile
+koymak — o zaman kapasite yarışı da bitiyor. Ama bu bir yerleşim kararı
+(salonda nerede, hangi hücrenin önünde, ölçek ne) ve CLAUDE.md ölçüleri
+`FloorGeometry`'ye sabit olarak eklemeyi ve testini yazmayı şart koşuyor.
+Ürün sahibinin kararı bekleniyor; kendi kafama göre değiştirmedim.
+
+**Oturum 2 bulgusu — dönüş özeti hiç çıkmıyordu (düzeltildi):**
+
+Madde 4 "Dönmüşsün özeti çıkar" diyor; çıkmıyordu. Para doğru yazılıyordu,
+özet yoktu. Sebep sahne fazı sırası: geri dönerken iOS `.background →
+.inactive → .active` veriyor ve `NotOnMyShiftApp` `.inactive`'i de
+`handleWillResignActive()`'e bağlıyor. O çağrı `.live` resume yapıp
+`lastSeenAt`'i şimdiye damgalıyordu — parayı yazıyor ama uzakta geçen süreyi
+siliyordu, dolayısıyla `.active`'te `elapsed ≈ 0` ve `isReportable == false`.
+
+Bunu önce testle kanıtladım (`testReturnSummarySurvivesTheInactivePhaseOnTheWayBack`):
+gerçek fazı sırasını kurunca para 300 ₺ doğru geliyor ama `offlineReport` nil.
+Düzeltme `GameStore`'da: `isResigned` bayrağı, `handleWillResignActive()` araya
+`handleBecameActive()` girmeden ikinci kez çalışmıyor. Sahne fazı bağlantısına
+dokunulmadı; kaç tane `.inactive` gelirse gelsin sonuç aynı.
+
+Etkisi göründüğünden büyüktü: madde 24 (çevrimdışı katlama) ve madde 26 (satın
+alanın katlamayı sorulmadan alması) dönüş özetinin içinde yaşıyor, yani ikisi
+de hiç görülemezdi. `stats.offlineReturns` de hiç artmıyordu. Ayrıca aynı
+kökten, `hasOfferedEventThisSession` her kısa kesintide sıfırlanıyordu.
+
+Test sayısı 191 → 192.
+
+**Oturum 2 bulgusu — kökte iki `.sheet` yan yanaydı (düzeltildi):**
+
+`isResigned` düzeltmesinden sonra bile özet çıkmadı. Sebep ikinci ve ayrı bir
+hataydı: `RootView`'da aynı görünüme iki `.sheet` zincirlenmişti —
+`isPresented: $showsSupport` ve hemen altında `item: $store.offlineReport`.
+SwiftUI bu durumda yalnızca birini sunuyor; destek sayfası kazanıyor, dönüş
+özeti hiç açılmıyordu.
+
+Destek sayfası `CashHeaderView`'a taşındı. Düğmenin kendisine değil: satın
+alma `hasRemovedAds`'i açınca düğme kayboluyor ve sayfa altından çekilirdi.
+Kökte artık tek `.sheet` var. Bunu yorumla da işaretledim ki ileride geri
+birleştirilmesin.
+
+Bu iki düzeltmeden sonra madde 4 ekranda geçti: "Dönmüşsün · 1 dakika 26
+saniye uzaktaydın · 93 ₺" ve altında katlama düğmesi.
+
+**Adım 3 ve 4'te geçen maddeler**
+
+- Madde 1, 2, 3 geçti. Rakamlar denge raporuyla birebir: ilk eleman sonrası
+  `saniyede 1,1 ₺`, `brüt 1,4 · maaş 0,3`; sıradaki eleman Kadir 480 ₺.
+  Kutlama ekranı bir kez çıkıyor ve `MomentBannerView` düzeltmesi doğru
+  çiziliyor (başlık, huy satırı, gövde metni, düğme).
+- Madde 4 geçti (yukarıdaki iki düzeltmeden sonra).
+- Madde 12'nin "Şimdi değil her zaman açık" kısmı geçti; olay kartı kendi
+  başına çıktı.
+- Madde 24 geçti: katlama düğmesi → sponsor arası → "186 ₺ · Katlandı".
+- **Adım 4'ün birinci kutusu geçti**: sponsor arası sahnesi dönüş özetinin
+  üstünde çıkıyor, arkasında değil.
+- Yan doğrulama: kasa 1000 ₺'yi geçince "1,0 B ₺" yazıyor — bu oturumda
+  eklenen `format.scaleSeparator` cihazda çalışıyor.
 
 **Kaldı:**
 
