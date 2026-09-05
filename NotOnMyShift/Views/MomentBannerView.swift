@@ -9,9 +9,25 @@ struct MomentBannerView: View {
     let title: String
     /// Başlığın altındaki tek satırlık renkli not — huy ya da sektör adı.
     let highlight: String
-    let body body_: String
+    /// Gövde metni. Çağrı yerinde `body:` diye geçer; saklı adı ayrı, çünkü
+    /// `body` SwiftUI'ın `var body: some View`'uyla çakışıyor.
+    let message: String
     let actionTitle: String
     let onDismiss: () -> Void
+
+    init(
+        title: String,
+        highlight: String,
+        body: String,
+        actionTitle: String,
+        onDismiss: @escaping () -> Void
+    ) {
+        self.title = title
+        self.highlight = highlight
+        self.message = body
+        self.actionTitle = actionTitle
+        self.onDismiss = onDismiss
+    }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var settled = false
@@ -33,7 +49,7 @@ struct MomentBannerView: View {
                     .foregroundStyle(Palette.pistachio)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text(body_)
+                Text(message)
                     .font(.system(.subheadline))
                     .foregroundStyle(Palette.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)

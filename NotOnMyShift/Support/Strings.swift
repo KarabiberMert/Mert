@@ -26,6 +26,12 @@ enum L {
         String(localized: "format.currencyPattern", defaultValue: "${amount}",
                comment: "Currency layout. Keep the {amount} placeholder. e.g. ${amount}, {amount} ₺, {amount} €")
     }
+    /// Sayı ile büyüklük kısaltması arasındaki ayraç: İngilizce'de boş,
+    /// Türkçe ve İspanyolca'da tek boşluk.
+    static var scaleSeparator: String {
+        String(localized: "format.scaleSeparator", defaultValue: "",
+               comment: "Separator between number and scale abbreviation. Empty for English (1.2K), a single space for languages that write it as a separate word (1,2 B)")
+    }
     static var scaleE3: String {
         String(localized: "format.scale.e3", defaultValue: "K", comment: "Abbreviation for thousand")
     }

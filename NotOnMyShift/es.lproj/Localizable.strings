@@ -8,6 +8,7 @@
 /* Formato — la moneda y los números dependen del idioma */
 "format.numberLocale" = "es_ES";
 "format.currencyPattern" = "{amount} €";
+"format.scaleSeparator" = " ";
 "format.scale.e3" = "K";
 "format.scale.e6" = "M";
 "format.scale.e9" = "MM";

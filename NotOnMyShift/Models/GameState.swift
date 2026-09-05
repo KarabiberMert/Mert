@@ -193,6 +193,8 @@ struct GameState: Codable, Sendable, Equatable {
         managedSectors: [String],
         activeRules: [String: [String]],
         autoResolvesEvents: Bool,
+        holdingPoints: Int,
+        cityNumber: Int,
         stats: Stats
     ) {
         self.schemaVersion = schemaVersion
@@ -214,6 +216,8 @@ struct GameState: Codable, Sendable, Equatable {
         self.managedSectors = managedSectors
         self.activeRules = activeRules
         self.autoResolvesEvents = autoResolvesEvents
+        self.holdingPoints = holdingPoints
+        self.cityNumber = cityNumber
         self.stats = stats
     }
 

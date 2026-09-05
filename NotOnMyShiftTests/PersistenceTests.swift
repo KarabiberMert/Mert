@@ -116,7 +116,7 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(state.lastSeenAt.timeIntervalSince1970, 1_700_000_000, accuracy: 1e-6)
         XCTAssertEqual(state.schemaVersion, 1)
         XCTAssertEqual(state.characterID, "kahveci")
-        XCTAssertTrue(state.staff.isEmpty)
+        XCTAssertTrue(state.floors[0].staff.isEmpty)
         XCTAssertEqual(state.warehouseLevel, 0)
         XCTAssertEqual(state.stats.manualSales, 0)
         XCTAssertFalse(state.hasCelebratedFirstHire)

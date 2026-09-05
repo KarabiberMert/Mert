@@ -9,6 +9,7 @@
 /* Formatting — currency and numbers follow the language */
 "format.numberLocale" = "en_US";
 "format.currencyPattern" = "${amount}";
+"format.scaleSeparator" = "";
 "format.scale.e3" = "K";
 "format.scale.e6" = "M";
 "format.scale.e9" = "B";

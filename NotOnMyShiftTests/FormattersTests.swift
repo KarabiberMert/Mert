@@ -13,17 +13,20 @@ final class FormattersTests: XCTestCase {
     private let dollar = Money.Style(
         numberLocale: Locale(identifier: "en_US"),
         pattern: "${amount}",
-        suffixes: ["Q", "T", "B", "M", "K"]
+        suffixes: ["Q", "T", "B", "M", "K"],
+        scaleSeparator: ""
     )
     private let lira = Money.Style(
         numberLocale: Locale(identifier: "tr_TR"),
         pattern: "{amount} ₺",
-        suffixes: ["Kt", "Tn", "Mr", "Mn", "B"]
+        suffixes: ["Kt", "Tn", "Mr", "Mn", "B"],
+        scaleSeparator: " "
     )
     private let euro = Money.Style(
         numberLocale: Locale(identifier: "es_ES"),
         pattern: "{amount} €",
-        suffixes: ["MB", "B", "MM", "M", "K"]
+        suffixes: ["MB", "B", "MM", "M", "K"],
+        scaleSeparator: " "
     )
 
     // MARK: - Para

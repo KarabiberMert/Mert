@@ -143,7 +143,7 @@ struct ActionPanelView: View {
             note(L.staffFull)
         }
 
-        ForEach(store.state.staff) { member in
+        ForEach(store.currentFloor?.staff ?? []) { member in
             VStack(alignment: .leading, spacing: 1) {
                 Text(L.staffName(member.id))
                     .font(Typography.display(15))
@@ -177,7 +177,7 @@ struct ActionPanelView: View {
                 subtitle: item.level == 0
                     ? L.equipmentNote(item.id)
                     : "\(L.equipmentLevel(item.level)) · \(L.equipmentOutput(multiplierText(item.multiplier)))",
-                trailing: item.upgradeCost.map(Money.text) ?? L.equipmentMaxed,
+                trailing: item.upgradeCost.map { Money.text($0) } ?? L.equipmentMaxed,
                 enabled: item.upgradeCost.map { store.state.money >= $0 } ?? false,
                 action: { store.upgradeEquipment(item.id) }
             )
@@ -316,7 +316,7 @@ struct ActionPanelView: View {
         row(
             title: L.upgradeWarehouse,
             subtitle: L.warehouseHolds(DurationText.text(store.offlineCapacitySeconds)),
-            trailing: store.warehouseUpgradeCost.map(Money.text) ?? L.equipmentMaxed,
+            trailing: store.warehouseUpgradeCost.map { Money.text($0) } ?? L.equipmentMaxed,
             enabled: store.warehouseUpgradeCost.map { store.state.money >= $0 } ?? false,
             action: { store.upgradeWarehouse() }
         )

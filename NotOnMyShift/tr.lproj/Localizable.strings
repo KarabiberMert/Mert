@@ -11,6 +11,7 @@
 /* Biçim — para birimi ve sayı dile bağlı */
 "format.numberLocale" = "tr_TR";
 "format.currencyPattern" = "{amount} ₺";
+"format.scaleSeparator" = " ";
 "format.scale.e3" = "B";
 "format.scale.e6" = "Mn";
 "format.scale.e9" = "Mr";

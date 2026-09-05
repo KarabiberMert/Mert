@@ -25,6 +25,11 @@ enum Money {
         /// Büyükten küçüğe: 10^15, 10^12, 10^9, 10^6, 10^3 kısaltmaları.
         var suffixes: [String]
 
+        /// Sayı ile kısaltma arasına giren ayraç. İngilizce bitişik yazar
+        /// (`1.2K`), Türkçe ve İspanyolca ayrı sözcük sayar (`1,2 B`).
+        /// Dilden gelir; koda dil listesi gömmüyoruz.
+        var scaleSeparator: String
+
         func render(_ body: String) -> String {
             pattern.replacingOccurrences(of: "{amount}", with: body)
         }
@@ -36,7 +41,8 @@ enum Money {
     static let current = Style(
         numberLocale: Locale(identifier: L.numberLocaleIdentifier),
         pattern: L.currencyPattern,
-        suffixes: [L.scaleE15, L.scaleE12, L.scaleE9, L.scaleE6, L.scaleE3]
+        suffixes: [L.scaleE15, L.scaleE12, L.scaleE9, L.scaleE6, L.scaleE3],
+        scaleSeparator: L.scaleSeparator
     )
 
     private static let thresholds: [Double] = [1e15, 1e12, 1e9, 1e6, 1e3]
@@ -78,7 +84,7 @@ enum Money {
         let body = scaled < 100
             ? fraction(1, scaled, locale: style.numberLocale)
             : fraction(0, scaled.rounded(.towardZero), locale: style.numberLocale)
-        return body + suffix
+        return suffix.isEmpty ? body : body + style.scaleSeparator + suffix
     }
 
     static let emptyValue = "—"

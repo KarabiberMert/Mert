@@ -37,17 +37,17 @@ Tek dal var ve varsayılan o; `checkout` gerekmiyor. **Proje zip'i yoktur** —
 her şey bu depoda. (Daha önce paylaşılan `mockups.zip` yalnızca maket ekran
 görüntüleridir, kod değil.)
 
-- [ ] `xcodebuild -version` → Xcode 16 veya üstü
-- [ ] `xcrun simctl list devices available | grep iPhone` → en az bir iPhone simülatörü
-- [ ] `./scripts/mac_kapi.sh --sadece-denetci` → beş denetçi de geçiyor
+- [x] `xcodebuild -version` → Xcode 16 veya üstü
+- [x] `xcrun simctl list devices available | grep iPhone` → en az bir iPhone simülatörü
+- [x] `./scripts/mac_kapi.sh --sadece-denetci` → beş denetçi de geçiyor
 
 Denetçiler bu konteynerde geçiyordu; Mac'te de geçmeli. Geçmiyorsa sorun
 ortamdadır, kodda değil — önce onu çöz.
 
 ### 1. Derle
 
-- [ ] `./scripts/mac_kapi.sh --derle` temiz geçti
-- [ ] Sıfır uyarı (CLAUDE.md: "Uyarı bırakma")
+- [x] `./scripts/mac_kapi.sh --derle` temiz geçti
+- [x] Sıfır uyarı (CLAUDE.md: "Uyarı bırakma")
 
 En riskli adım. Beklenen hata türü Swift 6 izolasyonu. İlk bakılacak beş yer
 [`xcode-devir.md`](xcode-devir.md) §4'te.
@@ -71,7 +71,7 @@ en kolay ama en yanlış çözüm: testler motoru ölçüyor, dengeyi değil.
 
 ### 2. Testler
 
-- [ ] `./scripts/mac_kapi.sh` → 191 testin hepsi geçti
+- [x] `./scripts/mac_kapi.sh` → 191 testin hepsi geçti
 
 Kırılan olursa önce **testin kendi kurulumuna** bak. Motor mantığı kâğıt
 üstünde defalarca doğrulandı; test hiç çalıştırılmadı. Yani ilk şüpheli
@@ -83,7 +83,7 @@ yakalayan bir test daha ekle.
 
 ### 3. Simülatörde aç
 
-- [ ] Uygulama açılıyor, `BootFailureView` görünmüyor
+- [x] Uygulama açılıyor, `BootFailureView` görünmüyor
 - [ ] `README.md` → "Elle doğrulama" listesindeki 27 madde geçti
 
 ```bash
@@ -145,11 +145,54 @@ yayın derlemesine sızmaz.
 
 Her oturumun sonunda buraya yaz. Kısa tut: ne yapıldı, ne bulundu, ne kaldı.
 
-### Oturum 1 — (tarih)
+### Oturum 1 — 5 Eylül 2026
 
-**Yapıldı:**
+**Yapıldı:** Adım 0, adım 1, adım 2 ve adım 3'ün ilk kutusu. Proje ilk kez
+derlendi, 191 testin hepsi geçti, uygulama simülatörde açıldı.
 
-**Bulundu:** (derleme hataları, kırılan testler, ekranda yanlış görünenler)
+**Bulundu:**
+
+- Ortam: Xcode 26.6, Swift 6.3.3. `iPhone 16 Pro Max` bu makinede yok; bütün
+  komutlar `DEST='platform=iOS Simulator,name=iPhone 17 Pro Max'` ile koşuldu.
+  Betiğin `DEST` kancası tam da bunun için varmış.
+- Beş denetçi Mac'te ilk denemede temiz geçti; konteyner sonucu birebir tuttu.
+- **Derleme hataları Swift 6 izolasyonu değildi.** `xcode-devir.md` §4'ün beş
+  şüphelisinden hiçbiri patlamadı. Çıkan dört hata "hiç derlenmemiş olmanın"
+  izleriydi:
+  1. `MomentBannerView.swift:12` — `let body body_: String` geçersiz sözdizimi;
+     `body` SwiftUI'ın `var body`'siyle çakışıyor. Saklı ad `message` oldu,
+     dış etiket `body` açık bir `init` ile korundu; üç çağrı yeri değişmedi.
+  2. `GameState.swift` — elle yazılmış `init` şema 7'nin iki alanını
+     (`holdingPoints`, `cityNumber`) almıyordu, `newGame` ise 22 argüman
+     veriyordu. Kod çözücü ve kodlayıcı ikisini de doğru işliyordu; eksik olan
+     yalnızca init'ti.
+  3. `ActionPanelView.swift:146` — `store.state.staff`; kadro şema 4'te kata
+     taşınmıştı. `store.currentFloor?.staff ?? []` oldu.
+  4. `ActionPanelView.swift:180,319` — `map(Money.text)`; fonksiyon referansı
+     `style` varsayılanını kaybediyor. `map { Money.text($0) }` oldu.
+- Testlerde iki şey çıktı:
+  - `PersistenceTests.swift:119` — aynı `state.staff` kalıntısı. İddia
+    `state.floors[0].staff` oldu; beklenti değişmedi.
+  - `FormattersTests` üç test — kod `5,6Mr ₺` üretiyordu, test `5,6 Mr ₺`
+    bekliyordu. **Test haklıydı**: `Money.text`'in kendi doküman satırı da
+    `1,2 B ₺` yazıyor. `number()` sayı ile kısaltmayı ayraçsız birleştiriyordu.
+    Ayraç dile bağlı olduğu için (İngilizce bitişik, Türkçe/İspanyolca ayrı
+    sözcük) `format.scaleSeparator` anahtarı eklendi — en `""`, tr/es `" "` —
+    ve `Money.Style` bir `scaleSeparator` alanı kazandı. Koda dil listesi
+    gömülmedi; yeni dil hâlâ tek `.lproj` klasörü. Test kurulumlarına alan
+    eklendi, **beklenen çıktıların hiçbiri değişmedi.**
+- Ekran ilk açılışta doğru: kasa `0 ₺`, tek kişi tezgâhın arkasında, "Kahve sat
+  +4 ₺", şerit dört sekmeli (Kadro · Ekipman · Şubeler · Bina). Tabela okunuyor.
 
 **Kaldı:**
+
+- **Adım 3'ün ikinci kutusu (27 maddelik elle doğrulama) ve adım 4, 5, 6.**
+  Engel teknik: simülatöre dokunma/yazma yapılamıyor, çünkü Claude Code'un
+  simülatör aracı `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`
+  çalıştırılmadan açılmıyor. Komut şifre istediği için Mert'in çalıştırması
+  gerekiyor; sonrasında 27 madde, kör düzeltilmiş üç yer, StoreKit ve ekran
+  görüntüleri sırayla geçilebilir.
+- `xcode-devir.md` §6'daki açık işlere (bina 4 kattan sonra okunmuyor, sektör
+  sayısı, dengedeki iki sayısal kaygı) bu oturumda dokunulmadı.
+- Değişiklikler commit edilmedi; çalışan kopyada duruyor.
 
