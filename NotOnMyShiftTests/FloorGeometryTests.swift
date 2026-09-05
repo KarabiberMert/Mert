@@ -276,4 +276,28 @@ final class FloorGeometryTests: XCTestCase {
         XCTAssertEqual(FloorPalette(floor: 5, plannedFloors: 2).coolness, 1, accuracy: 1e-9)
         XCTAssertEqual(FloorPalette(floor: 0, plannedFloors: 1).coolness, 0, accuracy: 1e-9)
     }
+    /// Patron kadroyla yuva yarışına girmemeli. Eskiden kapasite 1 iken ilk
+    /// eleman gelince `ownerInRow` false oluyordu ve patron hiç çizilmiyordu —
+    /// ekranda görülen hata buydu.
+    func testOwnerKeepsASlotEvenWhenTheCounterIsFull() {
+        let dolu = FloorGeometry.figureLayout(staffCount: 1, capacity: 1, showsOwner: true)
+        XCTAssertEqual(dolu.visibleStaff, 1)
+        XCTAssertEqual(dolu.ownerSlot, 1, "Patron kadro dolu olsa da kendi yuvasını alır")
+        XCTAssertEqual(dolu.slotCount, 2)
+
+        let bos = FloorGeometry.figureLayout(staffCount: 0, capacity: 1, showsOwner: true)
+        XCTAssertEqual(bos.visibleStaff, 0)
+        XCTAssertEqual(bos.ownerSlot, 0, "Kadro yokken patron kadronun yerinde durur")
+        XCTAssertEqual(bos.slotCount, 1)
+
+        let tasan = FloorGeometry.figureLayout(staffCount: 5, capacity: 3, showsOwner: true)
+        XCTAssertEqual(tasan.visibleStaff, 3, "Kadro kapasiteyle sınırlı")
+        XCTAssertEqual(tasan.ownerSlot, 3)
+        XCTAssertEqual(tasan.slotCount, 4)
+
+        let baskaKat = FloorGeometry.figureLayout(staffCount: 2, capacity: 4, showsOwner: false)
+        XCTAssertNil(baskaKat.ownerSlot, "Patron yalnızca seçili katta görünür")
+        XCTAssertEqual(baskaKat.slotCount, 2)
+    }
+
 }

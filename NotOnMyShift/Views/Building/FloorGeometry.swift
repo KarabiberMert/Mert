@@ -85,6 +85,22 @@ struct FloorGeometry {
     func visibleFigures(unitCount: Int) -> Int {
         max(1, Int(unit(0, of: unitCount).width / Self.pointsPerFigure) - 1)
     }
+
+    /// Kadro ve patron bantta hangi yuvaları kaplar.
+    ///
+    /// Patron kadroyla yuva yarışına **girmez**. Kadro yokken tezgâhın
+    /// arkasında, kadronun yerinde durur ("şimdilik her kahveyi sen
+    /// yapıyorsun"); ilk eleman gelince tezgâhın önüne, salona geçer ve kendi
+    /// yuvasını alır. Eskiden kapasite dolduğunda patron hiç çizilmiyordu.
+    static func figureLayout(
+        staffCount: Int,
+        capacity: Int,
+        showsOwner: Bool
+    ) -> (visibleStaff: Int, ownerSlot: Int?, slotCount: Int) {
+        let visible = min(max(0, staffCount), max(1, capacity))
+        guard showsOwner else { return (visible, nil, max(1, visible)) }
+        return (visible, visible, visible + 1)
+    }
 }
 
 /// Kat içindeki tek hücre: bir şube. Dikey ölçüleri banttan alır.

@@ -184,7 +184,7 @@ derlendi, 191 testin hepsi geçti, uygulama simülatörde açıldı.
 - Ekran ilk açılışta doğru: kasa `0 ₺`, tek kişi tezgâhın arkasında, "Kahve sat
   +4 ₺", şerit dört sekmeli (Kadro · Ekipman · Şubeler · Bina). Tabela okunuyor.
 
-**Oturum 2 bulgusu — patron ilk eleman tutulunca kayboluyor:**
+**Oturum 2 bulgusu — patron ilk eleman tutulunca kayboluyordu (düzeltildi):**
 
 README madde 3 "sen tezgâhtan çekilip salonda izlemeye başlarsın" diyor.
 Ekranda olan bu değil: eleman tutulduğu anda patron figürü hiç çizilmiyor.
@@ -199,11 +199,17 @@ Ekranda olan bu değil: eleman tutulduğu anda patron figürü hiç çizilmiyor.
   koşulu ilk elemandan sonra `1 < 1` → false oluyor; patron tezgâh sırasında
   eleman ile yer yarışına giriyor ve kaybediyor.
 
-Doğrusu muhtemelen patronu sıradan çıkarıp salona `standing: true` ile
-koymak — o zaman kapasite yarışı da bitiyor. Ama bu bir yerleşim kararı
-(salonda nerede, hangi hücrenin önünde, ölçek ne) ve CLAUDE.md ölçüleri
-`FloorGeometry`'ye sabit olarak eklemeyi ve testini yazmayı şart koşuyor.
-Ürün sahibinin kararı bekleniyor; kendi kafama göre değiştirmedim.
+Ürün sahibi düzeltilmesini onayladı. Yapılan: yerleşim `FloorGeometry`'ye
+saf ve test edilebilir bir işlev olarak taşındı (`figureLayout(staffCount:
+capacity:showsOwner:)`). Patron artık kadroyla yuva yarışına girmiyor —
+kadro yokken tezgâhın arkasında kadronun yerinde duruyor, ilk eleman gelince
+kendi yuvasını alıp salona geçiyor. Salon katmanı `drawFront`'tan **sonra**
+çiziliyor (tezgâhın önünde) ve `standing: true` ile, yani bacakları görünüyor
+— `ShopFigureView`'ın ölü dalı böylece gerçekten kullanılıyor.
+
+Testi yazıldı (`testOwnerKeepsASlotEvenWhenTheCounterIsFull`): kapasite 1 iken
+kadro 1 olduğunda patron yuvası artık kayboluyor mu diye bakıyor. Ekranda
+doğrulandı; madde 3 tam geçti. Test sayısı 192 → 193.
 
 **Oturum 2 bulgusu — dönüş özeti hiç çıkmıyordu (düzeltildi):**
 

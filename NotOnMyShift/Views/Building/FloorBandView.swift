@@ -54,6 +54,11 @@ struct FloorBandView: View {
                         )
                     }
                     .allowsHitTesting(false)
+
+                    // Patron tezgâhtan **sonra** çizilir: salonda, tezgâhın
+                    // önünde duruyor. Bacakları görünsün diye `standing`.
+                    ownerInSalon(in: band)
+                        .allowsHitTesting(false)
                 }
             }
         }
@@ -66,10 +71,12 @@ struct FloorBandView: View {
     /// Patron bir tane: yalnızca ilk hücrede durur.
     @ViewBuilder
     private func crew(in band: FloorGeometry, detail: FloorDetail) -> some View {
-        let capacity = band.visibleFigures(unitCount: unitCount)
-        let visible = min(floor.staff.count, capacity)
-        let ownerInRow = showsOwner && (visible < capacity || floor.staff.isEmpty)
-        let total = max(1, visible + (ownerInRow ? 1 : 0))
+        let layout = figureLayout(in: band)
+        let visible = layout.visibleStaff
+        // Patron yalnızca kadro yokken tezgâhın arkasında durur; kadro gelince
+        // salona geçiyor ve ayrı bir katmanda çiziliyor.
+        let ownerInRow = layout.ownerSlot != nil && floor.staff.isEmpty
+        let total = layout.slotCount
 
         ZStack(alignment: .topLeading) {
             ForEach(Array(0..<max(1, unitCount)), id: \.self) { unitIndex in
@@ -87,17 +94,43 @@ struct FloorBandView: View {
                     .transition(.opacity.combined(with: .offset(y: -band.h(0.12))))
                 }
 
-                if ownerInRow, unitIndex == 0 {
+                if ownerInRow, unitIndex == 0, let slot = layout.ownerSlot {
                     figure(
                         in: band,
                         unit: unit,
-                        centerX: UnitGeometry.slotCenter(index: visible, count: total),
-                        scale: floor.staff.isEmpty ? 1 : 0.92,
+                        centerX: UnitGeometry.slotCenter(index: slot, count: total),
+                        scale: 1,
                         apron: palette.ownerApron,
                         skin: Palette.skinTones[0]
                     )
                 }
             }
+        }
+    }
+
+    private func figureLayout(in band: FloorGeometry)
+        -> (visibleStaff: Int, ownerSlot: Int?, slotCount: Int) {
+        FloorGeometry.figureLayout(
+            staffCount: floor.staff.count,
+            capacity: band.visibleFigures(unitCount: unitCount),
+            showsOwner: showsOwner
+        )
+    }
+
+    /// Kadro kurulduktan sonra patron: tezgâhın önünde, salonda, ayakta.
+    @ViewBuilder
+    private func ownerInSalon(in band: FloorGeometry) -> some View {
+        let layout = figureLayout(in: band)
+        if let slot = layout.ownerSlot, !floor.staff.isEmpty, !floor.isInvestment {
+            figure(
+                in: band,
+                unit: band.unit(0, of: unitCount),
+                centerX: UnitGeometry.slotCenter(index: slot, count: layout.slotCount),
+                scale: 1,
+                apron: palette.ownerApron,
+                skin: Palette.skinTones[0],
+                standing: true
+            )
         }
     }
 
@@ -107,7 +140,8 @@ struct FloorBandView: View {
         centerX: Double,
         scale: Double,
         apron: Color,
-        skin: Color
+        skin: Color,
+        standing: Bool = false
     ) -> some View {
         let bodyHeight = band.h(FloorGeometry.figureBodyHeight * scale)
         let width = bodyHeight * FloorGeometry.figureWidthRatio
@@ -120,7 +154,7 @@ struct FloorBandView: View {
             headRadius: headRadius,
             apron: apron,
             skin: skin,
-            standing: false
+            standing: standing
         )
         .position(
             x: unit.x(centerX),
