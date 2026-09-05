@@ -61,11 +61,15 @@ sırayla koşturur, ilk başarısızlıkta durur.
 ### 0. Hazırlık
 
 ```bash
-git clone <repo> && cd Mert
-git checkout claude/ekdeki-promtu-uygula-g776lw
+git clone https://github.com/KarabiberMert/Mert.git
+cd Mert
 xcodebuild -version          # Xcode 16+ olmalı
 xcrun simctl list devices available | grep iPhone
 ```
+
+Depoda tek dal var (`claude/ekdeki-promtu-uygula-g776lw`) ve varsayılan o,
+yani `clone` doğrudan doğru dala düşer — ayrıca `checkout` gerekmiyor.
+İndirilecek bir zip yok; proje bütünüyle bu depoda.
 
 Denetleme betikleri Mac'te de çalışır, önce onları geçir:
 

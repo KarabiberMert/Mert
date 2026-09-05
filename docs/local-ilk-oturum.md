@@ -29,6 +29,14 @@ Bir adım bitmeden sonrakine geçme.
 
 ### 0. Ortam
 
+```bash
+git clone https://github.com/KarabiberMert/Mert.git && cd Mert
+```
+
+Tek dal var ve varsayılan o; `checkout` gerekmiyor. **Proje zip'i yoktur** —
+her şey bu depoda. (Daha önce paylaşılan `mockups.zip` yalnızca maket ekran
+görüntüleridir, kod değil.)
+
 - [ ] `xcodebuild -version` → Xcode 16 veya üstü
 - [ ] `xcrun simctl list devices available | grep iPhone` → en az bir iPhone simülatörü
 - [ ] `./scripts/mac_kapi.sh --sadece-denetci` → beş denetçi de geçiyor
