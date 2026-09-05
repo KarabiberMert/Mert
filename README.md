@@ -51,6 +51,13 @@ simülasyonlarıyla yürüdü. Sıradaki iş bunu bir Mac'te gerçeğe çevirmek
 Aşağıdakilerin hepsi **Claude Code oturumundan** yapılabilir — Xcode'u elle
 açmaya gerek yok. Sırayla git; her adım bir öncekine bağlı.
 
+Çalışma sayfası: [`docs/local-ilk-oturum.md`](docs/local-ilk-oturum.md) —
+kutulu iş listesi, oturumu başlatan komut ve oturum günlüğü orada. Local
+oturum onun üstünde çalışır; buradaki bölüm sadece özet.
+
+Tek komutluk kapı: `./scripts/mac_kapi.sh` — denetçiler, derleme ve testleri
+sırayla koşturur, ilk başarısızlıkta durur.
+
 ### 0. Hazırlık
 
 ```bash
@@ -497,6 +504,7 @@ python3 scripts/build_fonts.py       # Archivo kesitlerini yeniden üretir (font
 ./scripts/check_rules.sh             # pazarlığa kapalı kuralları tarar
 python3 scripts/make_app_icon.py     # 1024×1024 ikonu yeniden üretir
 python3 scripts/lint_pbxproj.py      # project.pbxproj yapısını doğrular
+./scripts/mac_kapi.sh                # Mac'te: denetçiler + derleme + testler tek komutta
 python3 scripts/check_store_copy.py  # mağaza ve ekran görüntüsü metinlerini ölçer
 python3 scripts/render_mockups.py    # mağaza kareleri için ekran maketi çizer (maket, gerçek değil)
 ```

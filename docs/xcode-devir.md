@@ -48,6 +48,9 @@ Bu ayrım önemli — ikisini karıştırmayalım.
 
 ## 3. Mac'te ilk oturum
 
+Adım adım çalışma sayfası ve oturum günlüğü:
+[`local-ilk-oturum.md`](local-ilk-oturum.md). Aşağısı onun özeti.
+
 En riskliden başla; her adım bir öncekine bağlı.
 
 **1. Aç ve derle.** Xcode 16+. `NotOnMyShift.xcodeproj`. Şema `NotOnMyShift`.

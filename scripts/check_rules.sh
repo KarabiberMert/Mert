@@ -31,7 +31,10 @@ scan() {
 echo "Kod kuralları"
 scan "SpriteKit kullanılmamalı"                  '^import SpriteKit'          NotOnMyShift NotOnMyShiftTests
 scan "Ekonomi Timer.publish üstüne kurulmamalı"  'Timer\.publish'             NotOnMyShift NotOnMyShiftTests
-scan "Force unwrap olmamalı"                     '[A-Za-z0-9_)\]]!([ ,)\.]|$)' NotOnMyShift
+# POSIX köşeli parantez ifadesinde ters bölü kaçış DEĞİLDİR: '[...\]]' yazınca
+# sınıf erken kapanır ve kalıp yalnızca ']!' yakalar. ']' sınıfa ilk karakter
+# olarak konur. Sondaki '[^=]' '!=' karşılaştırmasını eler.
+scan "Force unwrap olmamalı"                     '[]A-Za-z0-9_)]!([^=]|$)'    NotOnMyShift NotOnMyShiftTests
 scan "force try / force cast olmamalı"           '\btry!|\bas!'               NotOnMyShift
 scan "fatalError bırakılmamalı"                  'fatalError\('               NotOnMyShift
 scan "Motor saf kalmalı: saat, dosya, kalıcılık yok" \
