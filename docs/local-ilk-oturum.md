@@ -106,9 +106,9 @@ kez burada göreceğiz.
 
 - [x] **Sponsor arası sahnesinin katmanı.** Dönüş özeti bir `.sheet`; katlama
       düğmesine basınca geri sayım sayfanın **üstünde** çıkmalı, arkasında değil.
-- [ ] **Beş sekmeli şerit.** Çatı açıkken sekme başlıkları sığıyor mu,
+- [x] **Beş sekmeli şerit.** Çatı açıkken sekme başlıkları sığıyor mu,
       `minimumScaleFactor` devreye giriyor mu?
-- [ ] **Binanın dikey dengesi.** Çatı + iki kat + kaldırım. Zemin katın 1,35
+- [x] **Binanın dikey dengesi.** Çatı + iki kat + kaldırım. Zemin katın 1,35
       katı yüksekliği ekranda doğru duruyor mu?
 
 ### 5. Satın alma
@@ -316,6 +316,40 @@ düğmesi ("Kahve sat +29 ₺") o kata geçiyor, patron da o kata taşınıyor.
 
 Not: bu SwiftUI yerleşim sırası hatası birim testiyle yakalanmıyor; koda
 sebebini anlatan bir yorum bırakıldı.
+
+**Oturum 2 — kurucudan sonra geçilen maddeler**
+
+- Madde 6 geçti: tam yeniden başlatmadan sonra ilerleme yerinde, kutlama
+  tekrar etmiyor.
+- Madde 9 geçti: üst kat açıldı, bina yükseldi, kat boş geldi ve otomatik
+  seçildi, kutlama bir kez çıktı. Satış düğmesi "Ekmek sat +45 ₺" oldu —
+  `balance.json`'daki fırın elle satışıyla aynı.
+- Madde 10 geçti (dokunma alanı düzeltmesinden sonra).
+- Madde 13 kısmen: pazar payı çubuğu, "Açık hücre: 4" ve isimli rakipler
+  (Çınar Holding, Değirmen Grup, Percolate) görünüyor. Payın zamanla kayması
+  uzun bekleme istiyor, bakılmadı.
+- Madde 14 geçti: yönetim katı bandı tepeye oturdu, şeritte Ofis sekmesi
+  belirdi ve **kasa oranı 209 ₺/sn olarak değişmedi** — çatı üretmiyor.
+- Madde 15 geçti: kural açılınca "Verim +10%", oran 209 → 231, brüt 216 → 238
+  (×1,10) ama maaş 7,2 ₺ sabit — bonus brüte uygulanıyor, maaşa değil.
+  Kural metinleri tarafsız; hiçbiri "kural koymazsan kaybedersin" demiyor.
+- Madde 19, 20, 21 geçti. Satış raporun §5 üçlüsünü birden veriyor: nakit,
+  "Holding puanı 1 · Sahip olduğun her şey +12% kazanıyor" ve kat yatırıma
+  dönüşüp ödemeye devam ediyor. Oran 231 → **35,2 ₺/sn** = 31,5 × 1,12, yani
+  donmuş oranın üstüne holding çarpanı biniyor ve iki kez sayılmıyor.
+  Kat kepenkli çizildi, **tabelası yerinde kaldı**, satış düğmesi kayboldu.
+- Madde 24 tekrar doğrulandı, bu kez 9 dakikalık aralıkta: 113 B ₺.
+
+**Adım 4'ün diğer iki kutusu**
+
+- Beş sekmeli şerit: Kadro · Ekipman · Şubeler · Ofis · Bina — kırpılma yok,
+  `minimumScaleFactor` devreye girmedi, sığıyorlar.
+- Binanın dikey dengesi: çatı + iki kat + kaldırım ölçüldü; zemin kat 332 px,
+  üst kat 246 px → oran **1,35**, `BuildingLayout.groundFloorScale` ile birebir.
+
+**Kurucu düğmelerinde kendi hatam:** `contentShape`'i `Button`'ın dışına
+koymuştum, oysa `Button`'ın basılabilir bölgesini etiketi belirliyor. Etiketin
+içine taşındı; artık satırın tamamı basılabilir.
 
 **Kaldı:**
 

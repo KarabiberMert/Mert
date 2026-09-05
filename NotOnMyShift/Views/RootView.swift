@@ -263,12 +263,17 @@ struct RootView: View {
                 row(L.lifetime, Money.text(store.state.lifetimeEarnings))
                 // Elle ulaşması uzun süren durumlar. Yalnızca DEBUG.
                 ForEach(GameStore.DebugScenario.allCases) { scenario in
-                    Button(scenario.title) { store.applyDebugScenario(scenario) }
-                        .font(Typography.label(13))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        // Etiket düz metin: vuruş alanı yoksa satırın sadece
-                        // yazı kadarı basılabiliyor.
-                        .contentShape(Rectangle())
+                    Button {
+                        store.applyDebugScenario(scenario)
+                    } label: {
+                        // Genişletme ve vuruş alanı **etiketin içinde** olmalı:
+                        // Button'ın basılabilir bölgesini etiketi belirliyor,
+                        // dışarıya konan contentShape onu genişletmiyor.
+                        Text(scenario.title)
+                            .font(Typography.label(13))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
                 }
                 .padding(.top, 2)
 
