@@ -509,6 +509,37 @@ Kuralın üç yarısı da tuttu:
 - **Yatırım payı geri getiriyor.** Üst kat açılınca pay 0,6370 → 0,6719, yani
   **+0,0349** — `sharePerPurchase: 0.035` ile birebir.
 
+**Cihaza kurulum (6 Eylül 2026)**
+
+Uygulama ilk kez gerçek bir telefonda çalıştı: iPhone 14 Pro Max, Release
+derlemesi. Simülatör aracı gerçek cihazı süremiyor, kurulum `devicectl` ile
+yapıldı:
+
+```bash
+xcodebuild -project NotOnMyShift.xcodeproj -scheme NotOnMyShift \
+  -configuration Release -destination 'platform=iOS,id=<cihaz-id>' \
+  -derivedDataPath build/cihaz-release build
+xcrun devicectl device install app --device <cihaz-id> \
+  build/cihaz-release/Build/Products/Release-iphoneos/NotOnMyShift.app
+xcrun devicectl device process launch --device <cihaz-id> com.karabibermert.notonmyshift
+```
+
+Cihaz kimliği: `xcrun devicectl list devices`.
+
+`DEVELOPMENT_TEAM` tanımsız olduğu için cihaza derleme önce başarısızdı;
+sertifikadan çıkarılan takım kimliği (`SB7J75D3C4`) ürün sahibinin onayıyla
+projeye eklendi — dört yapılandırmaya da. Artık Xcode'da ⌘R ve komut satırı
+ek ayar istemiyor.
+
+**Denemeyi Release ile yapın.** Swift'in Debug derlemesi optimize edilmiyor ve
+oyun her kareyi `Canvas` ile çiziyor; akıcılığı Debug'da yargılamak haksız
+sonuç verir. Bunun bedeli DEBUG panelinin (para/zaman düğmeleri) olmaması.
+
+Yan doğrulama: DEBUG araçlarının yayın derlemesine sızmadığı iki ikili
+karşılaştırılarak kanıtlandı — `DebugScenario`, `Depoyu tavana`,
+`forwardTwoDays`, `debugTimeOffset` Debug ikilisinde var, Release'te hiçbiri
+yok.
+
 **Kaldı:**
 
 - **Adım 3'ün ikinci kutusu (27 maddelik elle doğrulama) ve adım 4, 5, 6.**
