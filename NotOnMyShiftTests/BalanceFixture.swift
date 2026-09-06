@@ -81,6 +81,9 @@ enum BalanceFixture {
         costGrowth: Double = 2,
         maxStaff: Int = 3,
         wagePerSecond: Double = 0,
+        // Varsayılan 0: elle satışı sayan testler motoru ölçüyor, soğumayı
+        // değil. Soğumanın kendi testi ayrı.
+        manualCooldownSeconds: TimeInterval = 0,
         minimumReportSeconds: TimeInterval = 60,
         upperUnlockCost: Double = 1_000,
         plannedFloors: Int = 8,
@@ -117,6 +120,7 @@ enum BalanceFixture {
                 .init(capacitySeconds: 28_800, cost: 500),     // 8 saat
                 .init(capacitySeconds: 86_400, cost: 1_500)    // 24 saat
             ]),
+            counter: .init(manualCooldownSeconds: manualCooldownSeconds),
             offline: .init(minimumReportSeconds: minimumReportSeconds),
             // Jitter 0: testlerde olay aralığı tam olarak gapSeconds.
             events: .init(

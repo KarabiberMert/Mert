@@ -257,6 +257,9 @@
       }
     ]
   },
+  "counter": {
+    "manualCooldownSeconds": 1.0
+  },
   "offline": {
     "minimumReportSeconds": 60
   },

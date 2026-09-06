@@ -59,6 +59,23 @@ final class FormattersTests: XCTestCase {
         XCTAssertEqual(Money.text(340_000, style: lira), "340 B ₺")
     }
 
+    /// Kasa sayacı kısaltmaz: oyuncu tam rakamı görür. `text` ise sayacın
+    /// genişliğini sabit tutmak için kısaltmaya devam eder.
+    func testCashCounterShowsTheWholeNumber() {
+        XCTAssertEqual(Money.exactText(1_200, style: dollar), "$1,200")
+        XCTAssertEqual(Money.exactText(37_800_000, style: lira), "37.800.000 ₺")
+        XCTAssertEqual(Money.exactText(1_001_585_098, style: euro), "1.001.585.098 €")
+
+        // Kuruş gösterilmiyor, aşağı yuvarlanıyor.
+        XCTAssertEqual(Money.exactText(847.9, style: dollar), "$847")
+        XCTAssertEqual(Money.exactText(0, style: dollar), "$0")
+        // İşaret kalıbın dışında, `text` ile aynı kural.
+        XCTAssertEqual(Money.exactText(-5, style: lira), "-5 ₺")
+
+        // Kısaltmalı biçim değişmedi.
+        XCTAssertEqual(Money.text(1_200, style: dollar), "$1.2K")
+    }
+
     func testNegativeSignSitsOutsideThePattern() {
         XCTAssertEqual(Money.text(-5, style: dollar), "-$5")
         XCTAssertEqual(Money.text(-5, style: lira), "-5 ₺")

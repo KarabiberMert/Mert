@@ -397,6 +397,10 @@ final class GameStore {
     @ObservationIgnored private var hasBoostedThisSession = false
     /// Çevrimdışı katlama, dönüş özetinde bir kez sunulur.
     @ObservationIgnored private var hasDoubledThisReturn = false
+    /// Son elle satışın anı. Tezgâhın soğuma süresi buradan ölçülür.
+    /// Kayda yazılmıyor: bir saniyelik bir kuralın yeniden açılışta
+    /// yaşaması gerekmiyor, motorun saf kalması ise gerekiyor.
+    private var lastManualSaleAt: Date?
     /// Zaten arka planda mıyız? Sahne fazı geri dönerken de `.inactive`
     /// veriyor; ikinci kez damgalarsak uzakta geçen süre `.active`'e hiç
     /// ulaşmaz ve dönüş özeti çıkmaz.
@@ -541,8 +545,23 @@ final class GameStore {
 
     // MARK: - Eylemler
 
+    /// Tezgâh soğumaya hazır mı? Art arda dokunuş sayılmaz.
+    var canSellManually: Bool { manualCooldownRemaining <= 0 }
+
+    /// Soğumanın bitmesine kalan süre. Düğme bunu göstersin diye açık.
+    var manualCooldownRemaining: TimeInterval {
+        guard let last = lastManualSaleAt else { return 0 }
+        let gecen = now().timeIntervalSince(last)
+        // Saat geriye alınmışsa soğumada kilitli kalma.
+        guard gecen >= 0 else { return 0 }
+        return max(0, config.counter.manualCooldownSeconds - gecen)
+    }
+
     func sellManually() {
         lastActionError = nil
+        // Tezgâh sınırsız bir musluk değil: iki satış arasında soğuma var.
+        guard canSellManually else { return }
+        lastManualSaleAt = now()
         state = GameEngine.sellManually(onFloor: selectedFloor, state, config: config)
         Haptics.play(.light)
     }

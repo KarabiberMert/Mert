@@ -57,6 +57,18 @@ enum Money {
         return (value < 0 ? "-" : "") + style.render(body)
     }
 
+    /// Kasa sayacı için: **kısaltma yok**, binlik ayracı var.
+    /// `text` sayacın genişliğini sabit tutmak için kısaltıyor; kasada ise
+    /// oyuncunun tam rakamı görmesi isteniyor.
+    static func exactText(_ value: Double, style: Style = current) -> String {
+        guard value.isFinite else { return emptyValue }
+        let body = FloatingPointFormatStyle<Double>()
+            .locale(style.numberLocale)
+            .precision(.fractionLength(0))
+            .format(abs(value).rounded(.towardZero))
+        return (value < 0 ? "-" : "") + style.render(body)
+    }
+
     /// Küçük ve ondalıklı değerler için: saniyelik gelir gibi.
     /// `text` 100'ün altını tam sayıya yuvarlar; oranda bu bilgi kaybı can sıkar
     /// (1,2/sn "1/sn" görünür).

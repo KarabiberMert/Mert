@@ -22,11 +22,13 @@ struct CashHeaderView: View {
                 .font(Typography.label(13))
                 .foregroundStyle(Palette.inkSoft)
 
-            Text(Money.text(money))
+            Text(Money.exactText(money))
+                .lineLimit(1)
+                .minimumScaleFactor(0.4)
                 .font(Typography.money(46))
                 .foregroundStyle(Palette.ink)
                 .scaleEffect(bumped ? 1.04 : 1, anchor: .leading)
-                .accessibilityLabel("\(L.cash): \(Money.text(money))")
+                .accessibilityLabel("\(L.cash): \(Money.exactText(money))")
 
             if eventMultiplier != 1 {
                 eventBadge

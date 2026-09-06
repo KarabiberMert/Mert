@@ -12,6 +12,7 @@ struct BalanceConfig: Codable, Sendable, Equatable {
     /// Katların sırası. Sıfırıncı sektör zemin kattır ve baştan açıktır.
     var sectors: [SectorSpec]
     var warehouse: Warehouse
+    var counter: Counter
     var offline: Offline
     var events: Events
     var market: Market
@@ -118,6 +119,13 @@ struct BalanceConfig: Codable, Sendable, Equatable {
             /// Bu seviyeye çıkmanın ücreti. İlk seviyede 0.
             var cost: Double
         }
+    }
+
+    /// Tezgâh: elle satışın kendi kuralları.
+    struct Counter: Codable, Sendable, Equatable {
+        /// İki elle satış arasındaki en kısa süre. Sıfır ise soğuma yok.
+        /// Amaç, tezgâhın sınırsız bir para musluğu olmaması.
+        var manualCooldownSeconds: TimeInterval
     }
 
     struct Offline: Codable, Sendable, Equatable {

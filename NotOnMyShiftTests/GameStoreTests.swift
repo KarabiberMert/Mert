@@ -78,6 +78,56 @@ final class GameStoreTests: XCTestCase {
         }
     }
 
+    /// Tezgâh sınırsız bir musluk olmamalı: iki elle satış arasında soğuma var.
+    /// Saat enjekte edildiği için gerçek zaman beklemeden ölçebiliyoruz.
+    func testManualSaleWaitsForTheCounterToCoolDown() async throws {
+        try await withTemporaryDirectory { directory in
+            let config = BalanceFixture.config(manualCooldownSeconds: 1)
+            let clock = TestClock(BalanceFixture.epoch)
+            let store = GameStore(
+                config: config,
+                saves: SaveStore(containerDirectory: directory),
+                now: clock.provider
+            )
+
+            store.sellManually()
+            XCTAssertEqual(store.state.money, 10, accuracy: 1e-9)
+            XCTAssertFalse(store.canSellManually, "Soğuma bitmeden düğme kapalı")
+
+            // Aynı saniyede üst üste dokunmak para basmamalı.
+            store.sellManually()
+            store.sellManually()
+            XCTAssertEqual(store.state.money, 10, accuracy: 1e-9)
+
+            // Soğuma dolunca yeniden satılabilir.
+            clock.date = BalanceFixture.epoch.addingTimeInterval(1)
+            XCTAssertTrue(store.canSellManually)
+            store.sellManually()
+            XCTAssertEqual(store.state.money, 20, accuracy: 1e-9)
+
+            store.handleWillResignActive()
+        }
+    }
+
+    /// Soğuma sıfırken eski davranış aynen sürüyor — mevcut testler bu yüzden
+    /// kırılmıyor.
+    func testZeroCooldownKeepsRapidTapping() async throws {
+        try await withTemporaryDirectory { directory in
+            let config = BalanceFixture.config(manualCooldownSeconds: 0)
+            let clock = TestClock(BalanceFixture.epoch)
+            let store = GameStore(
+                config: config,
+                saves: SaveStore(containerDirectory: directory),
+                now: clock.provider
+            )
+
+            for _ in 0..<5 { store.sellManually() }
+            XCTAssertEqual(store.state.money, 50, accuracy: 1e-9)
+
+            store.handleWillResignActive()
+        }
+    }
+
     func testProgressSurvivesRelaunch() async throws {
         try await withTemporaryDirectory { directory in
             let config = BalanceFixture.config()

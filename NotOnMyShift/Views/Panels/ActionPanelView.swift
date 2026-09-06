@@ -87,6 +87,9 @@ struct ActionPanelView: View {
             .background(Palette.enamel, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
+        // Soğuma sırasında düğme sönük: dokunuşun neden işlemediği görünsün.
+        .disabled(!store.canSellManually)
+        .opacity(store.canSellManually ? 1 : 0.55)
     }
 
     // MARK: - Sekmeler
