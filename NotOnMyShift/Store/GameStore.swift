@@ -846,6 +846,7 @@ extension GameStore {
         case readyToIPO
         case forwardThreeHours
         case backOneHour
+        case emptyCash
 
         var id: String { rawValue }
 
@@ -859,6 +860,7 @@ extension GameStore {
             case .readyToIPO:  "Halka arza hazırla"
             case .forwardThreeHours: "Saati 3 saat ileri al"
             case .backOneHour:       "Saati 1 saat geri al"
+            case .emptyCash:         "Kasayı boşalt"
             }
         }
     }
@@ -901,8 +903,21 @@ extension GameStore {
             // şimdi geri gidiyor. Para ne artmalı ne azalmalı.
             debugTimeOffset -= 3600
             handleBecameActive()
+
+        case .emptyCash:
+            // Müdür raporunu görebilmek için gerekiyor: kasa doluyken müdür
+            // kuralları anında canlı uyguluyor ve dönüşte yapacak iş kalmıyor.
+            // Kasa boşken bekliyor, sen yokken gelir birikiyor, dönüşte harcıyor.
+            state.money = 0
         }
-        clearDebugCelebrations()
+        // Toplu kurulum kutlamaları temizlenir; ama zaman senaryolarının ürettiği
+        // dönüş özeti ve müdür raporu **durmalı** — onları görmek için varlar.
+        switch scenario {
+        case .forwardThreeHours, .backOneHour, .emptyCash:
+            break
+        case .rich, .secondFloor, .roof, .matureFloor, .readyToIPO:
+            clearDebugCelebrations()
+        }
         persist()
     }
 

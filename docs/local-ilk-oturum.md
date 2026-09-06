@@ -454,6 +454,33 @@ Kayıt karşılaştırması, kural istisnasız tutuyor:
 
 Holding puanı 6 iken panel "+72% kazanıyor" yazıyordu — 6 × %12, doğru.
 
+**Madde 16 ve 17 — zaman yolculuğuyla geçildi (6 Eylül 2026)**
+
+İlk denemede rapor çıkmadı ve sebebi **benim aracımdı**: `applyDebugScenario`
+her senaryonun sonunda `clearDebugCelebrations()` çağırıyordu, o da
+`dismissManagerReport()` yapıyordu — yani zaman senaryosunun ürettiği raporu
+kendi elimle siliyordum. Düzeltildi: kutlama temizliği yalnızca kurulum
+senaryolarında çalışıyor, zaman senaryolarında dönüş özeti ve müdür raporu
+duruyor.
+
+İkinci engel gerçekti ama uygulamanın hatası değil: kasa doluyken müdür
+kuralları **canlı** uyguluyor (saniyelik tick), dönüşte yapacak iş kalmıyor ve
+rapor boş geliyor. Gerçek senaryoda kısıt paradır. Bunun için "Kasayı boşalt"
+senaryosu eklendi: kadro kurulur, kasa boşaltılır, kalan kurallar açılır, sonra
+saat ileri alınır — sen yokken biriken parayı müdür dönüşte harcar.
+
+- **Madde 16 geçti.** "Müdürler boş durmamış" raporu satır satır yazdı:
+  öğütücü, süt istasyonu ve espresso makinesi yenilendi, sonra iki yeni hücre
+  ("artık 3 açık", "artık 4 açık"). Kasa 32,8 B ₺ olarak kaldı — müdür harcadı
+  ama birikimi süpürmedi (oran 211 ₺/sn, iki dakikalık yedek ~25 B ₺).
+- **Madde 17 geçti.** "Kararı müdürler versin" açıkken olay kartı hiç
+  gösterilmedi; olay raporda göründü: "Biri öğrenmek istiyor — Öğret". Müdür
+  kârlı seçeneği aldı ve kasa satırında karşılığı çıktı: "Üretim ×1,4 · 1 saat
+  30 dakika kaldı", oran 274 → 387 ₺/sn (282 × 1,4 brüt).
+- Yan doğrulama: Ofis sekmesindeki metin madde 15'in tonunu birebir tutuyor —
+  "Her kural verimi artırır. Hiç kural koymamak bir şey eksiltmez — işi kendin
+  yaparsın, o kadar."
+
 **Kaldı:**
 
 - **Adım 3'ün ikinci kutusu (27 maddelik elle doğrulama) ve adım 4, 5, 6.**
