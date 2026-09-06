@@ -427,6 +427,33 @@ Yeni şehirde elle satış +4 değil +5 ₺, brüt 216,97 yerine 321 ₺ (×1,48
 puan × %12) — madde 20'nin "yeni açtığın kat ilk günden daha hızlı yürür"
 kısmı böylece kendiliğinden doğrulandı.
 
+**Madde 22 — sıfırdan kuruldu, final sahnesi izlendi**
+
+Önceki turda halka arz kazara olmuştu ve sahneyi görmemiştim. Bu kez adım adım:
+iki sektör olgunlaştırılıp satıldı (iki kat da kepenkli yatırım katı, tabelalar
+yerinde, oran 617 ₺/sn), Bina şeridinde "Holdingi halka arz et · 2. şehir ·
+Bütün katlar büyüdü. Burada yapacak bir şey kalmadı." satırı belirdi.
+
+Sahne: **"Zili çaldın"** — "Bina artık borsada bir şirket. Şehrin öbür ucunda
+boş bir dükkân seni bekliyor." Altında biten şehrin rakamları: kazanılan
+37,8 Mn ₺, süre 14 saat 34 dakika, satılan iş 4, elle satış 81, holding puanı 8.
+
+**Özet sıfırlamadan önce alınıyor** — sahne bu rakamları yazarken arkadaki bina
+çoktan sıfırlanmıştı (kasa 0 ₺, tek Dede Kahve katı, işlenen süre 5 saniye).
+Rapor §5'in ve CLAUDE.md'nin istediği sıra bu.
+
+Kayıt karşılaştırması, kural istisnasız tutuyor:
+
+| Sana ait — kaldı | Binaya ait — sıfırlandı |
+|---|---|
+| `holdingPoints` 6 → 8 (+2) | `money` → 0 |
+| `warehouseLevel` korundu | `floors` → tek boş kahve katı |
+| `manualSales 81`, `offlineReturns 7`, `rewardsClaimed 2` | `hasRoof` → false |
+| `citiesCompleted` 1 → 2, `sectorsSold` 2 → 4 | `managedSectors` [], `activeRules` {} |
+| | `cityNumber` 2 → 3 |
+
+Holding puanı 6 iken panel "+72% kazanıyor" yazıyordu — 6 × %12, doğru.
+
 **Kaldı:**
 
 - **Adım 3'ün ikinci kutusu (27 maddelik elle doğrulama) ve adım 4, 5, 6.**
