@@ -122,7 +122,7 @@ struct ActionPanelView: View {
 
     /// Çubuğu doldurup soğuma süresi boyunca boşaltır.
     private func startCooldownSweep() {
-        let seconds = store.config.counter.manualCooldownSeconds
+        let seconds = store.manualCooldownSeconds
         guard seconds > 0 else { return }
         cooldownSweep = 1
         guard !reduceMotion else {
@@ -172,8 +172,50 @@ struct ActionPanelView: View {
 
     // MARK: - Kadro
 
+    /// Fiyat kaydırıcısı. Dengedeki alt ve üst sınır arasında gezer.
+    ///
+    /// Yanındaki doluluk oranı kararın karşılığını anında gösteriyor:
+    /// tezgâh %100'e yakınsa fiyatı yükseltmek kazandırır, altına düşerse
+    /// tezgâh boş kalmaya başlamıştır.
+    private var priceRow: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 8) {
+                Text(L.price)
+                    .font(Typography.display(15))
+                    .foregroundStyle(Palette.ink)
+                Text(Money.exactText(store.price))
+                    .font(Typography.money(15))
+                    .foregroundStyle(Palette.mustardDeep)
+                Spacer(minLength: 8)
+                if let fill = store.shopFill {
+                    Text(L.shopFill(Percent.text(fill)))
+                        .font(Typography.label(12))
+                        .foregroundStyle(Palette.inkFaint)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+            }
+
+            Slider(
+                value: Binding(get: { store.price }, set: { store.setPrice($0) }),
+                in: store.priceRange
+            )
+            .tint(Palette.mustard)
+
+            Text(L.priceHint)
+                .font(Typography.label(11))
+                .foregroundStyle(Palette.inkFaint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .padding(.horizontal, 4)
+        .padding(.bottom, 2)
+    }
+
     @ViewBuilder
     private var crewTab: some View {
+        priceRow
+
         if let cost = store.hireCost, let next = store.nextStaffTemplate {
             row(
                 title: L.hireStaff,

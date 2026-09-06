@@ -167,6 +167,47 @@ enum GameEngine {
         max(0.0001, spec.manual.revenuePerSale)
     }
 
+    /// Fiyatın inebileceği ve çıkabileceği sınırlar.
+    static func priceRange(for spec: BalanceConfig.SectorSpec) -> ClosedRange<Double> {
+        let base = salePrice(spec)
+        let low = base * max(0.01, min(spec.manual.minPriceFactor, spec.manual.maxPriceFactor))
+        let high = base * max(spec.manual.minPriceFactor, spec.manual.maxPriceFactor)
+        return low...max(low, high)
+    }
+
+    /// Katın satış fiyatı. Kurulmamışsa dengedeki taban fiyat.
+    static func price(for floor: FloorState, spec: BalanceConfig.SectorSpec) -> Double {
+        let range = priceRange(for: spec)
+        let value = floor.price < 0 ? salePrice(spec) : floor.price
+        return min(max(value, range.lowerBound), range.upperBound)
+    }
+
+    /// Fiyatın talebe etkisi: `(taban / fiyat)^esneklik`.
+    ///
+    /// Pahalı satmak müşteriyi azaltır. Esneklik 1'den büyük olduğu için
+    /// talep sınırlıyken fiyatı yükseltmek geliri **düşürür**; kapasite
+    /// sınırlıyken ise yükseltmek geliri artırır. Tepe nokta bu yüzden
+    /// talebin kapasiteyi tam doldurduğu fiyattır.
+    static func priceFactor(for floor: FloorState, spec: BalanceConfig.SectorSpec, config: BalanceConfig) -> Double {
+        let base = salePrice(spec)
+        let current = price(for: floor, spec: spec)
+        guard current > 0 else { return 1 }
+        return pow(base / current, max(1, config.demand.priceElasticity))
+    }
+
+    /// Tezgâhın soğuma süresi. Ekipman kahveyi hızlandırır.
+    static func manualCooldown(
+        for floor: FloorState,
+        spec: BalanceConfig.SectorSpec,
+        config: BalanceConfig
+    ) -> TimeInterval {
+        let speed = max(1, equipmentMultiplier(for: floor, spec: spec))
+        return max(
+            max(0, config.counter.minCooldownSeconds),
+            max(0, config.counter.manualCooldownSeconds) / speed
+        )
+    }
+
     /// Katın kapsaması. Kayıt kurulmamışsa dengedeki başlangıç değeri.
     static func coverage(for floor: FloorState, config: BalanceConfig) -> Double {
         let value = floor.demandCoverage < 0 ? config.demand.startCoverage : floor.demandCoverage
@@ -192,7 +233,10 @@ enum GameEngine {
         let buff = eventMultiplier(for: state) * holdingMultiplier(for: state, config: config)
         let bonus = processBonus(for: floor, state: state, config: config)
         let capacity = capacityRate(floor, spec: spec, buff: buff, bonus: bonus)
+        // Fiyat hem tabanı hem kapasite terimini etkiler: pahalı dükkâna
+        // Çağ 0'da da az müşteri gelir.
         return max(base, capacity * coverage(for: floor, config: config))
+            * priceFactor(for: floor, spec: spec, config: config)
     }
 
     /// Bir segmentte verilen hizmet ve kalan kuyruk.
@@ -265,6 +309,22 @@ enum GameEngine {
         return min(max(moved, demand.minCoverage), demand.maxCoverage)
     }
 
+    /// Tezgâhın ne kadarı dolu (0…1). Kapasite yoksa `nil` — Çağ 0'da
+    /// doluluk anlamsız, orada tezgâhı oyuncunun kendisi çalıştırıyor.
+    ///
+    /// Fiyat kaydırıcısının öğrettiği şey bu: doluluk 1'e yaklaşırken fiyatı
+    /// yükseltmek kazandırır, 1'in altına düşünce tezgâh boş kalmaya başlar.
+    static func shopFill(onFloor index: Int, _ state: GameState, config: BalanceConfig) -> Double? {
+        guard state.floors.indices.contains(index),
+              !state.floors[index].isInvestment,
+              let spec = spec(for: state.floors[index], config: config) else { return nil }
+        let floor = state.floors[index]
+        let buff = eventMultiplier(for: state) * holdingMultiplier(for: state, config: config)
+        let bonus = processBonus(for: floor, state: state, config: config)
+        guard capacityRate(floor, spec: spec, buff: buff, bonus: bonus) > 0 else { return nil }
+        return demandFactor(for: floor, spec: spec, state: state, config: config)
+    }
+
     /// Üretimin kapasiteye oranı (0…1). Ekrandaki saniyelik oran bunu içerir.
     static func demandFactor(
         for floor: FloorState,
@@ -332,7 +392,10 @@ enum GameEngine {
             // Talep tavanı brüte uygulanır, maaşa değil: müşteri gelmese de
             // kadro maaşını alır. Olay çarpanıyla aynı kural.
             let demand = demandFactor(for: floor, spec: spec, state: state, config: config)
-            let gross = floorGross(floor, spec: spec, bonus: bonus) * buff * demand
+            // `floorGross` taban fiyatla ölçülüyor; oyuncunun koyduğu fiyata
+            // çeviriyoruz. Kapasite satış adedidir, fiyat onu paraya çevirir.
+            let priceRatio = price(for: floor, spec: spec) / salePrice(spec)
+            let gross = floorGross(floor, spec: spec, bonus: bonus) * buff * demand * priceRatio
             return max(0, gross - floorWages(floor, spec: spec))
         }
     }
@@ -404,6 +467,9 @@ enum GameEngine {
             }
             if next.floors[index].demandQueue < 0 {
                 next.floors[index].demandQueue = max(0, config.demand.startQueue)
+            }
+            if next.floors[index].price < 0, let spec = spec(for: next.floors[index], config: config) {
+                next.floors[index].price = salePrice(spec)
             }
         }
         return next
@@ -502,7 +568,7 @@ enum GameEngine {
 
     /// Elle bir satışın getirisi. Ekipman Çağ 0'da da işe yarar.
     static func manualRevenue(for floor: FloorState, spec: BalanceConfig.SectorSpec) -> Double {
-        max(0, spec.manual.revenuePerSale) * equipmentMultiplier(for: floor, spec: spec)
+        price(for: floor, spec: spec) * equipmentMultiplier(for: floor, spec: spec)
     }
 
     /// Elle satışın olay çarpanı dahil getirisi — ekranda gösterilen değer.
@@ -596,7 +662,7 @@ enum GameEngine {
                 seconds: seconds,
                 config: config
             )
-            earned += max(0, outcome.served * salePrice(spec) - wages)
+            earned += max(0, outcome.served * price(for: floor, spec: spec) - wages)
 
             next.floors[index].demandQueue = outcome.queue
             next.floors[index].demandCoverage = nextCoverage(
@@ -752,6 +818,18 @@ enum GameEngine {
         next.money += revenue
         next.lifetimeEarnings += revenue
         next.stats.manualSales += 1
+        return next
+    }
+
+    /// Katın fiyatını değiştir. Sınırların dışına taşan değer kırpılır.
+    static func setPrice(_ value: Double, onFloor index: Int, _ state: GameState, config: BalanceConfig) -> GameState {
+        guard state.floors.indices.contains(index),
+              !state.floors[index].isInvestment,
+              let spec = spec(for: state.floors[index], config: config),
+              value.isFinite else { return state }
+        let range = priceRange(for: spec)
+        var next = normalised(state, config: config)
+        next.floors[index].price = min(max(value, range.lowerBound), range.upperBound)
         return next
     }
 

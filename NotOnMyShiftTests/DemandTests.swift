@@ -190,3 +190,120 @@ final class DemandTests: XCTestCase {
         XCTAssertEqual(next.money, 10 * 7200, accuracy: 1, "Talep çevrimdışı kazancı düşürmemeli")
     }
 }
+
+/// Fiyat mekaniği ve tezgâh hızı.
+///
+/// Tasarımın çekirdeği: gelir = `min(kapasite, talep(fiyat)) × fiyat`.
+/// Ucuz satmak müşteriyi çoğaltır ama kapasiteyi aşan kısmı kuyrukta bekler;
+/// pahalı satmak tezgâhı boş bırakır. Tepe nokta ikisinin kesiştiği yerdir.
+final class PriceTests: XCTestCase {
+
+    /// Aynı denge: kapasite 1 satış/sn, taban fiyat 10 ₺, esneklik 2.
+    /// Taban geliş hızı devre dışı ki fiyat belirleyici olsun.
+    private let config = BalanceFixture.config(
+        revenuePerSale: 10,
+        ratePerSecond: 10,
+        starterArrivalSeconds: 1_000_000,
+        baseArrivalSeconds: 1_000_000,
+        demandStartQueue: 0,
+        startCoverage: 1, minCoverage: 1, maxCoverage: 1,
+        priceElasticity: 2
+    )
+
+    private func rate(at price: Double) -> Double {
+        var state = BalanceFixture.state(staffCount: 1, demandQueue: 0, config: config)
+        state = GameEngine.setPrice(price, onFloor: 0, state, config: config)
+        return GameEngine.productionRate(for: state, config: config)
+    }
+
+    /// Gelir, talebin kapasiteyi tam doldurduğu fiyatta tepe yapar.
+    ///
+    /// Ucuz tarafta kapasite sınırlıyız: müşteri çok ama tezgâh yetişmiyor,
+    /// her satış az kazandırıyor. Pahalı tarafta tezgâh boş: satış az.
+    func testIncomePeaksWhereDemandJustFillsCapacity() {
+        // λ(p) = kapasite × (10/p)². Kapasite 1 → λ = 1 tam olarak p = 10'da.
+        XCTAssertEqual(rate(at: 10), 10, accuracy: 1e-6, "Tepe nokta: dükkân tam dolu")
+
+        // Ucuz: λ = 4 satış/sn ama kapasite 1 → gelir 1 × 5.
+        XCTAssertEqual(rate(at: 5), 5, accuracy: 1e-6, "Ucuz satmak kapasiteyi aşan talebi boşa harcar")
+
+        // Pahalı: λ = 0,25 satış/sn → gelir 0,25 × 20.
+        XCTAssertEqual(rate(at: 20), 5, accuracy: 1e-6, "Pahalı satmak tezgâhı boş bırakır")
+
+        XCTAssertGreaterThan(rate(at: 10), rate(at: 5))
+        XCTAssertGreaterThan(rate(at: 10), rate(at: 20))
+    }
+
+    /// Fiyat dengedeki aralığın dışına çıkamaz.
+    func testPriceStaysInsideTheBalanceRange() {
+        let state = BalanceFixture.state(config: config)
+        let range = GameEngine.priceRange(for: config.sectors[0])
+        XCTAssertEqual(range.lowerBound, 5, accuracy: 1e-9)
+        XCTAssertEqual(range.upperBound, 20, accuracy: 1e-9)
+
+        let ucuz = GameEngine.setPrice(1, onFloor: 0, state, config: config)
+        XCTAssertEqual(ucuz.floors[0].price, 5, accuracy: 1e-9)
+
+        let pahali = GameEngine.setPrice(999, onFloor: 0, state, config: config)
+        XCTAssertEqual(pahali.floors[0].price, 20, accuracy: 1e-9)
+    }
+
+    /// Fiyat elle satışın getirisini de değiştirir.
+    func testPriceChangesWhatOneTapEarns() {
+        var state = BalanceFixture.state(config: config)
+        state = GameEngine.setPrice(20, onFloor: 0, state, config: config)
+        XCTAssertEqual(GameEngine.manualRevenue(onFloor: 0, state, config: config), 20, accuracy: 1e-9)
+
+        let satildi = GameEngine.sellManually(onFloor: 0, state, config: config)
+        XCTAssertEqual(satildi.money, 20, accuracy: 1e-9)
+    }
+
+    /// Ekipman tezgâhı hızlandırır: oyunun başında iki saniye, makineler
+    /// geldikçe bir saniyenin altına iner ve dengedeki tabanda durur.
+    func testEquipmentSpeedsUpTheCounter() {
+        let config = BalanceFixture.config(
+            manualCooldownSeconds: 2,
+            minCooldownSeconds: 0.25
+        )
+        let spec = config.sectors[0]
+
+        let ekipmansiz = FloorState(sectorID: spec.id)
+        XCTAssertEqual(
+            GameEngine.manualCooldown(for: ekipmansiz, spec: spec, config: config),
+            2, accuracy: 1e-9,
+            "Oyunun başında kahve yapmak iki saniye"
+        )
+
+        // Koşumda öğütücü seviye 1 → ×2, seviye 2 → ×4.
+        let birinci = FloorState(sectorID: spec.id, equipmentLevels: ["grinder": 1])
+        XCTAssertEqual(
+            GameEngine.manualCooldown(for: birinci, spec: spec, config: config),
+            1, accuracy: 1e-9,
+            "İlk geliştirme süreyi yarıya indirir"
+        )
+
+        let ikinci = FloorState(sectorID: spec.id, equipmentLevels: ["grinder": 2])
+        XCTAssertEqual(
+            GameEngine.manualCooldown(for: ikinci, spec: spec, config: config),
+            0.5, accuracy: 1e-9,
+            "İkincisiyle bir saniyenin altına iner"
+        )
+    }
+
+    /// Soğuma dengedeki tabanın altına inmez.
+    func testCooldownNeverGoesBelowTheFloor() {
+        let config = BalanceFixture.config(manualCooldownSeconds: 2, minCooldownSeconds: 0.25)
+        let spec = config.sectors[0]
+        let tamEkipman = FloorState(sectorID: spec.id, equipmentLevels: ["grinder": 2])
+        // ×4 → 0,5 sn. Tabanı yükseltirsek taban kazanır.
+        let sikiConfig = BalanceFixture.config(manualCooldownSeconds: 2, minCooldownSeconds: 1.5)
+        XCTAssertEqual(
+            GameEngine.manualCooldown(for: tamEkipman, spec: sikiConfig.sectors[0], config: sikiConfig),
+            1.5, accuracy: 1e-9
+        )
+        XCTAssertEqual(
+            GameEngine.manualCooldown(for: tamEkipman, spec: spec, config: config),
+            0.5, accuracy: 1e-9
+        )
+    }
+}

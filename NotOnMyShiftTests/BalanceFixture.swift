@@ -10,6 +10,8 @@ enum BalanceFixture {
     /// Zemin kat: yuvarlak sayılar. Çarpanlar 1,0 / 2,0 / 0,5.
     static func groundSector(
         revenuePerSale: Double = 10,
+        minPriceFactor: Double = 0.5,
+        maxPriceFactor: Double = 2,
         ratePerSecond: Double = 1,
         baseCost: Double = 100,
         costGrowth: Double = 2,
@@ -20,7 +22,11 @@ enum BalanceFixture {
         BalanceConfig.SectorSpec(
             id: "coffee",
             unlockCost: 0,
-            manual: .init(revenuePerSale: revenuePerSale),
+            manual: .init(
+                revenuePerSale: revenuePerSale,
+                minPriceFactor: minPriceFactor,
+                maxPriceFactor: maxPriceFactor
+            ),
             staff: .init(
                 ratePerSecond: ratePerSecond,
                 baseCost: baseCost,
@@ -52,7 +58,7 @@ enum BalanceFixture {
         BalanceConfig.SectorSpec(
             id: "bakery",
             unlockCost: unlockCost,
-            manual: .init(revenuePerSale: 100),
+            manual: .init(revenuePerSale: 100, minPriceFactor: 0.5, maxPriceFactor: 2),
             staff: .init(
                 ratePerSecond: 10,
                 baseCost: 1_000,
@@ -84,6 +90,7 @@ enum BalanceFixture {
         // Varsayılan 0: elle satışı sayan testler motoru ölçüyor, soğumayı
         // değil. Soğumanın kendi testi ayrı.
         manualCooldownSeconds: TimeInterval = 0,
+        minCooldownSeconds: TimeInterval = 0,
         // Talep varsayılanları bol: kapsama 1'de sabit ve kuyruk derin, yani
         // talebi ölçmeyen testler eskisi gibi kapasiteyle çalışır.
         starterArrivalSeconds: TimeInterval = 1,
@@ -95,6 +102,7 @@ enum BalanceFixture {
         maxCoverage: Double = 1,
         coveragePerSecond: Double = 0,
         backlogToleranceSeconds: TimeInterval = 20,
+        priceElasticity: Double = 2,
         minimumReportSeconds: TimeInterval = 60,
         upperUnlockCost: Double = 1_000,
         plannedFloors: Int = 8,
@@ -140,9 +148,13 @@ enum BalanceFixture {
                 minCoverage: minCoverage,
                 maxCoverage: maxCoverage,
                 coveragePerSecond: coveragePerSecond,
-                backlogToleranceSeconds: backlogToleranceSeconds
+                backlogToleranceSeconds: backlogToleranceSeconds,
+                priceElasticity: priceElasticity
             ),
-            counter: .init(manualCooldownSeconds: manualCooldownSeconds),
+            counter: .init(
+                manualCooldownSeconds: manualCooldownSeconds,
+                minCooldownSeconds: minCooldownSeconds
+            ),
             offline: .init(minimumReportSeconds: minimumReportSeconds),
             // Jitter 0: testlerde olay aralığı tam olarak gapSeconds.
             events: .init(
@@ -240,6 +252,9 @@ enum BalanceFixture {
         for index in state.floors.indices {
             state.floors[index].demandQueue = demandQueue
             state.floors[index].demandCoverage = config.demand.startCoverage
+            if let spec = config.sectors.first(where: { $0.id == state.floors[index].sectorID }) {
+                state.floors[index].price = spec.manual.revenuePerSale
+            }
         }
         return state
     }

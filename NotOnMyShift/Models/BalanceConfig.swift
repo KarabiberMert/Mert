@@ -48,8 +48,13 @@ struct BalanceConfig: Codable, Sendable, Equatable {
 
     /// Çağ 0: elle üretip satma.
     struct Manual: Codable, Sendable, Equatable {
-        /// Bir dokunuşun getirisi.
+        /// Bir dokunuşun taban getirisi. Oyuncunun koyduğu fiyat bunun
+        /// etrafında gezinir; kapasite hesabı hep bu tabanla yapılır.
         var revenuePerSale: Double
+        /// Fiyatın inebileceği en düşük kat. 0,5 → taban fiyatın yarısı.
+        var minPriceFactor: Double
+        /// Fiyatın çıkabileceği en yüksek kat. 2,0 → taban fiyatın iki katı.
+        var maxPriceFactor: Double
     }
 
     /// Çağ 1: eleman.
@@ -156,13 +161,23 @@ struct BalanceConfig: Codable, Sendable, Equatable {
         var coveragePerSecond: Double
         /// Kuyruk bu kadar saniyelik işi aşarsa kapsama düşmeye başlar.
         var backlogToleranceSeconds: TimeInterval
+
+        /// Fiyat esnekliği. Talep `(taban fiyat / fiyat)^esneklik` ile çarpılır.
+        ///
+        /// 1'den büyük olmalı: aksi hâlde pahalıya satmak her zaman kazandırır
+        /// ve kaydırıcının bir anlamı kalmaz. 1'den büyükken tepe nokta
+        /// **talebin kapasiteyi tam doldurduğu fiyat** olur — oyuncunun
+        /// öğrenmesi gereken tek kural budur.
+        var priceElasticity: Double
     }
 
     /// Tezgâh: elle satışın kendi kuralları.
     struct Counter: Codable, Sendable, Equatable {
-        /// İki elle satış arasındaki en kısa süre. Sıfır ise soğuma yok.
-        /// Amaç, tezgâhın sınırsız bir para musluğu olmaması.
+        /// Ekipmansız tezgâhta iki satış arasındaki süre. Ekipman bunu
+        /// kısaltır: makine kahveyi daha hızlı yapar.
         var manualCooldownSeconds: TimeInterval
+        /// Soğuma bunun altına inmez — tezgâh sınırsız bir musluk olmasın.
+        var minCooldownSeconds: TimeInterval
     }
 
     struct Offline: Codable, Sendable, Equatable {

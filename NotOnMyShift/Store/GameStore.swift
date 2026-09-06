@@ -561,13 +561,43 @@ final class GameStore {
         manualCooldownRemaining <= 0 && waitingCustomers >= 1
     }
 
+    /// Seçili katın soğuma süresi. Ekipman aldıkça kısalır.
+    var manualCooldownSeconds: TimeInterval {
+        guard let floor = currentFloor, let spec = currentSpec else {
+            return config.counter.manualCooldownSeconds
+        }
+        return GameEngine.manualCooldown(for: floor, spec: spec, config: config)
+    }
+
     /// Soğumanın bitmesine kalan süre. Düğme bunu göstersin diye açık.
     var manualCooldownRemaining: TimeInterval {
         guard let last = lastManualSaleAt else { return 0 }
         let gecen = now().timeIntervalSince(last)
         // Saat geriye alınmışsa soğumada kilitli kalma.
         guard gecen >= 0 else { return 0 }
-        return max(0, config.counter.manualCooldownSeconds - gecen)
+        return max(0, manualCooldownSeconds - gecen)
+    }
+
+    /// Seçili katın satış fiyatı ve oynayabileceği aralık.
+    var price: Double {
+        guard let floor = currentFloor, let spec = currentSpec else { return 0 }
+        return GameEngine.price(for: floor, spec: spec)
+    }
+
+    var priceRange: ClosedRange<Double> {
+        guard let spec = currentSpec else { return 0...0 }
+        return GameEngine.priceRange(for: spec)
+    }
+
+    /// Tezgâhın doluluk oranı. Çağ 0'da nil.
+    var shopFill: Double? {
+        GameEngine.shopFill(onFloor: selectedFloor, state, config: config)
+    }
+
+    /// Fiyatı değiştir. Sınır dışı değer kırpılır.
+    func setPrice(_ value: Double) {
+        state = GameEngine.setPrice(value, onFloor: selectedFloor, state, config: config)
+        persist()
     }
 
     func sellManually() {

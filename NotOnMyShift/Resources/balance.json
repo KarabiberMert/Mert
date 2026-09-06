@@ -8,7 +8,9 @@
       "id": "coffee",
       "unlockCost": 0,
       "manual": {
-        "revenuePerSale": 4.0
+        "revenuePerSale": 4.0,
+        "minPriceFactor": 0.5,
+        "maxPriceFactor": 2.0
       },
       "staff": {
         "ratePerSecond": 1.2,
@@ -118,7 +120,9 @@
       "id": "bakery",
       "unlockCost": 250000,
       "manual": {
-        "revenuePerSale": 45.0
+        "revenuePerSale": 45.0,
+        "minPriceFactor": 0.5,
+        "maxPriceFactor": 2.0
       },
       "staff": {
         "ratePerSecond": 14.0,
@@ -266,10 +270,12 @@
     "minCoverage": 0.6,
     "maxCoverage": 1.0,
     "coveragePerSecond": 0.0025,
-    "backlogToleranceSeconds": 20.0
+    "backlogToleranceSeconds": 20.0,
+    "priceElasticity": 2.0
   },
   "counter": {
-    "manualCooldownSeconds": 1.0
+    "manualCooldownSeconds": 2.0,
+    "minCooldownSeconds": 0.25
   },
   "offline": {
     "minimumReportSeconds": 60

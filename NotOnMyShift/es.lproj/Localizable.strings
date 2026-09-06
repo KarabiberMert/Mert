@@ -45,6 +45,9 @@
 "action.hire" = "Contratar a alguien";
 "action.upgradeWarehouse" = "Ampliar el almacén";
 "action.staffFull" = "Detrás del mostrador ya no cabe nadie más.";
+"action.price" = "Precio";
+"action.shopFill" = "Mostrador %@ lleno";
+"action.priceHint" = "Más barato trae más clientes, más caro trae menos";
 "action.waitingCustomers" = "%lld esperando";
 "action.noCustomers" = "No hay nadie en el mostrador";
 "action.coffeesToGo" = "faltan %lld";

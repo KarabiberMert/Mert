@@ -46,6 +46,9 @@
 "action.hire" = "Hire someone";
 "action.upgradeWarehouse" = "Grow the store room";
 "action.staffFull" = "No room behind the counter for anyone else.";
+"action.price" = "Price";
+"action.shopFill" = "Counter %@ full";
+"action.priceHint" = "Cheaper brings more customers, dearer brings fewer";
 "action.waitingCustomers" = "%lld waiting";
 "action.noCustomers" = "No one at the counter yet";
 "action.coffeesToGo" = "%lld more to go";

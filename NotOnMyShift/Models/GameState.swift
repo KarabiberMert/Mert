@@ -13,8 +13,8 @@ struct GameState: Codable, Sendable, Equatable {
     /// 1 → Faz 0-1 · 2 → ilk eleman kutlaması · 3 → ekipman ve şubeler
     /// 4 → kat kat bina (tek dükkân yerine `floors`) · 5 → olaylar ve pazar
     /// 6 → çatı katı ve süreç katmanı · 7 → sektör satışı ve holding puanı
-    /// 8 → talep: kat başına kuyruk ve kapsama
-    static let currentSchemaVersion = 8
+    /// 8 → talep: kat başına kuyruk ve kapsama · 9 → kat başına fiyat
+    static let currentSchemaVersion = 9
 
     /// `marketShare` ve `nextEventAtGameSeconds` için "henüz kurulmadı" işareti.
     /// Kod çözücünün dengeye erişimi yok; ilk değerleri motor koyuyor.
@@ -343,11 +343,18 @@ struct FloorState: Codable, Sendable, Equatable, Identifiable {
     /// alt sınırın altına inmez. (şema 8)
     var demandCoverage: Double
 
+    /// Oyuncunun koyduğu satış fiyatı. Dengedeki taban fiyatın
+    /// `minPriceFactor`–`maxPriceFactor` aralığında gezer.
+    ///
+    /// Pahalı satmak müşteriyi azaltır, ucuz satmak çoğaltır; tepe nokta
+    /// talebin kapasiteyi tam doldurduğu fiyattır. (şema 9)
+    var price: Double
+
     var id: String { sectorID }
 
     private enum CodingKeys: String, CodingKey {
         case sectorID, staff, equipmentLevels, branchCount, investmentRate
-        case demandQueue, demandCoverage
+        case demandQueue, demandCoverage, price
     }
 
     init(
@@ -360,7 +367,8 @@ struct FloorState: Codable, Sendable, Equatable, Identifiable {
         demandQueue: Double = GameState.unset,
         // Motor dengeden başlangıç kapsamasını koyar,
         // çünkü kod çözücünün dengeye erişimi yok.
-        demandCoverage: Double = GameState.unset
+        demandCoverage: Double = GameState.unset,
+        price: Double = GameState.unset
     ) {
         self.sectorID = sectorID
         self.staff = staff
@@ -369,6 +377,7 @@ struct FloorState: Codable, Sendable, Equatable, Identifiable {
         self.investmentRate = max(0, investmentRate)
         self.demandQueue = demandQueue
         self.demandCoverage = demandCoverage
+        self.price = price
     }
 
     init(from decoder: any Decoder) throws {
@@ -382,6 +391,8 @@ struct FloorState: Codable, Sendable, Equatable, Identifiable {
         // dengeden dolduracağı "kurulmadı" değeri.
         demandQueue = try container.decodeIfPresent(Double.self, forKey: .demandQueue) ?? GameState.unset
         demandCoverage = try container.decodeIfPresent(Double.self, forKey: .demandCoverage) ?? GameState.unset
+        // Şema 9 öncesi kayıtlarda fiyat yok: motor dengedeki tabanı koyar.
+        price = try container.decodeIfPresent(Double.self, forKey: .price) ?? GameState.unset
     }
 
     /// Bu kat satıldı mı? Yatırım katı üretir ama artık yönetilmez.

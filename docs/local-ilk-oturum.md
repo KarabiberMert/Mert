@@ -608,6 +608,42 @@ dokunuş→kare turum da o kadar. Cihazda gözle doğrulanması gerekiyor.
 
 203 → 205 test.
 
+**Fiyat mekaniği ve tezgâh hızı (6 Eylül 2026)**
+
+*Fiyat.* Kaydırıcı dengedeki aralıkta gezer: kahve 2–8 ₺ (taban 4 ₺,
+`minPriceFactor` 0,5 · `maxPriceFactor` 2,0). Aralık sektöre göreli olduğu için
+fırın kendiliğinden 22,5–90 ₺ oluyor ve yeni sektör eklemek ek ayar istemiyor.
+
+Denge şu formülden çıkıyor: **gelir = min(kapasite, talep(fiyat)) × fiyat**.
+Talep `(taban/fiyat)^esneklik` ile çarpılıyor, esneklik 2.
+
+- Ucuz tarafta dükkân **kapasite sınırlı**: müşteri çok ama tezgâh yetişmiyor,
+  fazlası kuyrukta bekleyip kaçıyor. Fiyatı düşürmek yalnızca kazancı azaltıyor.
+- Pahalı tarafta **talep sınırlı**: tezgâh boş kalıyor.
+- **Tepe nokta ikisinin kesiştiği yer** — talebin kapasiteyi tam doldurduğu
+  fiyat. Oyuncunun öğrenmesi gereken tek kural bu, ve o fiyat sabit değil:
+  kapsama (servis kalitesi) yükseldikçe daha pahalıya satılabiliyor.
+
+Testte birebir ölçüldü (`testIncomePeaksWhereDemandJustFillsCapacity`):
+kapasite 1 satış/sn, taban 10 ₺. Gelir 10 ₺'de **10/sn**, 5 ₺'de **5/sn**,
+20 ₺'de **5/sn** — tepe ortada, iki uçta yarıya iniyor.
+
+Esnekliğin 1'den büyük olması şart; küçük olsaydı pahalıya satmak her zaman
+kazandırır ve kaydırıcının anlamı kalmazdı. `BalanceConfig.Demand` bunu
+yorumda söylüyor.
+
+*Tezgâh hızı.* Soğuma artık sabit değil, ekipmana bağlı:
+`soğuma = tabanTaban / ekipmanÇarpanı`, dengedeki alt sınırda duruyor.
+Oyunun başında **2 saniye**; öğütücü ilk seviyesiyle (×1,20) 1,67 sn, makine de
+gelince (×1,56) 1,28 sn, tam ekipmanda (×7,35) alt sınır 0,25 sn'ye dayanıyor.
+Yani "ilk geliştirme hızı etkiler ve bir saniyenin altına iner" tutuyor.
+Ekipmanın mevcut çarpanını kullandığı için dengeye yeni sayı eklenmedi.
+
+*Yan düzeltme:* `productionRate` hâlâ taban fiyatla hesaplıyordu; fiyat
+değişince ekrandaki saniyelik oran yanlış olurdu. Fiyat oranıyla çarpılıyor.
+
+Şema 8 → 9: kat başına `price`, `decodeIfPresent` ile. 205 → 210 test.
+
 **Kaldı:**
 
 - **Adım 3'ün ikinci kutusu (27 maddelik elle doğrulama) ve adım 4, 5, 6.**

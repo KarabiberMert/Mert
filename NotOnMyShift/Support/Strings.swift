@@ -195,6 +195,24 @@ enum L {
         String(localized: "action.staffFull", defaultValue: "No room behind the counter for anyone else.", comment: "Crew is full")
     }
     /// Çoğul eki yok: 1 ve 38 için aynı çalışır.
+    /// Fiyat kaydırıcısının başlığı.
+    static var price: String {
+        String(localized: "action.price", defaultValue: "Price",
+               comment: "Label above the price slider.")
+    }
+
+    /// Tezgâhın doluluğu. `value` hazır biçimlenmiş yüzde.
+    static func shopFill(_ value: String) -> String {
+        String(localized: "action.shopFill", defaultValue: "Counter \(value) full",
+               comment: "How much of the shop capacity demand fills. Value is a formatted percentage.")
+    }
+
+    /// Fiyat kaydırıcısının altındaki ipucu.
+    static var priceHint: String {
+        String(localized: "action.priceHint", defaultValue: "Cheaper brings more customers, dearer brings fewer",
+               comment: "One line explaining the price trade-off.")
+    }
+
     /// Kuyrukta bekleyen müşteri. 1 için de 20 için de doğru okunmalı.
     static func waitingCustomers(_ count: Int) -> String {
         String(localized: "action.waitingCustomers", defaultValue: "\(count) waiting",
