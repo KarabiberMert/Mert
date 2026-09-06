@@ -436,6 +436,10 @@ final class GameStore {
         case .empty:
             self.state = GameState.newGame(characterID: "kahveci", sectorID: groundSector, now: now())
         }
+        // Kayıttaki "kurulmadı" alanlarını dengeden doldur: pazar payı, olay
+        // zamanı ve talep. Motor bunu kendi içinde de yapıyor ama mağazanın
+        // ilk okuduğu değerler de doğru olmalı — kuyruk boş görünmesin.
+        self.state = GameEngine.normalised(self.state, config: config)
     }
 
     // MARK: - Sahne fazı
@@ -545,8 +549,17 @@ final class GameStore {
 
     // MARK: - Eylemler
 
-    /// Tezgâh soğumaya hazır mı? Art arda dokunuş sayılmaz.
-    var canSellManually: Bool { manualCooldownRemaining <= 0 }
+    /// Seçili katın kapısında bekleyen müşteri sayısı.
+    /// Kuyruk sürekli bir stok; oyuncuya tam sayı olarak gösteriliyor.
+    var waitingCustomers: Int {
+        guard let floor = currentFloor, !floor.isInvestment else { return 0 }
+        return max(0, Int(floor.demandQueue))
+    }
+
+    /// Tezgâh satışa hazır mı? İki şart: soğuma bitmiş ve bekleyen müşteri var.
+    var canSellManually: Bool {
+        manualCooldownRemaining <= 0 && waitingCustomers >= 1
+    }
 
     /// Soğumanın bitmesine kalan süre. Düğme bunu göstersin diye açık.
     var manualCooldownRemaining: TimeInterval {

@@ -84,6 +84,17 @@ enum BalanceFixture {
         // Varsayılan 0: elle satışı sayan testler motoru ölçüyor, soğumayı
         // değil. Soğumanın kendi testi ayrı.
         manualCooldownSeconds: TimeInterval = 0,
+        // Talep varsayılanları bol: kapsama 1'de sabit ve kuyruk derin, yani
+        // talebi ölçmeyen testler eskisi gibi kapasiteyle çalışır.
+        starterArrivalSeconds: TimeInterval = 1,
+        baseArrivalSeconds: TimeInterval = 1,
+        demandExpirySeconds: TimeInterval = 60,
+        demandStartQueue: Double = 1000,
+        startCoverage: Double = 1,
+        minCoverage: Double = 1,
+        maxCoverage: Double = 1,
+        coveragePerSecond: Double = 0,
+        backlogToleranceSeconds: TimeInterval = 20,
         minimumReportSeconds: TimeInterval = 60,
         upperUnlockCost: Double = 1_000,
         plannedFloors: Int = 8,
@@ -120,6 +131,17 @@ enum BalanceFixture {
                 .init(capacitySeconds: 28_800, cost: 500),     // 8 saat
                 .init(capacitySeconds: 86_400, cost: 1_500)    // 24 saat
             ]),
+            demand: .init(
+                starterArrivalSeconds: starterArrivalSeconds,
+                baseArrivalSeconds: baseArrivalSeconds,
+                expirySeconds: demandExpirySeconds,
+                startQueue: demandStartQueue,
+                startCoverage: startCoverage,
+                minCoverage: minCoverage,
+                maxCoverage: maxCoverage,
+                coveragePerSecond: coveragePerSecond,
+                backlogToleranceSeconds: backlogToleranceSeconds
+            ),
             counter: .init(manualCooldownSeconds: manualCooldownSeconds),
             offline: .init(minimumReportSeconds: minimumReportSeconds),
             // Jitter 0: testlerde olay aralığı tam olarak gapSeconds.
@@ -187,6 +209,9 @@ enum BalanceFixture {
         extraFloors: [FloorState] = [],
         selectedFloor: Int = 0,
         lastSeenAt: Date = epoch,
+        // Kuyruk bilerek derin: talebi ölçmeyen testler eskisi gibi
+        // kapasiteyle çalışsın, elle satış müşteri yokluğuna takılmasın.
+        demandQueue: Double = 1000,
         config: BalanceConfig = BalanceFixture.config()
     ) -> GameState {
         var state = GameState.newGame(characterID: "kahveci", now: lastSeenAt)
@@ -210,6 +235,12 @@ enum BalanceFixture {
         // motorun normalleştirmesine bırakırdı ve ölçüm bulanıklaşırdı.
         state.marketShare = config.market.startShare
         state.nextEventAtGameSeconds = config.events.firstAfterSeconds
+        // Talep de aynı sebeple açıkça kurulur: `unset` bırakmak ölçümü
+        // motorun normalleştirmesine bırakırdı.
+        for index in state.floors.indices {
+            state.floors[index].demandQueue = demandQueue
+            state.floors[index].demandCoverage = config.demand.startCoverage
+        }
         return state
     }
 

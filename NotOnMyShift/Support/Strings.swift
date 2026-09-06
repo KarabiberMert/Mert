@@ -195,6 +195,18 @@ enum L {
         String(localized: "action.staffFull", defaultValue: "No room behind the counter for anyone else.", comment: "Crew is full")
     }
     /// Çoğul eki yok: 1 ve 38 için aynı çalışır.
+    /// Kuyrukta bekleyen müşteri. 1 için de 20 için de doğru okunmalı.
+    static func waitingCustomers(_ count: Int) -> String {
+        String(localized: "action.waitingCustomers", defaultValue: "\(count) waiting",
+               comment: "Customers queued at the counter. Must read correctly for 1 as well as 20.")
+    }
+
+    /// Kuyruk boşken tezgâhın altındaki not.
+    static var noCustomers: String {
+        String(localized: "action.noCustomers", defaultValue: "No one at the counter yet",
+               comment: "Shown when the demand queue is empty and the counter cannot sell.")
+    }
+
     static func coffeesToGo(_ count: Int) -> String {
         String(localized: "action.coffeesToGo", defaultValue: "\(count) more to go",
                comment: "Manual sales still needed. Must read correctly for 1 as well as 38.")

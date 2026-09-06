@@ -540,6 +540,45 @@ karşılaştırılarak kanıtlandı — `DebugScenario`, `Depoyu tavana`,
 `forwardTwoDays`, `debugTimeOffset` Debug ikilisinde var, Release'te hiçbiri
 yok.
 
+**Talep sistemi — ilk kat (6 Eylül 2026)**
+
+Ürün sahibinin kararlarıyla kuruldu: talep **üretim tavanı** olur, sen yokken
+kadro talebi karşılar, geliş hızının tabanı vardır ve talep **kapasiteye
+oranlı** ölçeklenir.
+
+Ölçekleme kararı kritikti. Sabit 10 saniyelik geliş hızı, tam kurulmuş bir
+dükkânın gelirini binde ikiye düşürüyordu (kapasite 54,2 satış/sn, talep
+0,1 satış/sn). Kapasiteye oranlı model bunu çözüyor: `λ = max(taban,
+kapasite × kapsama)`. Sonuç: **mevcut denge korundu** — 196 testin hiçbirinin
+beklediği sayı değişmedi.
+
+Mekanizma, `advance`'ın kapalı form kuralına uyacak şekilde seçildi. Talep
+tekil kart listesi değil, sürekli bir stok: `dQ/dt = (λ − servis) − Q/T`.
+Doğrusal olduğu için iki saatlik yokluk da tek hesapta çıkıyor, döngü yok.
+Kapsama segment içinde sabit tutuluyor, tıpkı olay çarpanlarında olduğu gibi.
+
+- Talep çarpanı **brüte** uygulanıyor, maaşa değil — olay çarpanıyla aynı kural.
+- Kapsama kuyruk hoşgörüyü aşınca iner, boş kuyrukta tavana tırmanır; dengedeki
+  tabanın altına inmez.
+- Çağ 0'da taban geliş aralığı 3 saniye (dengede `starterArrivalSeconds`), kadro
+  gelince 10 saniyeye döner ama kapasite terimi zaten devralır.
+- Yeni dükkân kapısında hazır müşteriyle açılır (`startQueue`), yoksa oyuncu
+  uygulamayı açtığında satacak kimse bulamazdı.
+- Elle satış bir müşteriyi kuyruktan alır; kuyruk boşken tezgâh çalışmaz.
+- Şema 7 → 8: kat başına `demandQueue` ve `demandCoverage`, ikisi de
+  `decodeIfPresent` ile. Eski kayıtlar açılmaya devam ediyor.
+
+Yedi test eklendi (`DemandTests`): talep tavanı, kuyruğun λ·T'de durması,
+Çağ 0'da kuyruğun dolup taşması, müşterisiz satışın olmaması, açılış kuyruğu,
+kapsamanın tabanı ve **çevrimdışı kazancın düşmemesi**. 196 → 203 test.
+
+**Bilinmesi gereken sınır:** kadro talebi otomatik karşıladığı için sistem
+kendi kendini dengeliyor ve tam kurulmuş bir dükkânda ısırmıyor — ekosistem
+asıl olarak oyuncunun darboğaz olduğu yerde (Çağ 0 ve kapasite < talep)
+çalışıyor. Reklam/bilinirlik katmanı da bu yüzden henüz eklenmedi: tavanı
+yükseltmenin geliri artırması için önce talebin kapasitenin altına düşebildiği
+bir band gerekiyor. Bu bir sonraki tur.
+
 **Kaldı:**
 
 - **Adım 3'ün ikinci kutusu (27 maddelik elle doğrulama) ve adım 4, 5, 6.**

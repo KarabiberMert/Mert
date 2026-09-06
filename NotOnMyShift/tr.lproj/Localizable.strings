@@ -48,6 +48,8 @@
 "action.hire" = "Eleman tut";
 "action.upgradeWarehouse" = "Depoyu büyüt";
 "action.staffFull" = "Tezgâhın arkasına başka kimse sığmıyor.";
+"action.waitingCustomers" = "%lld kişi bekliyor";
+"action.noCustomers" = "Tezgâhta kimse yok";
 "action.coffeesToGo" = "%lld satış daha";
 
 /* Depo */

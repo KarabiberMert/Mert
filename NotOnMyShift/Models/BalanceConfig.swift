@@ -12,6 +12,7 @@ struct BalanceConfig: Codable, Sendable, Equatable {
     /// Katların sırası. Sıfırıncı sektör zemin kattır ve baştan açıktır.
     var sectors: [SectorSpec]
     var warehouse: Warehouse
+    var demand: Demand
     var counter: Counter
     var offline: Offline
     var events: Events
@@ -119,6 +120,36 @@ struct BalanceConfig: Codable, Sendable, Equatable {
             /// Bu seviyeye çıkmanın ücreti. İlk seviyede 0.
             var cost: Double
         }
+    }
+
+    /// Talep: dükkâna gelen müşteri akışı.
+    ///
+    /// Talep **kapasiteye oranlı** ölçeklenir: geliş hızı, katın satış
+    /// kapasitesinin `coverage` katıdır. Böylece iş büyüdükçe talep de büyür
+    /// ve denge tablosu geçerli kalır; sistem bir ödül/ceza bandı olarak
+    /// çalışır. Kapasite yokken (Çağ 0) taban geliş hızı devreye girer.
+    struct Demand: Codable, Sendable, Equatable {
+        /// Kadro yokken geliş aralığı. Oyunun ilk dakikası akıcı kalsın diye
+        /// `baseArrivalSeconds`'tan kısadır.
+        var starterArrivalSeconds: TimeInterval
+        /// Kadro varken taban geliş aralığı. Kapasite terimi bunu aşınca
+        /// belirleyici olmaktan çıkar — taban yalnızca alt sınırdır.
+        var baseArrivalSeconds: TimeInterval
+        /// Kuyrukta bu kadar bekleyen talep gider.
+        var expirySeconds: TimeInterval
+        /// Yeni dükkânın kapısındaki hazır müşteri. Sıfır olsaydı oyuncu
+        /// uygulamayı açtığında satacak kimse bulamazdı.
+        var startQueue: Double
+        /// Yeni dükkânın kapsaması. 1,0 = talep tam kapasiteyi karşılar.
+        var startCoverage: Double
+        /// Kapsama bunun altına inmez — ihmal geliri sıfırlamaz, yavaşlatır.
+        var minCoverage: Double
+        /// Kapsama bunun üstüne çıkmaz. Reklam bu tavana kadar iter.
+        var maxCoverage: Double
+        /// Kapsamanın saniyede değişme hızı. Ekosistem yavaş nefes alsın.
+        var coveragePerSecond: Double
+        /// Kuyruk bu kadar saniyelik işi aşarsa kapsama düşmeye başlar.
+        var backlogToleranceSeconds: TimeInterval
     }
 
     /// Tezgâh: elle satışın kendi kuralları.

@@ -72,9 +72,17 @@ struct ActionPanelView: View {
 
     private var sellButton: some View {
         Button(action: onSell) {
-            HStack {
+            HStack(spacing: 10) {
                 Text(L.sectorSell(store.currentFloor?.sectorID ?? ""))
-                Spacer(minLength: 12)
+                // Kuyruk tezgâhın üstünde durur: oyuncu kime sattığını görsün.
+                Text(store.waitingCustomers >= 1
+                     ? L.waitingCustomers(store.waitingCustomers)
+                     : L.noCustomers)
+                    .font(Typography.label(13))
+                    .foregroundStyle(Palette.plaster.opacity(0.7))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Spacer(minLength: 8)
                 Text("+\(Money.text(store.manualRevenue))")
                     .foregroundStyle(Palette.mustard)
             }

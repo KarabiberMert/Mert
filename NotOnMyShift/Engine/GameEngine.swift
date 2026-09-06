@@ -150,6 +150,139 @@ enum GameEngine {
         max(0, floorGross(floor, spec: spec, bonus: bonus) - floorWages(floor, spec: spec))
     }
 
+    // MARK: - Talep
+
+    /// Katın satış kapasitesi (satış/saniye). Brüt para oranını satış başına
+    /// gelire böler — "bu kat saniyede kaç müşteri kaldırabilir".
+    static func capacityRate(
+        _ floor: FloorState,
+        spec: BalanceConfig.SectorSpec,
+        buff: Double,
+        bonus: Double
+    ) -> Double {
+        floorGross(floor, spec: spec, bonus: bonus) * buff / salePrice(spec)
+    }
+
+    private static func salePrice(_ spec: BalanceConfig.SectorSpec) -> Double {
+        max(0.0001, spec.manual.revenuePerSale)
+    }
+
+    /// Katın kapsaması. Kayıt kurulmamışsa dengedeki başlangıç değeri.
+    static func coverage(for floor: FloorState, config: BalanceConfig) -> Double {
+        let value = floor.demandCoverage < 0 ? config.demand.startCoverage : floor.demandCoverage
+        return min(max(value, config.demand.minCoverage), config.demand.maxCoverage)
+    }
+
+    /// Talebin geliş hızı (satış/saniye).
+    ///
+    /// **Kapasiteye oranlı**: iş büyüdükçe talep de büyür, böylece denge
+    /// tablosu geçerli kalır. Taban geliş hızı alt sınırdır — Çağ 0'da
+    /// kapasite yokken oyunu yürüten şey odur.
+    static func demandArrivalRate(
+        for floor: FloorState,
+        spec: BalanceConfig.SectorSpec,
+        state: GameState,
+        config: BalanceConfig
+    ) -> Double {
+        guard !floor.isInvestment else { return 0 }
+        let interval = floor.staff.isEmpty
+            ? config.demand.starterArrivalSeconds
+            : config.demand.baseArrivalSeconds
+        let base = 1 / max(0.0001, interval)
+        let buff = eventMultiplier(for: state) * holdingMultiplier(for: state, config: config)
+        let bonus = processBonus(for: floor, state: state, config: config)
+        let capacity = capacityRate(floor, spec: spec, buff: buff, bonus: bonus)
+        return max(base, capacity * coverage(for: floor, config: config))
+    }
+
+    /// Bir segmentte verilen hizmet ve kalan kuyruk.
+    ///
+    /// Kapalı form: `dQ/dt = (λ − servis) − Q/T` doğrusal olduğu için iki
+    /// saatlik yokluk da tek hesapta çıkar. Döngüye çevirmeye gerek yok.
+    struct DemandOutcome: Sendable, Equatable {
+        /// Segmentte karşılanan talep (satış adedi).
+        var served: Double
+        /// Segment sonunda kuyrukta kalan.
+        var queue: Double
+    }
+
+    static func serveDemand(
+        queue: Double,
+        capacity: Double,
+        arrival: Double,
+        seconds: TimeInterval,
+        config: BalanceConfig
+    ) -> DemandOutcome {
+        let life = max(1, config.demand.expirySeconds)
+        let start = max(0, queue)
+        guard seconds > 0 else { return DemandOutcome(served: 0, queue: start) }
+
+        // Kapasite yok (Çağ 0): kimse hizmet vermiyor. Kuyruk birikir ve
+        // bekleyenler kaçar; denge noktası λ·T.
+        guard capacity > 0 else {
+            let limit = life * max(0, arrival)
+            let rest = limit + (start - limit) * exp(-seconds / life)
+            return DemandOutcome(served: 0, queue: max(0, rest))
+        }
+
+        if arrival >= capacity {
+            // Kapasite sınırlı: sürekli tam hızda servis, kuyruk büyür.
+            let limit = life * (arrival - capacity)
+            let rest = limit + (start - limit) * exp(-seconds / life)
+            return DemandOutcome(served: capacity * seconds, queue: max(0, rest))
+        }
+
+        // Talep sınırlı: önce birikmiş kuyruk boşalır, sonra geliş hızında.
+        let drain = capacity - arrival
+        let drainSeconds = start / drain
+        if seconds <= drainSeconds {
+            return DemandOutcome(served: capacity * seconds, queue: max(0, start - drain * seconds))
+        }
+        let served = capacity * drainSeconds + arrival * (seconds - drainSeconds)
+        return DemandOutcome(served: served, queue: 0)
+    }
+
+    /// Kapsamanın segment sonundaki değeri.
+    ///
+    /// Kuyruk hoşgörü süresinin altındaysa dükkân iyi çalışıyor demektir ve
+    /// kapsama tavana doğru tırmanır; kuyruk birikirse tabana doğru iner.
+    /// Taban dengede tanımlı — ihmal geliri sıfırlamaz, yavaşlatır.
+    static func nextCoverage(
+        current: Double,
+        queue: Double,
+        capacity: Double,
+        seconds: TimeInterval,
+        config: BalanceConfig
+    ) -> Double {
+        let demand = config.demand
+        let reference = capacity > 0 ? capacity : 1 / max(0.0001, demand.starterArrivalSeconds)
+        let backlogSeconds = max(0, queue) / max(0.0001, reference)
+        let target = backlogSeconds > max(0, demand.backlogToleranceSeconds)
+            ? demand.minCoverage
+            : demand.maxCoverage
+        let step = max(0, demand.coveragePerSecond) * seconds
+        let moved = current < target ? min(target, current + step) : max(target, current - step)
+        return min(max(moved, demand.minCoverage), demand.maxCoverage)
+    }
+
+    /// Üretimin kapasiteye oranı (0…1). Ekrandaki saniyelik oran bunu içerir.
+    static func demandFactor(
+        for floor: FloorState,
+        spec: BalanceConfig.SectorSpec,
+        state: GameState,
+        config: BalanceConfig
+    ) -> Double {
+        guard !floor.isInvestment else { return 1 }
+        let buff = eventMultiplier(for: state) * holdingMultiplier(for: state, config: config)
+        let bonus = processBonus(for: floor, state: state, config: config)
+        let capacity = capacityRate(floor, spec: spec, buff: buff, bonus: bonus)
+        guard capacity > 0 else { return 1 }
+        // Kuyruk varsa kapasite sınırlıyız: tam hızda çalışıyoruz.
+        guard floor.demandQueue <= 0 else { return 1 }
+        let arrival = demandArrivalRate(for: floor, spec: spec, state: state, config: config)
+        return min(1, arrival / capacity)
+    }
+
     // MARK: - Bina geneli
 
     private static func sum(
@@ -196,7 +329,11 @@ enum GameEngine {
         let buff = eventMultiplier(for: state) * holdingMultiplier(for: state, config: config)
         return sum(state, config) { floor, spec in
             let bonus = processBonus(for: floor, state: state, config: config)
-            return max(0, floorGross(floor, spec: spec, bonus: bonus) * buff - floorWages(floor, spec: spec))
+            // Talep tavanı brüte uygulanır, maaşa değil: müşteri gelmese de
+            // kadro maaşını alır. Olay çarpanıyla aynı kural.
+            let demand = demandFactor(for: floor, spec: spec, state: state, config: config)
+            let gross = floorGross(floor, spec: spec, bonus: bonus) * buff * demand
+            return max(0, gross - floorWages(floor, spec: spec))
         }
     }
 
@@ -259,6 +396,15 @@ enum GameEngine {
         }
         if next.nextEventAtGameSeconds < 0 {
             next.nextEventAtGameSeconds = next.elapsedGameSeconds + max(0, config.events.firstAfterSeconds)
+        }
+        // Şema 8 öncesi kayıtlarda kapsama yok; dengedeki başlangıç konur.
+        for index in next.floors.indices {
+            if next.floors[index].demandCoverage < 0 {
+                next.floors[index].demandCoverage = config.demand.startCoverage
+            }
+            if next.floors[index].demandQueue < 0 {
+                next.floors[index].demandQueue = max(0, config.demand.startQueue)
+            }
         }
         return next
     }
@@ -421,10 +567,47 @@ enum GameEngine {
         by seconds: TimeInterval,
         config: BalanceConfig
     ) -> GameState {
-        let earned = productionRate(for: state, config: config) * seconds
         let share = marketShare(for: state, config: config)
+        let buff = eventMultiplier(for: state) * holdingMultiplier(for: state, config: config)
 
         var next = state
+        var earned = 0.0
+
+        // Kat kat: her dükkânın kendi talebi, kendi kuyruğu. Bu bir zaman
+        // döngüsü değil — segment içinde oran sabit, kat başına tek hesap.
+        for index in state.floors.indices {
+            let floor = state.floors[index]
+            guard let spec = spec(for: floor, config: config) else { continue }
+            let bonus = processBonus(for: floor, state: state, config: config)
+            let capacity = capacityRate(floor, spec: spec, buff: buff, bonus: bonus)
+            let wages = floorWages(floor, spec: spec) * seconds
+
+            // Yatırım katı kira öder: müşterisi yok, talep onu bağlamaz.
+            guard !floor.isInvestment else {
+                earned += max(0, capacity * salePrice(spec) * seconds - wages)
+                continue
+            }
+
+            let arrival = demandArrivalRate(for: floor, spec: spec, state: state, config: config)
+            let outcome = serveDemand(
+                queue: floor.demandQueue,
+                capacity: capacity,
+                arrival: arrival,
+                seconds: seconds,
+                config: config
+            )
+            earned += max(0, outcome.served * salePrice(spec) - wages)
+
+            next.floors[index].demandQueue = outcome.queue
+            next.floors[index].demandCoverage = nextCoverage(
+                current: coverage(for: floor, config: config),
+                queue: outcome.queue,
+                capacity: capacity,
+                seconds: seconds,
+                config: config
+            )
+        }
+
         next.elapsedGameSeconds += seconds
         if earned > 0 {
             next.money += earned
@@ -558,10 +741,14 @@ enum GameEngine {
               !state.floors[index].isInvestment,
               let spec = spec(for: state.floors[index], config: config) else { return state }
 
+        // Müşteri gelmeden satış olmaz: tezgâh bir talebi karşılar.
+        var next = normalised(state, config: config)
+        guard next.floors[index].demandQueue >= 1 else { return state }
+        next.floors[index].demandQueue -= 1
+
         let revenue = manualRevenue(for: state.floors[index], spec: spec)
             * eventMultiplier(for: state)
             * holdingMultiplier(for: state, config: config)
-        var next = state
         next.money += revenue
         next.lifetimeEarnings += revenue
         next.stats.manualSales += 1

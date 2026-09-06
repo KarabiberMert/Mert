@@ -46,6 +46,8 @@
 "action.hire" = "Hire someone";
 "action.upgradeWarehouse" = "Grow the store room";
 "action.staffFull" = "No room behind the counter for anyone else.";
+"action.waitingCustomers" = "%lld waiting";
+"action.noCustomers" = "No one at the counter yet";
 "action.coffeesToGo" = "%lld more to go";
 
 /* Store room */

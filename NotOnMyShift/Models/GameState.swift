@@ -13,7 +13,8 @@ struct GameState: Codable, Sendable, Equatable {
     /// 1 → Faz 0-1 · 2 → ilk eleman kutlaması · 3 → ekipman ve şubeler
     /// 4 → kat kat bina (tek dükkân yerine `floors`) · 5 → olaylar ve pazar
     /// 6 → çatı katı ve süreç katmanı · 7 → sektör satışı ve holding puanı
-    static let currentSchemaVersion = 7
+    /// 8 → talep: kat başına kuyruk ve kapsama
+    static let currentSchemaVersion = 8
 
     /// `marketShare` ve `nextEventAtGameSeconds` için "henüz kurulmadı" işareti.
     /// Kod çözücünün dengeye erişimi yok; ilk değerleri motor koyuyor.
@@ -332,10 +333,21 @@ struct FloorState: Codable, Sendable, Equatable, Identifiable {
     /// iz"i bu: sattığın şey yok olmaz, kira ödemeye devam eder. (şema 7)
     var investmentRate: Double
 
+    /// Karşılanmamış talep. Tekil kart listesi değil, sürekli bir stok:
+    /// motor kapalı formda kalsın diye. Ekranda `floor(demandQueue)` kadar
+    /// bekleyen müşteri olarak okunur. (şema 8)
+    var demandQueue: Double
+
+    /// Talebin kapasiteyi karşılama oranı. 1,0 = talep tam kapasite kadar.
+    /// Hızlı servis ve reklam yükseltir, biriken kuyruk düşürür; dengedeki
+    /// alt sınırın altına inmez. (şema 8)
+    var demandCoverage: Double
+
     var id: String { sectorID }
 
     private enum CodingKeys: String, CodingKey {
         case sectorID, staff, equipmentLevels, branchCount, investmentRate
+        case demandQueue, demandCoverage
     }
 
     init(
@@ -343,13 +355,20 @@ struct FloorState: Codable, Sendable, Equatable, Identifiable {
         staff: [StaffMember] = [],
         equipmentLevels: [String: Int] = [:],
         branchCount: Int = 1,
-        investmentRate: Double = 0
+        investmentRate: Double = 0,
+        // Negatif: "kurulmadı" — ikisini de motor dengeden dolduruyor.
+        demandQueue: Double = GameState.unset,
+        // Motor dengeden başlangıç kapsamasını koyar,
+        // çünkü kod çözücünün dengeye erişimi yok.
+        demandCoverage: Double = GameState.unset
     ) {
         self.sectorID = sectorID
         self.staff = staff
         self.equipmentLevels = equipmentLevels
         self.branchCount = max(1, branchCount)
         self.investmentRate = max(0, investmentRate)
+        self.demandQueue = demandQueue
+        self.demandCoverage = demandCoverage
     }
 
     init(from decoder: any Decoder) throws {
@@ -359,6 +378,10 @@ struct FloorState: Codable, Sendable, Equatable, Identifiable {
         equipmentLevels = try container.decodeIfPresent([String: Int].self, forKey: .equipmentLevels) ?? [:]
         branchCount = max(1, try container.decodeIfPresent(Int.self, forKey: .branchCount) ?? 1)
         investmentRate = max(0, try container.decodeIfPresent(Double.self, forKey: .investmentRate) ?? 0)
+        // Şema 8 öncesi kayıtlarda talep yoktu: kuyruk boş, kapsama motorun
+        // dengeden dolduracağı "kurulmadı" değeri.
+        demandQueue = try container.decodeIfPresent(Double.self, forKey: .demandQueue) ?? GameState.unset
+        demandCoverage = try container.decodeIfPresent(Double.self, forKey: .demandCoverage) ?? GameState.unset
     }
 
     /// Bu kat satıldı mı? Yatırım katı üretir ama artık yönetilmez.

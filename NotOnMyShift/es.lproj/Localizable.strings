@@ -45,6 +45,8 @@
 "action.hire" = "Contratar a alguien";
 "action.upgradeWarehouse" = "Ampliar el almacén";
 "action.staffFull" = "Detrás del mostrador ya no cabe nadie más.";
+"action.waitingCustomers" = "%lld esperando";
+"action.noCustomers" = "No hay nadie en el mostrador";
 "action.coffeesToGo" = "faltan %lld";
 
 /* Almacén */

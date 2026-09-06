@@ -257,6 +257,17 @@
       }
     ]
   },
+  "demand": {
+    "starterArrivalSeconds": 3.0,
+    "baseArrivalSeconds": 10.0,
+    "expirySeconds": 60.0,
+    "startQueue": 3.0,
+    "startCoverage": 1.0,
+    "minCoverage": 0.6,
+    "maxCoverage": 1.4,
+    "coveragePerSecond": 0.0025,
+    "backlogToleranceSeconds": 20.0
+  },
   "counter": {
     "manualCooldownSeconds": 1.0
   },
