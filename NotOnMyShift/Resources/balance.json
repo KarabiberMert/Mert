@@ -264,11 +264,11 @@
   "demand": {
     "starterArrivalSeconds": 3.0,
     "baseArrivalSeconds": 10.0,
-    "cancelSeconds": 10.0,
+    "cancelSeconds": 25.0,
     "startQueue": 3.0,
     "startSatisfaction": 0.9,
     "minSatisfaction": 0.6,
-    "maxSatisfaction": 1.0,
+    "maxSatisfaction": 1.4,
     "satisfactionPerSecond": 0.01,
     "priceElasticity": 2.0,
     "serviceWeight": 0.7

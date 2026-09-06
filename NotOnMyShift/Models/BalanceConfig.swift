@@ -154,12 +154,18 @@ struct BalanceConfig: Codable, Sendable, Equatable {
         var startSatisfaction: Double
         /// Memnuniyet bunun altına inmez — kötü gün geliri sıfırlamaz.
         var minSatisfaction: Double
-        /// Memnuniyet bunun üstüne çıkmaz ve **1'i geçmemeli**.
+        /// Memnuniyet tavanı. **1'i geçmeli** ki dükkân dolabilsin.
         ///
-        /// Geçerse geliş hızı kapasiteyi aşar; o zaman kadronun birikmiş
-        /// siparişi eritecek boş kapasitesi kalmaz ve kuyruk yalnızca
-        /// iptallerle azalır. Tavan 1 olunca kadro siparişi gerçekten
-        /// karşılar ve o siparişler paraya döner.
+        /// Tavan 1'de kalırsa geliş hızı kapasiteyi asla aşamaz: kuyruk
+        /// oluşmaz, oluşmayınca memnuniyet tavana yapışır ve denge noktası
+        /// yerine yalnızca iki uç kalır — ya boş dükkân ya da fiyat kısılınca
+        /// bir anda yığılma.
+        ///
+        /// 1'in üstünde negatif geri besleme doğuyor: geliş kapasiteyi aşar →
+        /// kuyruk büyür → iptaller başlar → memnuniyet düşer → geliş yavaşlar.
+        /// Sistem ortada bir sabit noktaya oturuyor. Dengedeki değerlerle
+        /// (taban 0,6 · tavan 1,4 · servis ağırlığı 0,7) sabit nokta ≈ 1,22,
+        /// yani abonelik %122 ve siparişlerin ~%18'i iptal oluyor.
         var maxSatisfaction: Double
         /// Memnuniyetin saniyede hedefe yaklaşma hızı. Ekosistem yavaş
         /// nefes alsın; tek bir iptal her şeyi çevirmesin.

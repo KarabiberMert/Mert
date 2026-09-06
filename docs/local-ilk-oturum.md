@@ -757,6 +757,55 @@ zamanında: `GameStore.swift` 939-1088 ve `RootView.swift` 281-324 arası
 `#if DEBUG` içinde, kaynaktan doğrulandı. Sağ üstteki "Baştan başla" tuşu ise
 bilerek dışarıda — telefonda denenen derleme Release.
 
+**Denge turu: dükkân dolsun, memnuniyet ortada kalsın (6 Eylül 2026)**
+
+Ürün sahibi üç şey bildirdi ve üçü de haklıydı.
+
+**1. "Fiyat 4 ₺ ama ortalama satış 7,4 ₺" — hataydı.** Sayaca `manualRevenue`
+bağlanmıştı: o, tezgâha **elle** dokunduğunda kazanılan tutar (fiyat × ekipman
+çarpanı) ve maaş düşülmemiş. Kadronun satışı ekipman çarpanı almaz — o çarpan
+zaten kapasiteye yazılı. Doğrusu `averageSaleValue`: net gelir ÷ satış hızı.
+
+**2-3. Dükkânın hep boş olması ve fiyat kısılınca yığılma.** Bu bir ayar değil,
+tasarımın matematiksel sonucuydu: `maxSatisfaction` 1,0 iken geliş hızı
+kapasiteyi **asla** aşamıyor, kuyruk oluşmuyor, oluşmayınca memnuniyet tavana
+yapışıyordu. Denge noktası yoktu, yalnızca iki uç vardı.
+
+Çözüm tavanı 1'in üstüne çıkarmak (1,4). O zaman negatif geri besleme doğuyor:
+geliş kapasiteyi aşar → kuyruk büyür → iptaller başlar → memnuniyet düşer →
+geliş yavaşlar. Sabit nokta hesaplandı: **s\* ≈ 1,22**, yani abonelik %122 ve
+siparişlerin **%18'i** iptal. Kuyruk `T·(s\*−1)·kapasite`.
+
+Bu da iptal süresini zorunlu kıldı. 10 saniyeyle görünür bir kuyruk için
+siparişlerin ~%46'sının iptal olması gerekiyordu — "memnuniyet ortalarda
+kalsın" şartıyla çelişiyor. **25 saniye** seçildi:
+
+| | kuyruk |
+|---|---|
+| Çağ 0 (kadro yok) | ~8 sipariş |
+| 1 eleman | ~2 |
+| tam kadro | ~10 |
+| tam kadro + ekipman | ~75 |
+
+Ürün sahibinin verdiği 10 saniye bu yüzden değiştirildi; sebebi tam da
+bildirdiği belirti.
+
+Memnuniyet artık 1'i aşabildiği için bar ve yüzde dengedeki taban-tavan
+aralığına göre okunuyor — ikisi aynı şeyi söylesin.
+
+**Bilinen sınır:** geri besleme tek segmentte dönmüyor. Bir saati tek adımda
+ilerletince memnuniyet yalnızca sonda güncelleniyor ve kuyruk eski memnuniyetle
+hesaplanıyor. Canlı oyunda zamanlayıcı saniye saniye ilerlettiği için döngü
+orada dönüyor; çevrimdışı dönüşte ekosistem bir adım atıyor. Kapalı form
+kuralının bilinen bedeli. Testi de bu yüzden saniye saniye ilerletiyor.
+
+Eski `testShippedBalanceKeepsSatisfactionAtOrBelowFullCapacity` artık yanlış
+tasarımı kodluyordu; yerine `testShippedBalanceSettlesInTheMiddleWithAQueue`
+geldi: gerçek denge dosyasıyla bir eleman tutup 600 saniye ilerletiyor,
+memnuniyetin **iki uca da yapışmadığını** ve **kuyruk oluştuğunu** ölçüyor.
+
+219 test.
+
 **Kaldı:**
 
 - **Adım 3'ün ikinci kutusu (27 maddelik elle doğrulama) ve adım 4, 5, 6.**

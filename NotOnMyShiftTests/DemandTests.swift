@@ -347,16 +347,45 @@ final class DemandTests: XCTestCase {
         XCTAssertEqual(next.money, 1000, accuracy: 1e-6, "Eriyen müşteriler paraya dönmeli")
     }
 
-    /// Memnuniyet tavanı 1'i geçmemeli. Geçerse kadronun boş kapasitesi
-    /// kalmaz ve kuyruk yalnızca iptallerle azalır — istediğimiz bu değil.
-    func testShippedBalanceKeepsSatisfactionAtOrBelowFullCapacity() throws {
+    /// Dengedeki sayılar **ortada bir sabit nokta** üretmeli.
+    ///
+    /// Tavan 1'de kalsaydı geliş hızı kapasiteyi asla aşamaz, kuyruk oluşmaz
+    /// ve memnuniyet tavana yapışırdı: denge yerine iki uç kalırdı. Tavan 1'in
+    /// üstünde olunca negatif geri besleme doğuyor — geliş kapasiteyi aşar,
+    /// kuyruk büyür, iptaller memnuniyeti düşürür, geliş yavaşlar.
+    func testShippedBalanceSettlesInTheMiddleWithAQueue() throws {
         let config = try BalanceConfig.load()
-        XCTAssertLessThanOrEqual(config.demand.maxSatisfaction, 1.0)
-        XCTAssertLessThanOrEqual(config.demand.startSatisfaction, config.demand.maxSatisfaction)
-        XCTAssertLessThanOrEqual(config.demand.minSatisfaction, config.demand.startSatisfaction)
+        XCTAssertGreaterThan(config.demand.maxSatisfaction, 1.0, "Dükkân dolabilmeli")
+        XCTAssertLessThan(config.demand.minSatisfaction, 1.0, "İhmal gerçekten aç bırakmalı")
+
+        // Gerçek dengeyle bir eleman tut ve uzun süre çalıştır.
+        var state = GameState.newGame(characterID: "kahveci", now: BalanceFixture.epoch)
+        state = GameEngine.normalised(state, config: config)
+        state.money = 1_000_000
+        guard case .success(let hired) = GameEngine.hireStaff(onFloor: 0, state, config: config) else {
+            return XCTFail("Eleman tutulamadı")
+        }
+        // Saniye saniye: canlı oyunda zamanlayıcı böyle ilerletiyor ve
+        // ekosistem ancak adımlar arasında geri besleme yapabiliyor. Tek bir
+        // 3600 saniyelik adımda memnuniyet yalnızca sonda güncellenir, döngü
+        // dönmez — kapalı formun bilinen sınırı.
+        var sonra = hired
+        for _ in 0..<600 {
+            sonra = GameEngine.advance(sonra, by: 1, config: config)
+        }
+
+        let memnuniyet = sonra.floors[0].satisfaction
+        XCTAssertGreaterThan(memnuniyet, config.demand.minSatisfaction + 0.05, "Tabana yapışmamalı")
+        XCTAssertLessThan(memnuniyet, config.demand.maxSatisfaction - 0.05, "Tavana da yapışmamalı")
+
+        // Ve dükkânda gerçekten sıra olmalı — boş bir tezgâh oyun değil.
+        XCTAssertGreaterThan(sonra.floors[0].demandQueue, 1, "Kuyruk oluşmalı")
+
+        // Para akmaya devam ediyor.
+        XCTAssertGreaterThan(sonra.money, hired.money)
     }
 
-    /// Sen yokken kadro talebi karşılar: çevrimdışı kazanç talep yüzünden
+    /// Sen yokken kadro talebi karşılar    /// Sen yokken kadro talebi karşılar: çevrimdışı kazanç talep yüzünden
     /// çökmez. Ürün sahibinin seçtiği kural buydu.
     func testStaffKeepServingWhileYouAreAway() {
         let config = BalanceFixture.config(

@@ -344,6 +344,31 @@ enum GameEngine {
         return min(max(moved, low), high)
     }
 
+    /// Binanın saniyede kaç sipariş karşıladığı. Kapasite ile geliş hızının
+    /// küçüğü — tezgâh boşsa geliş, dolusa kapasite belirler.
+    static func salesRate(for state: GameState, config: BalanceConfig) -> Double {
+        let buff = eventMultiplier(for: state) * holdingMultiplier(for: state, config: config)
+        return sum(state, config) { floor, spec in
+            guard !floor.isInvestment else { return 0 }
+            let bonus = processBonus(for: floor, state: state, config: config)
+            let capacity = capacityRate(floor, spec: spec, buff: buff, bonus: bonus)
+            let arrival = demandArrivalRate(for: floor, spec: spec, state: state, config: config)
+            return min(capacity, arrival)
+        }
+    }
+
+    /// Bir satışın ortalama **net** getirisi: maaş düşülmüş gelirin satış
+    /// adedine bölümü.
+    ///
+    /// Elle satıştan farklı: tezgâha dokunmak ekipman çarpanını da alır,
+    /// kadronun satışı almaz — o çarpan zaten kapasiteye yazılı. Bu yüzden
+    /// sayaçta `manualRevenue` gösterilemez, gerçek ortalama budur.
+    static func averageSaleValue(for state: GameState, config: BalanceConfig) -> Double {
+        let sales = salesRate(for: state, config: config)
+        guard sales > 0 else { return 0 }
+        return max(0, productionRate(for: state, config: config) / sales)
+    }
+
     /// Tezgâhın ne kadarı dolu (0…1). Kapasite yoksa `nil` — Çağ 0'da
     /// doluluk anlamsız, orada tezgâhı oyuncunun kendisi çalıştırıyor.
     ///

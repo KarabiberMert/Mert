@@ -265,10 +265,12 @@ struct ActionPanelView: View {
     @ViewBuilder
     private var satisfactionBar: some View {
         if let value = store.satisfaction {
-            // Bar mutlak değeri gösterir, alt sınıra göre ölçeklenmez:
-            // yanındaki yüzdeyle aynı şeyi söylesin. Taban %60 ise bar da
-            // %60 dolu görünür, boş değil.
-            let fraction = min(1, max(0, value))
+            // Memnuniyet 1'i aşabiliyor (dükkân dolduğunda abonelik %100'ün
+            // üstüne çıkar), o yüzden bar da yüzde de dengedeki taban-tavan
+            // aralığına göre okunuyor. İkisi aynı şeyi söylesin.
+            let range = store.satisfactionRange
+            let span = max(0.0001, range.upperBound - range.lowerBound)
+            let fraction = min(1, max(0, (value - range.lowerBound) / span))
 
             HStack(spacing: 8) {
                 Text(L.satisfaction)
@@ -287,7 +289,7 @@ struct ActionPanelView: View {
                 }
                 .frame(height: 6)
 
-                Text(Percent.text(value))
+                Text(Percent.text(fraction))
                     .font(Typography.label(12))
                     .foregroundStyle(Palette.inkFaint)
                     .monospacedDigit()

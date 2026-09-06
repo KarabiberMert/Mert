@@ -592,7 +592,12 @@ final class GameStore {
         return GameEngine.priceRange(for: spec)
     }
 
-    /// Seçili katın müşteri memnuniyeti (0…1). Yatırım katında nil.
+    /// Bir satışın ortalama net getirisi. Sayaç bunu gösteriyor.
+    var averageSaleValue: Double {
+        GameEngine.averageSaleValue(for: state, config: config)
+    }
+
+    /// Seçili katın müşteri memnuniyeti. Yatırım katında nil.
     var satisfaction: Double? {
         guard let floor = currentFloor, !floor.isInvestment else { return nil }
         return GameEngine.satisfaction(for: floor, config: config)
