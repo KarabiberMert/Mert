@@ -16,7 +16,8 @@ struct GameState: Codable, Sendable, Equatable {
     /// 8 → talep: kat başına kuyruk ve kapsama · 9 → kat başına fiyat
     /// 10 → kapsama yerine memnuniyet: sonuçtan beslenen ekosistem
     /// 11 → elle karşılanan siparişler de memnuniyet oranına giriyor
-    static let currentSchemaVersion = 11
+    /// 12 → satışlar tam adet: para saniye saniye değil, satış başına yatar
+    static let currentSchemaVersion = 12
 
     /// `marketShare` ve `nextEventAtGameSeconds` için "henüz kurulmadı" işareti.
     /// Kod çözücünün dengeye erişimi yok; ilk değerleri motor koyuyor.
@@ -359,11 +360,27 @@ struct FloorState: Codable, Sendable, Equatable, Identifiable {
     /// ile zamanın ilerlemesi arasındaki köprü buradan geçiyor. (şema 11)
     var servedByHand: Double
 
+    /// Henüz tamamlanmamış satışın payı (0…1).
+    ///
+    /// Kadro ürünü tek tek satar: para saniye saniye sızmaz, satış bitince
+    /// kasaya yatar. Bu alan iki adım arasında kalan kesri taşır ki kapalı
+    /// form bozulmasın — iki saatlik yokluk da tek hesapta binlerce satışa
+    /// dönüşür. (şema 12)
+    var saleProgress: Double
+
+    /// Henüz satıştan karşılanmamış maaş.
+    ///
+    /// Satış tam fiyatı kasaya yatırır; maaş buradan mahsup edilir. Böylece
+    /// hem "para satış başına yatar" kuralı korunur hem maaş, satışın
+    /// tamamlanmadığı saniyelerde affedilmez — yoksa sonuç segment boyuna
+    /// bağlı olurdu. (şema 12)
+    var wageDebt: Double
+
     var id: String { sectorID }
 
     private enum CodingKeys: String, CodingKey {
         case sectorID, staff, equipmentLevels, branchCount, investmentRate
-        case demandQueue, satisfaction, price, servedByHand
+        case demandQueue, satisfaction, price, servedByHand, saleProgress, wageDebt
     }
 
     init(
@@ -378,7 +395,9 @@ struct FloorState: Codable, Sendable, Equatable, Identifiable {
         // çünkü kod çözücünün dengeye erişimi yok.
         satisfaction: Double = GameState.unset,
         price: Double = GameState.unset,
-        servedByHand: Double = 0
+        servedByHand: Double = 0,
+        saleProgress: Double = 0,
+        wageDebt: Double = 0
     ) {
         self.sectorID = sectorID
         self.staff = staff
@@ -389,6 +408,8 @@ struct FloorState: Codable, Sendable, Equatable, Identifiable {
         self.satisfaction = satisfaction
         self.price = price
         self.servedByHand = max(0, servedByHand)
+        self.saleProgress = max(0, saleProgress)
+        self.wageDebt = max(0, wageDebt)
     }
 
     init(from decoder: any Decoder) throws {
@@ -405,6 +426,8 @@ struct FloorState: Codable, Sendable, Equatable, Identifiable {
         // Şema 9 öncesi kayıtlarda fiyat yok: motor dengedeki tabanı koyar.
         price = try container.decodeIfPresent(Double.self, forKey: .price) ?? GameState.unset
         servedByHand = max(0, try container.decodeIfPresent(Double.self, forKey: .servedByHand) ?? 0)
+        saleProgress = max(0, try container.decodeIfPresent(Double.self, forKey: .saleProgress) ?? 0)
+        wageDebt = max(0, try container.decodeIfPresent(Double.self, forKey: .wageDebt) ?? 0)
     }
 
     /// Bu kat satıldı mı? Yatırım katı üretir ama artık yönetilmez.

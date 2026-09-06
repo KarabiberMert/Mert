@@ -13,6 +13,8 @@ struct CashHeaderView: View {
     let eventMultiplier: Double
     /// En uzun süren etkiye kalan oyun süresi.
     let eventRemaining: TimeInterval?
+    /// Bir satışın ortalama getirisi.
+    let averageSale: Double
     /// Elle satışta kısa bir nefes. Oyuncunun eylemine cevap.
     let bumped: Bool
 
@@ -35,9 +37,15 @@ struct CashHeaderView: View {
             }
 
             if isAutomated {
-                Text(L.perSecond(Money.preciseText(netRate)))
+                // Para artık satış başına yatıyor; saniyelik sızıntı yok.
+                // Üstte bir satışın ortalama getirisi, altta dakikalık ortalama.
+                Text(L.averagePerSale(Money.preciseText(averageSale)))
                     .font(Typography.label(15))
                     .foregroundStyle(Palette.pistachio)
+
+                Text(L.perMinute(Money.text(netRate * 60)))
+                    .font(Typography.label(12))
+                    .foregroundStyle(Palette.inkSoft)
 
                 // Maaş varken brütü de göster: makine yatırımıyla eleman maaşı
                 // arasındaki seçim ancak iki sayı yan yana görünürse anlaşılır.

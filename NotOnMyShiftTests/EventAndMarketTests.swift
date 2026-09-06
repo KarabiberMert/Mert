@@ -44,7 +44,14 @@ final class EventAndMarketTests: XCTestCase {
 
     func testSegmentedAdvanceMatchesSecondBySecond() {
         // Kırılım noktası varken de kapalı form ile adım adım aynı sonucu vermeli.
+        //
+        // Satışlar ayrık olduğundan burada eşitlik tam değil: oran kırılım
+        // noktasında değişiyor ve bir satışın tam olarak hangi anda bittiği
+        // segment boyuna bağlı. Fark birkaç satışla sınırlı ve **birikmiyor**
+        // — asıl iddia bu. Sürekli akışta tam eşitlik mümkündü; ayrık satışa
+        // geçerken bilerek verilen taviz bu oldu.
         let state = boosted(working(), multiplier: 3, seconds: 45)
+        let unit = config.sectors[0].manual.revenuePerSale
 
         let single = GameEngine.advance(state, by: 300, config: config)
 
@@ -53,7 +60,7 @@ final class EventAndMarketTests: XCTestCase {
             stepped = GameEngine.advance(stepped, by: 1, config: config)
         }
 
-        XCTAssertEqual(single.money, stepped.money, accuracy: 1e-6)
+        XCTAssertEqual(single.money, stepped.money, accuracy: unit)
         XCTAssertEqual(single.elapsedGameSeconds, stepped.elapsedGameSeconds, accuracy: 1e-6)
     }
 

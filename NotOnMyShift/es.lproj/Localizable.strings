@@ -39,6 +39,8 @@
 /* Caja */
 "cash.label" = "Caja";
 "cash.byHand" = "De momento haces cada café con tus manos.";
+"cash.averagePerSale" = "%@ por venta de media";
+"cash.perMinute" = "%@ por minuto";
 "cash.perSecond" = "%@ por segundo";
 
 /* Acciones */

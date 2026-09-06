@@ -40,6 +40,8 @@
 /* Cash */
 "cash.label" = "Cash";
 "cash.byHand" = "For now you make every coffee yourself.";
+"cash.averagePerSale" = "%@ a sale on average";
+"cash.perMinute" = "%@ a minute";
 "cash.perSecond" = "%@ per second";
 
 /* Actions */

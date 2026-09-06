@@ -42,6 +42,8 @@
 /* Kasa */
 "cash.label" = "Kasa";
 "cash.byHand" = "Şimdilik her kahveyi sen yapıyorsun.";
+"cash.averagePerSale" = "ortalama %@ / satış";
+"cash.perMinute" = "dakikada %@";
 "cash.perSecond" = "saniyede %@";
 
 /* Eylemler */

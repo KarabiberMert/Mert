@@ -10,14 +10,23 @@ final class GameEngineTests: XCTestCase {
 
     // MARK: - İlerleme
 
-    func testAdvanceOneSecondCreditsOneSecondOfProduction() {
-        let state = BalanceFixture.state(staffCount: 1, config: config)   // çarpan 1.0, oran 1/sn
+    /// Kadro ürünü tek tek satar: para saniye saniye sızmaz, satış bitince
+    /// yatar. Koşumda kapasite 0,1 satış/sn (1 ₺/sn ÷ 10 ₺), yani on saniyede
+    /// bir satış.
+    func testMoneyLandsWhenASaleCompletesNotEverySecond() {
+        let state = BalanceFixture.state(staffCount: 1, config: config)
 
-        let next = GameEngine.advance(state, by: 1, config: config)
+        // Bir saniye: satış tamamlanmadı, para yok — ama ilerleme kaydedildi.
+        let birSaniye = GameEngine.advance(state, by: 1, config: config)
+        XCTAssertEqual(birSaniye.money, 0, accuracy: 1e-9)
+        XCTAssertEqual(birSaniye.floors[0].saleProgress, 0.1, accuracy: 1e-9)
+        XCTAssertEqual(birSaniye.elapsedGameSeconds, 1.0, accuracy: 1e-9)
 
-        XCTAssertEqual(next.money, 1.0, accuracy: 1e-9)
-        XCTAssertEqual(next.lifetimeEarnings, 1.0, accuracy: 1e-9)
-        XCTAssertEqual(next.elapsedGameSeconds, 1.0, accuracy: 1e-9)
+        // On saniye: bir satış tamamlandı, tam fiyat kasaya yattı.
+        let onSaniye = GameEngine.advance(state, by: 10, config: config)
+        XCTAssertEqual(onSaniye.money, 10.0, accuracy: 1e-9)
+        XCTAssertEqual(onSaniye.lifetimeEarnings, 10.0, accuracy: 1e-9)
+        XCTAssertEqual(onSaniye.floors[0].saleProgress, 0, accuracy: 1e-9)
     }
 
     func testAdvanceWithoutStaffEarnsNothing() {
@@ -33,7 +42,14 @@ final class GameEngineTests: XCTestCase {
     func testAdvanceIsClosedFormNotALoop() {
         // Bir kerede 1 saat ilerletmek ile 3600 kez 1 saniye ilerletmek aynı
         // sonucu vermeli. Kapalı-form kuralının kanıtı.
+        //
+        // Satışlar ayrık olduğundan eşitlik artık **bir satış** toleransında:
+        // 3600 kez kesir toplamak kayan nokta hatası biriktiriyor ve sondaki
+        // satış bazen bir sonraki adıma kayıyor. Döngüye dönmüş bir motorda
+        // fark bundan çok daha büyük olurdu; tolerans o yüzden tek satışla
+        // sınırlı, "yaklaşık" değil.
         let state = BalanceFixture.state(staffCount: 2, config: config)
+        let unit = config.sectors[0].manual.revenuePerSale
 
         let single = GameEngine.advance(state, by: 3_600, config: config)
 
@@ -42,7 +58,7 @@ final class GameEngineTests: XCTestCase {
             stepped = GameEngine.advance(stepped, by: 1, config: config)
         }
 
-        XCTAssertEqual(single.money, stepped.money, accuracy: 1e-6)
+        XCTAssertEqual(single.money, stepped.money, accuracy: unit)
         XCTAssertEqual(single.elapsedGameSeconds, stepped.elapsedGameSeconds, accuracy: 1e-6)
     }
 

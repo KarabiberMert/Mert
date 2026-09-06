@@ -697,7 +697,23 @@ enum GameEngine {
                 seconds: seconds,
                 config: config
             )
-            earned += max(0, outcome.served * price(for: floor, spec: spec) - wages)
+            // Kadro ürünü tek tek satar. Yarım kalan satış bir sonraki
+            // adıma devreder; para yalnızca **tamamlanan** satışta yatar.
+            let unit = price(for: floor, spec: spec)
+            let progress = max(0, floor.saleProgress) + outcome.served
+            let completed = progress.rounded(.down)
+            next.floors[index].saleProgress = progress - completed
+
+            // Satış **tam fiyatı** kasaya yatırır; maaş borçtan mahsup edilir.
+            // Doğrudan düşseydik satış tamamlanmayan saniyelerde maaş affedilir
+            // ve sonuç segment boyuna bağlı olurdu. Borç olarak taşıyınca hem
+            // "kat neti = max(0, brüt − maaş)" kuralı korunuyor hem iki saatlik
+            // yokluk ile saniye saniye ilerlemek aynı sonucu veriyor.
+            let revenue = completed * unit
+            let debt = max(0, floor.wageDebt) + wages
+            let paid = min(debt, revenue)
+            next.floors[index].wageDebt = debt - paid
+            earned += revenue - paid
 
             next.floors[index].demandQueue = outcome.queue
             next.floors[index].satisfaction = nextSatisfaction(

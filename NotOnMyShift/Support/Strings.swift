@@ -172,6 +172,20 @@ enum L {
         String(localized: "cash.byHand", defaultValue: "For now you make every coffee yourself.", comment: "Age 0 explanation")
     }
     /// "$1.4 per second" — maaş düşülmüş net.
+    /// Bir satışın ortalama getirisi. Para artık saniye saniye değil,
+    /// satış başına yattığı için sayaç bunu gösteriyor.
+    static func averagePerSale(_ amount: String) -> String {
+        String(localized: "cash.averagePerSale", defaultValue: "\(amount) a sale on average",
+               comment: "Average money per completed sale. Money lands per sale, not per second.")
+    }
+
+    /// Dakikalık ortalama — yükseltmelerin işe yarayıp yaramadığı buradan
+    /// okunur.
+    static func perMinute(_ amount: String) -> String {
+        String(localized: "cash.perMinute", defaultValue: "\(amount) a minute",
+               comment: "Average income per minute, shown under the average sale value.")
+    }
+
     static func perSecond(_ amount: String) -> String {
         String(localized: "cash.perSecond", defaultValue: "\(amount) per second", comment: "Passive income line, after wages")
     }

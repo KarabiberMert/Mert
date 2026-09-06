@@ -27,6 +27,7 @@ struct RootView: View {
                     isAutomated: store.state.isAutomated,
                     eventMultiplier: store.eventMultiplier,
                     eventRemaining: store.modifiers.map { store.remainingSeconds(of: $0) }.max(),
+                    averageSale: store.manualRevenue,
                     bumped: cashBumped
                 )
                 .padding(.horizontal, 22)

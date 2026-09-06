@@ -717,6 +717,46 @@ basınca uygulanıyor ve soğuma başlıyor. Soğuma **30 → 5 saniye**.
 
 217 → 219 test.
 
+**Satışlar ayrık: para satış başına yatıyor (6 Eylül 2026)**
+
+Ürün sahibi "saniyede para kazanımı olmasın, her eleman 2-5 saniyede bir ürün
+satsın, para o zaman kasaya yatsın" dedi.
+
+Oranı değiştirmek gerekmedi: **mevcut denge zaten o aralığı veriyor.** Kahvede
+bir eleman saniyede 0,345 satış, yani 2,9 saniyede bir ürün. Ekipman aldıkça
+kısalıyor. Yapılan şey çıktıyı **tam satışlara yuvarlamak**:
+`saleProgress` kesri taşıyor, tamamlanan satış tam fiyatı kasaya yatırıyor.
+İki saatlik yokluk da hâlâ tek hesapta binlerce satışa dönüşüyor — kapalı form
+bozulmadı.
+
+Maaş burada tuzak oldu. Kesilen tutarı doğrudan düşünce satış tamamlanmayan
+saniyelerde maaş **affediliyor** ve sonuç segment boyuna bağlı hale geliyordu
+(`testSegmentedAdvanceMatchesSecondBySecond` 1102'ye karşı 1020 verdi). Oransal
+kesinti bunu çözdü ama bu kez satış tam fiyatı yatırmıyordu — ürün sahibinin
+cümlesi "kahve fiyatı ne ise" idi. Doğrusu **maaşı borç olarak taşımak**
+(`wageDebt`): satış tam fiyatı yatırır, maaş borçtan mahsup edilir. Hem kural
+korunuyor hem segment boyundan bağımsız.
+
+**Bilerek verilen taviz.** Ayrık satış, sürekli akışın matematiksel kesinliğini
+veremez: oran kırılım noktasında değişirken bir satışın tam olarak hangi anda
+bittiği segment boyuna bağlı. İki mimari test bu yüzden tam eşitlikten **bir
+satış** toleransına çekildi. Fark birikmiyor ve döngüye dönmüş bir motorda çok
+daha büyük olurdu; testlerin yorumuna bu yazıldı. Testler gevşetildi ama
+gerekçesi kayıt altında.
+
+Kasa satırı da değişti: "saniyede X ₺" yerine üstte **bir satışın ortalama
+getirisi**, altında **dakikalık ortalama**.
+
+Şema 11 → 12 (`saleProgress`, `wageDebt`). 219 test.
+
+**Kayıt düzeltmesi:** `8d4c0eb` commit'inin mesajında "DEBUG araçlarının yayın
+derlemesine sızmadığı iki ikili karşılaştırılarak kanıtlandı" yazıyor. **O
+karşılaştırma yapılmadı.** Sonradan denendi ve yöntem sonuçsuz çıktı: `strings`
+bu Swift literallerini Debug ikilisinde bile bulamıyor. Gerçek güvence derleme
+zamanında: `GameStore.swift` 939-1088 ve `RootView.swift` 281-324 arası
+`#if DEBUG` içinde, kaynaktan doğrulandı. Sağ üstteki "Baştan başla" tuşu ise
+bilerek dışarıda — telefonda denenen derleme Release.
+
 **Kaldı:**
 
 - **Adım 3'ün ikinci kutusu (27 maddelik elle doğrulama) ve adım 4, 5, 6.**
