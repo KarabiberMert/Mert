@@ -389,6 +389,44 @@ açılan uygulamada devrede olmuyor. `xcrun simctl`'de storekit alt komutu yok.
 Xcode'dan ⌘R ile açmak ya da `StoreKitTest`/`SKTestSession` ile test yazmak
 gerekiyor.
 
+**Madde 5 — sistem saatine dokunmadan çözüldü (6 Eylül 2026)**
+
+"Cihaz saatini ileri al" adımı, Mac'in saatini değiştirmeden yapıldı. Mimari
+buna zaten uygundu: `GameStore` saati enjekte ediyor (`now:`) ve motor
+ekonomiyi `lastSeenAt` ile şimdinin farkından türetiyor.
+
+Yapılan: `GameStore`'daki ham saat kaynağı `clock` olarak yeniden adlandırıldı
+ve üstüne `now()` kondu. Yalnızca DEBUG'da `debugTimeOffset` ekleniyor; yayın
+derlemesinde `now()` doğrudan `clock()` döndürüyor, tek fark bile yok.
+`nonisolated(unsafe)` gerekmedi — offset `@MainActor` olan store'un kendi
+alanı. İki senaryo eklendi: "Saati 3 saat ileri al" (ayrılış damgası → offset →
+dönüş) ve "Saati 1 saat geri al".
+
+Sonuçlar:
+
+- 3 saat ileri: "3 saat uzaktaydın", yazılan **2,3 Mn ₺** = 2 saat × 313 ₺/sn.
+  Üç saat olsaydı 3,4 Mn olurdu. Kayıtta `wastedOfflineSeconds = 3600`, yani
+  tavan tam bir saati kesmiş. Ekranda "Depo doldu, gerisi ziyan oldu."
+  `İşlenen süre` de tam +2 saat ilerledi.
+- 1 saat geri: para 8.170 ₺ arttı — bu 26 saniyelik normal üretim, `elapsed`
+  de 26 saniye ilerlemiş. Yanlış işlense ~1.126.800 ₺ atlaması gerekirdi.
+  Para azalmadı da; `lastSeenAt` geriye damgalandı, negatif süre krediye
+  yazılmadı.
+
+İkisi de motor testlerinde zaten kapsanıyor (`GameEngineTests` içinde
+`wastedSeconds` ve `clockWentBackwards`); cihazdaki koşum bunu doğruladı,
+yeni test eklemedim.
+
+**Yan gözlem — halka arz olmuş:** bu turun başında kayıt yeni bir şehirde
+buldum: `holdingPoints 4`, `cityNumber 2`, `citiesCompleted 1`, `sectorsSold 2`,
+bina sıfır, tek boş kahve katı. Devir kuralı tam tutmuş — puanlar, depo ve
+istatistikler taşınmış; katlar, kasa ve çatı sıfırlanmış. Ama **final sahnesini
+ekranda görmedim** ve hangi dokunuşun tetiklediğini de bilmiyorum, o yüzden
+madde 22'yi geçti saymıyorum; elimde yalnızca sonuç durumunun kanıtı var.
+Yeni şehirde elle satış +4 değil +5 ₺, brüt 216,97 yerine 321 ₺ (×1,48 = 4
+puan × %12) — madde 20'nin "yeni açtığın kat ilk günden daha hızlı yürür"
+kısmı böylece kendiliğinden doğrulandı.
+
 **Kaldı:**
 
 - **Adım 3'ün ikinci kutusu (27 maddelik elle doğrulama) ve adım 4, 5, 6.**

@@ -362,7 +362,24 @@ final class GameStore {
     // MARK: - İç durum
 
     private let saves: SaveStore
-    private let now: @Sendable () -> Date
+    /// Ham saat kaynağı. Motorun gördüğü an için `now()` kullanılır.
+    private let clock: @Sendable () -> Date
+
+    #if DEBUG
+    /// Uygulamanın gördüğü anı kaydırır. Depo tavanını ve saatin geri
+    /// alınmasını **sistem saatine dokunmadan** denemek için; motor zaten
+    /// ekonomiyi `lastSeenAt` ile şimdinin farkından türetiyor.
+    @ObservationIgnored private var debugTimeOffset: TimeInterval = 0
+    #endif
+
+    /// Motorun gördüğü an.
+    private func now() -> Date {
+        #if DEBUG
+        clock().addingTimeInterval(debugTimeOffset)
+        #else
+        clock()
+        #endif
+    }
 
     /// Satın alma sınırı. StoreKit'i yalnızca bu tip bilir.
     let purchases: any Purchases
@@ -401,7 +418,7 @@ final class GameStore {
     ) {
         self.config = config
         self.saves = saves
-        self.now = now
+        self.clock = now
         self.purchases = purchases
         self.ads = ads
 
@@ -827,6 +844,8 @@ extension GameStore {
         case roof
         case matureFloor
         case readyToIPO
+        case forwardThreeHours
+        case backOneHour
 
         var id: String { rawValue }
 
@@ -838,6 +857,8 @@ extension GameStore {
             case .roof:        "Çatı + müdür"
             case .matureFloor: "Katı olgunlaştır"
             case .readyToIPO:  "Halka arza hazırla"
+            case .forwardThreeHours: "Saati 3 saat ileri al"
+            case .backOneHour:       "Saati 1 saat geri al"
             }
         }
     }
@@ -866,6 +887,20 @@ extension GameStore {
                 guard GameEngine.nextFloorCost(for: state, config: config) != nil else { break }
                 unlockNextFloor()
             }
+
+        case .forwardThreeHours:
+            // "Cihaz saatini ileri al" ile aynı deneyim, sistem saatine
+            // dokunmadan: önce ayrılış damgası, sonra saat kayar, sonra dönüş.
+            // Depo tavanı 2 saat olduğu için 3 saatin bir saati kesilmeli.
+            handleWillResignActive()
+            debugTimeOffset += 3 * 3600
+            handleBecameActive()
+
+        case .backOneHour:
+            // Saat geriye alındı: `lastSeenAt` olduğu yerde kalıyor, yalnızca
+            // şimdi geri gidiyor. Para ne artmalı ne azalmalı.
+            debugTimeOffset -= 3600
+            handleBecameActive()
         }
         clearDebugCelebrations()
         persist()
