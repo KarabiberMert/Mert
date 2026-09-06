@@ -806,6 +806,51 @@ memnuniyetin **iki uca da yapışmadığını** ve **kuyruk oluştuğunu** ölç
 
 219 test.
 
+**Denge turu: ölçerek ayarlandı (6 Eylül 2026)**
+
+Elle oynayarak denge ayarlamak yavaş ve güvenilmez (her tur 3-4 saniye, uzun
+vadeli denge ekran görüntüsünden okunmuyor). Bunun yerine
+`NotOnMyShiftTests/DemandBalanceProbe.swift` yazıldı: **gerçek motoru gerçek
+`balance.json` ile** saniye saniye çalıştırıp memnuniyet, kuyruk, satış hızı ve
+dakikalık geliri tablo olarak basıyor. Ayar turları bu tabloya bakılarak
+yapıldı.
+
+**Sondanın bulduğu iki kusur:**
+
+1. *Fiyatı artırmak memnuniyeti **yükseltiyordu*** (4 ₺ → 1,22, 5 ₺ → 1,28).
+   Kuyruk erirken iptaller bitiyor ve servis puanı fiyat cezasını yeniyordu —
+   ürün sahibinin şartının tersi. `serviceWeight` 0,7 → 0,4.
+2. *Ucuz fiyatta memnuniyet yüksek kalıyordu*: 2 ₺'de siparişlerin %78'i iptal
+   olurken memnuniyet 1,15. Toplamsal karışımda ucuzluk puanı servis çöküşünü
+   örtüyordu. Karışım **çarpımsal** yapıldı (`service^w × fairness^(1−w)`) ve
+   en pahalı fiyatın adalet puanına taban kondu (`priceFairnessFloor` 0,3);
+   sıfır olsaydı tavan fiyat tek başına memnuniyeti dibe çakardı.
+
+**Ulaşılan şekil** (tam kadro, gerçek denge):
+
+| Fiyat | Memnuniyet | Kuyruk | ₺/dk |
+|---|---|---|---|
+| 2 ₺ | 1,05 | 148 | 113 |
+| 3 ₺ | 1,16 | 49 | 224 |
+| **4 ₺** | **1,23** | **10,5** | **335** |
+| 5 ₺ | 1,22 | 0 | 323 |
+| 8 ₺ | 0,99 | 0 | 111 |
+
+Memnuniyet taban fiyatta tepe yapıp iki yana da düşüyor, **gelir tepesi de
+kuyruğun olduğu yerde** — yani en kârlı oynayış dükkânı dolu tutmak. Bu şekil
+artık `testBalanceShapeRewardsKeepingTheShopBusy` ile korunuyor.
+
+**Ekranda yakalanan üçüncü hata:** sayaç "ortalama 4,8 ₺ / satış" yazıyordu,
+fiyat 4 ₺ iken. `productionRate` kuyruk varken tam kapasiteyle hesaplarken
+`salesRate` geliş hızını kullanıyordu; ikisi aynı çarpanı kullanmalıydı.
+Düzeltildikten sonra 3,1 ₺ — maaş düşülmüş hâli.
+`testAverageSaleValueStaysBelowThePrice` bunu koruyor.
+
+Simülatörde doğrulandı: 1 eleman ile memnuniyet %79, tezgâh %100 dolu, ortalama
+3,1 ₺ / satış, dakikada 64 ₺ — sondanın öngördüğü değerlerle birebir.
+
+222 test.
+
 **Kaldı:**
 
 - **Adım 3'ün ikinci kutusu (27 maddelik elle doğrulama) ve adım 4, 5, 6.**

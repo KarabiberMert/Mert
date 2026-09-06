@@ -271,7 +271,8 @@
     "maxSatisfaction": 1.4,
     "satisfactionPerSecond": 0.01,
     "priceElasticity": 2.0,
-    "serviceWeight": 0.7
+    "serviceWeight": 0.4,
+    "priceFairnessFloor": 0.3
   },
   "counter": {
     "manualCooldownSeconds": 2.0,

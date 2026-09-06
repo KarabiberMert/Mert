@@ -166,35 +166,45 @@ final class DemandTests: XCTestCase {
         XCTAssertEqual(sonra.floors[0].servedByHand, 0, accuracy: 1e-9, "Sayaç sıfırlanır")
     }
 
-    /// Fiyat memnuniyeti de etkiler: ucuz dükkân sevilir, pahalı tolere
-    /// edilir. Ama **tek başına belirlemez** — servis baskın kalır.
-    func testPriceMovesSatisfactionButServiceStaysDominant() {
+    /// Memnuniyet **ikisini birden** ister: zamanında servis ve adil fiyat.
+    ///
+    /// Karışım çarpımsal olduğu için biri dibe vurunca diğeri kurtaramaz —
+    /// toplamsal formda ucuzluk puanı servis çöküşünü örtüyordu. İç bölgede
+    /// ise ağırlık konuşuyor: kötü servis, pahalı fiyattan daha çok zarar
+    /// verir.
+    func testSatisfactionNeedsBothGoodServiceAndFairPrice() {
         let config = BalanceFixture.config(
             minSatisfaction: 0.6,
             maxSatisfaction: 1.0,
             satisfactionPerSecond: 1,        // tek adımda hedefe otursun
-            serviceWeight: 0.7
+            serviceWeight: 0.7,
+            priceFairnessFloor: 0
         )
 
-        // Kusursuz servis, en ucuz fiyat → tavan.
-        let ucuz = GameEngine.nextSatisfaction(
-            current: 0.6, served: 10, cancelled: 0, priceScore: 1, seconds: 100, config: config
-        )
-        XCTAssertEqual(ucuz, 1.0, accuracy: 1e-9)
+        func hedef(service: Double, fiyatPuani: Double) -> Double {
+            GameEngine.nextSatisfaction(
+                current: 0.6,
+                served: service * 10,
+                cancelled: (1 - service) * 10,
+                priceScore: fiyatPuani,
+                seconds: 100,
+                config: config
+            )
+        }
 
-        // Kusursuz servis, en pahalı fiyat → düşer ama tabana inmez.
-        let pahali = GameEngine.nextSatisfaction(
-            current: 1.0, served: 10, cancelled: 0, priceScore: 0, seconds: 100, config: config
-        )
-        XCTAssertEqual(pahali, 0.88, accuracy: 1e-9, "0,6 + 0,4 × 0,7")
-        XCTAssertGreaterThan(pahali, config.demand.minSatisfaction, "Fiyat tek başına dibe çekemez")
+        // İkisi de kusursuz → tavan.
+        XCTAssertEqual(hedef(service: 1, fiyatPuani: 1), 1.0, accuracy: 1e-9)
 
-        // Berbat servis, en ucuz fiyat → yine de düşük: servis baskın.
-        let kotuServis = GameEngine.nextSatisfaction(
-            current: 1.0, served: 0, cancelled: 10, priceScore: 1, seconds: 100, config: config
-        )
-        XCTAssertEqual(kotuServis, 0.72, accuracy: 1e-9, "0,6 + 0,4 × 0,3")
-        XCTAssertLessThan(kotuServis, pahali, "Kötü servis, pahalı fiyattan daha çok zarar verir")
+        // Biri dibe vurunca diğeri kurtaramaz.
+        XCTAssertEqual(hedef(service: 1, fiyatPuani: 0), 0.6, accuracy: 1e-9)
+        XCTAssertEqual(hedef(service: 0, fiyatPuani: 1), 0.6, accuracy: 1e-9)
+
+        // İç bölgede ağırlık konuşuyor: servis 0,7 · fiyat 0,3.
+        let kotuServis = hedef(service: 0.5, fiyatPuani: 1)      // 0,5^0,7
+        let pahali = hedef(service: 1, fiyatPuani: 0.5)          // 0,5^0,3
+        XCTAssertEqual(kotuServis, 0.6 + 0.4 * pow(0.5, 0.7), accuracy: 1e-9)
+        XCTAssertEqual(pahali, 0.6 + 0.4 * pow(0.5, 0.3), accuracy: 1e-9)
+        XCTAssertLessThan(kotuServis, pahali, "Kötü servis daha çok zarar verir")
     }
 
     /// Pahalı fiyat çöküş sarmalına sokmamalı: talep düşer, memnuniyet biraz
@@ -211,15 +221,17 @@ final class DemandTests: XCTestCase {
             minSatisfaction: 0.6,
             maxSatisfaction: 1.0,
             satisfactionPerSecond: 0.01,
-            serviceWeight: 0.7
+            serviceWeight: 0.7,
+            priceFairnessFloor: 0.3
         )
         var state = BalanceFixture.state(staffCount: 1, demandQueue: 0, config: config)
         state = GameEngine.setPrice(20, onFloor: 0, state, config: config)   // en pahalı
 
         let sonra = GameEngine.advance(state, by: 3600, config: config)
 
-        // Kadro yetiştiği için iptal yok; hedef 0,6 + 0,4 × (0,7 × 1 + 0,3 × 0).
-        XCTAssertEqual(sonra.floors[0].satisfaction, 0.88, accuracy: 1e-6)
+        // Kadro yetiştiği için iptal yok, servis 1; fiyat adaleti tabanda
+        // (0,3). Çarpımsal: 1^0,7 × 0,3^0,3 → 0,6 + 0,4 × 0,697.
+        XCTAssertEqual(sonra.floors[0].satisfaction, 0.6 + 0.4 * pow(0.3, 0.3), accuracy: 1e-6)
         XCTAssertGreaterThan(sonra.floors[0].satisfaction, 0.8, "Sarmal yok")
         // Ve dükkân hâlâ para kazanıyor.
         XCTAssertGreaterThan(sonra.money, 0)
@@ -387,6 +399,27 @@ final class DemandTests: XCTestCase {
 
     /// Sen yokken kadro talebi karşılar    /// Sen yokken kadro talebi karşılar: çevrimdışı kazanç talep yüzünden
     /// çökmez. Ürün sahibinin seçtiği kural buydu.
+    /// Sayaçtaki "ortalama satış" fiyatın **altında** olmalı: maaş düşülüyor.
+    /// Üstüne çıkıyorsa gelir ile satış adedi farklı çarpanla hesaplanıyordur —
+    /// ekranda tam olarak bu görüldü (fiyat 4 ₺ iken ortalama 4,8 ₺).
+    func testAverageSaleValueStaysBelowThePrice() throws {
+        let config = try BalanceConfig.load()
+        var state = GameState.newGame(characterID: "kahveci", now: BalanceFixture.epoch)
+        state = GameEngine.normalised(state, config: config)
+        state.money = 1_000_000
+        guard case .success(let hired) = GameEngine.hireStaff(onFloor: 0, state, config: config) else {
+            return XCTFail("Eleman tutulamadı")
+        }
+
+        var sonra = hired
+        for _ in 0..<300 { sonra = GameEngine.advance(sonra, by: 1, config: config) }
+
+        let fiyat = GameEngine.price(for: sonra.floors[0], spec: config.sectors[0])
+        let ortalama = GameEngine.averageSaleValue(for: sonra, config: config)
+        XCTAssertGreaterThan(ortalama, 0)
+        XCTAssertLessThan(ortalama, fiyat, "Maaş düşülünce ortalama fiyatın altında kalmalı")
+    }
+
     func testStaffKeepServingWhileYouAreAway() {
         let config = BalanceFixture.config(
             revenuePerSale: 10,

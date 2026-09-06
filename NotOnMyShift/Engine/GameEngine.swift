@@ -200,12 +200,20 @@ enum GameEngine {
     /// Memnuniyete **ağırlıklı** girer, tek başına belirlemez. Fiyat hem
     /// talebi hem memnuniyeti tek başına sürükleseydi pahalı dükkân çöküş
     /// sarmalına girerdi.
-    static func priceScore(for floor: FloorState, spec: BalanceConfig.SectorSpec) -> Double {
+    static func priceScore(
+        for floor: FloorState,
+        spec: BalanceConfig.SectorSpec,
+        config: BalanceConfig
+    ) -> Double {
         let range = priceRange(for: spec)
         let span = range.upperBound - range.lowerBound
         guard span > 0 else { return 1 }
         let current = price(for: floor, spec: spec)
-        return min(1, max(0, (range.upperBound - current) / span))
+        let linear = min(1, max(0, (range.upperBound - current) / span))
+        // Taban sıfır olsaydı tavan fiyat, servis kusursuz olsa bile
+        // memnuniyeti tek başına dibe çakardı.
+        let low = min(1, max(0, config.demand.priceFairnessFloor))
+        return low + (1 - low) * linear
     }
 
     /// Tezgâhın soğuma süresi. Ekipman kahveyi hızlandırır.
@@ -332,11 +340,14 @@ enum GameEngine {
         let total = max(0, served) + max(0, cancelled)
         guard total > 0 else { return min(max(current, low), high) }
 
-        // Hedef iki şeyin ağırlıklı karışımı: siparişi zamanında karşıladın mı,
-        // ve fiyatın adil mi. Ağırlık dengede tanımlı; servis baskın.
+        // Hedef iki şeyin **çarpımsal** karışımı: siparişi zamanında
+        // karşıladın mı, ve fiyatın adil mi. Toplamsal olsaydı ucuzluk puanı
+        // servis çöküşünü örter, dükkân taşarken memnuniyet yüksek kalırdı.
+        // Çarpımda ikisi de iyi olmak zorunda: iki uç da cezalanıyor.
         let service = max(0, served) / total
         let weight = min(1, max(0, demand.serviceWeight))
-        let score = service * weight + min(1, max(0, priceScore)) * (1 - weight)
+        let fairness = min(1, max(0, priceScore))
+        let score = pow(service, weight) * pow(fairness, 1 - weight)
 
         let target = low + (high - low) * score
         let step = max(0, demand.satisfactionPerSecond) * seconds
@@ -352,8 +363,10 @@ enum GameEngine {
             guard !floor.isInvestment else { return 0 }
             let bonus = processBonus(for: floor, state: state, config: config)
             let capacity = capacityRate(floor, spec: spec, buff: buff, bonus: bonus)
-            let arrival = demandArrivalRate(for: floor, spec: spec, state: state, config: config)
-            return min(capacity, arrival)
+            // `productionRate` ile **aynı** çarpanı kullanmalı, yoksa
+            // "ortalama satış" fiyatın üstüne çıkar: kuyruk varken gelir tam
+            // kapasiteyle, satış adedi geliş hızıyla hesaplanmış olurdu.
+            return capacity * demandFactor(for: floor, spec: spec, state: state, config: config)
         }
     }
 
@@ -746,7 +759,7 @@ enum GameEngine {
                 // Kadronun karşıladığı + oyuncunun elle karşıladığı.
                 served: outcome.served + max(0, floor.servedByHand),
                 cancelled: outcome.cancelled,
-                priceScore: priceScore(for: floor, spec: spec),
+                priceScore: priceScore(for: floor, spec: spec, config: config),
                 seconds: seconds,
                 config: config
             )
