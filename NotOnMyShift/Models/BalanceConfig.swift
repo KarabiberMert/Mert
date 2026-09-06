@@ -140,11 +140,17 @@ struct BalanceConfig: Codable, Sendable, Equatable {
         /// Yeni dükkânın kapısındaki hazır müşteri. Sıfır olsaydı oyuncu
         /// uygulamayı açtığında satacak kimse bulamazdı.
         var startQueue: Double
-        /// Yeni dükkânın kapsaması. 1,0 = talep tam kapasiteyi karşılar.
+        /// Yeni dükkânın kapsaması: kapasitenin ne kadarı doluyor.
         var startCoverage: Double
         /// Kapsama bunun altına inmez — ihmal geliri sıfırlamaz, yavaşlatır.
         var minCoverage: Double
-        /// Kapsama bunun üstüne çıkmaz. Reklam bu tavana kadar iter.
+        /// Kapsama bunun üstüne çıkmaz ve **1'i geçmemeli**.
+        ///
+        /// Geçerse geliş hızı kapasiteyi aşar; o zaman kadronun birikmiş
+        /// kuyruğu eritecek boş kapasitesi kalmaz ve kuyruk yalnızca müşteriler
+        /// kaçtığı için azalır. Tavan 1 olunca kadro kuyruğu gerçekten servis
+        /// eder ve o müşteriler paraya döner. Reklamın işi de budur:
+        /// kapsamayı tavana doğru itmek.
         var maxCoverage: Double
         /// Kapsamanın saniyede değişme hızı. Ekosistem yavaş nefes alsın.
         var coveragePerSecond: Double

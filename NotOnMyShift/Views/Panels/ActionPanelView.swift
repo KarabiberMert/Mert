@@ -31,6 +31,10 @@ struct ActionPanelView: View {
     /// Şerit içeriğinin yüksekliği. Bina kalan yeri alır.
     private let contentHeight: CGFloat = 196
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Soğuma çubuğunun kalan payı (1 → 0). Satıştan sonra sağdan sola çekilir.
+    @State private var cooldownSweep: Double = 0
+
     var body: some View {
         VStack(spacing: 10) {
             // Yatırım katında tezgâh yok: satış butonu da yok.
@@ -93,11 +97,39 @@ struct ActionPanelView: View {
             // kimse söylemeden "artık asıl iş sende değil" der.
             .frame(maxWidth: .infinity, minHeight: store.state.isAutomated ? 50 : 64)
             .background(Palette.enamel, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            // Soğuma çubuğu: satıştan sonra sağdan sola çekilerek kalan süreyi
+            // gösterir. Düğmenin üstünde, ama dokunmayı engellemez.
+            .overlay(alignment: .leading) {
+                GeometryReader { proxy in
+                    Rectangle()
+                        .fill(Palette.plaster.opacity(0.20))
+                        .frame(width: proxy.size.width * cooldownSweep)
+                        .frame(maxHeight: .infinity, alignment: .leading)
+                }
+                .allowsHitTesting(false)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
         // Soğuma sırasında düğme sönük: dokunuşun neden işlemediği görünsün.
         .disabled(!store.canSellManually)
         .opacity(store.canSellManually ? 1 : 0.55)
+        // Tezgâha dokunmak da satış sayar; çubuk her iki yoldan da tetiklensin.
+        .onChange(of: store.state.stats.manualSales) { _, _ in
+            startCooldownSweep()
+        }
+    }
+
+    /// Çubuğu doldurup soğuma süresi boyunca boşaltır.
+    private func startCooldownSweep() {
+        let seconds = store.config.counter.manualCooldownSeconds
+        guard seconds > 0 else { return }
+        cooldownSweep = 1
+        guard !reduceMotion else {
+            cooldownSweep = 0
+            return
+        }
+        withAnimation(.linear(duration: seconds)) { cooldownSweep = 0 }
     }
 
     // MARK: - Sekmeler

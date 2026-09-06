@@ -139,6 +139,38 @@ final class DemandTests: XCTestCase {
         XCTAssertEqual(yavas, 1.1, accuracy: 1e-9)
     }
 
+    /// Kadro birikmiş kuyruğu **servis ederek** eritir — müşteriler kaçtığı
+    /// için değil. Ölçüt para: eriyen kişi sayısı kadar satış yapılmış olmalı.
+    func testStaffWorkThroughTheQueueAndGetPaidForIt() {
+        // Kapasite 1 satış/sn (10 ₺/sn ÷ 10 ₺), geliş 0,5 satış/sn.
+        // Taban aralık devre dışı ki kapsama belirleyici olsun.
+        let config = BalanceFixture.config(
+            revenuePerSale: 10,
+            ratePerSecond: 10,
+            starterArrivalSeconds: 1_000_000,
+            baseArrivalSeconds: 1_000_000,
+            demandStartQueue: 0,
+            startCoverage: 0.5, minCoverage: 0.5, maxCoverage: 0.5
+        )
+        let state = BalanceFixture.state(staffCount: 1, demandQueue: 100, config: config)
+
+        let next = GameEngine.advance(state, by: 100, config: config)
+
+        // Kuyruk boşalma hızı = kapasite − geliş = 0,5 kişi/sn.
+        XCTAssertEqual(next.floors[0].demandQueue, 50, accuracy: 1e-6, "Kadro kuyruğu eritmeli")
+        // Ve tam kapasiteyle çalıştığı için 100 satış yapılmış olmalı.
+        XCTAssertEqual(next.money, 1000, accuracy: 1e-6, "Eriyen müşteriler paraya dönmeli")
+    }
+
+    /// Kapsama tavanı 1'i geçmemeli. Geçerse kadronun boş kapasitesi kalmaz ve
+    /// kuyruk yalnızca müşteriler kaçtığı için azalır — istediğimiz bu değil.
+    func testShippedBalanceKeepsCoverageAtOrBelowFullCapacity() throws {
+        let config = try BalanceConfig.load()
+        XCTAssertLessThanOrEqual(config.demand.maxCoverage, 1.0)
+        XCTAssertLessThanOrEqual(config.demand.startCoverage, config.demand.maxCoverage)
+        XCTAssertLessThanOrEqual(config.demand.minCoverage, config.demand.startCoverage)
+    }
+
     /// Sen yokken kadro talebi karşılar: çevrimdışı kazanç talep yüzünden
     /// çökmez. Ürün sahibinin seçtiği kural buydu.
     func testStaffKeepServingWhileYouAreAway() {

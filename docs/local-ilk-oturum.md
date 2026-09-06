@@ -579,6 +579,35 @@ asıl olarak oyuncunun darboğaz olduğu yerde (Çağ 0 ve kapasite < talep)
 yükseltmenin geliri artırması için önce talebin kapasitenin altına düşebildiği
 bir band gerekiyor. Bu bir sonraki tur.
 
+**Talep sistemi — ikinci tur (6 Eylül 2026)**
+
+Ürün sahibi "otomatik satışlar da kuyruğu azaltsın" deyince bir aritmetik
+hatası ortaya çıktı: kapsama 1,0'dan başlıyordu, yani geliş hızı kapasiteye
+**eşitti**. Eşit olunca kadronun birikmiş kuyruğu eritecek boş kapasitesi
+kalmıyor ve kuyruk yalnızca `Q/T` terimiyle, yani **müşteriler kaçtığı için**
+azalıyordu. Ekranda azalma görünüyordu ama para karşılığı yoktu.
+
+Düzeltme: `maxCoverage` 1,4 → **1,0**, `startCoverage` 1,0 → **0,9**. Artık
+kapasite her zaman gelişten büyük; kadro kuyruğu gerçekten servis ediyor ve o
+müşteriler paraya dönüyor. Yan fayda: reklam/bilinirlik katmanı da bir iş
+kazandı — kapsamayı tavana itmek artık gerçekten geliri artırıyor, çünkü gelir
+`kapasite × kapsama`.
+
+Testi yazıldı (`testStaffWorkThroughTheQueueAndGetPaidForIt`): kapasite 1
+satış/sn, geliş 0,5 satış/sn, kuyruk 100. Yüz saniye sonra kuyruk 50'ye
+düşüyor **ve** kasada 1000 ₺ var — yani eriyen elli kişinin hepsi satılmış.
+Ayrıca `testShippedBalanceKeepsCoverageAtOrBelowFullCapacity` tavanın bir daha
+1'in üstüne çıkmasını engelliyor.
+
+**Soğuma çubuğu:** satıştan sonra satış düğmesinin üstünde açık bir şerit
+sağdan sola çekilerek kalan süreyi gösteriyor. Tezgâha dokunmak da satış
+saydığı için çubuk `stats.manualSales` değişimini dinliyor, yani her iki
+yoldan da tetikleniyor. `accessibilityReduceMotion` açıksa animasyon
+çalışmıyor. **Ekran görüntüsüyle kanıtlanamadı**: animasyon bir saniye, benim
+dokunuş→kare turum da o kadar. Cihazda gözle doğrulanması gerekiyor.
+
+203 → 205 test.
+
 **Kaldı:**
 
 - **Adım 3'ün ikinci kutusu (27 maddelik elle doğrulama) ve adım 4, 5, 6.**

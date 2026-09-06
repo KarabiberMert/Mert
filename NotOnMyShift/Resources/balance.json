@@ -262,9 +262,9 @@
     "baseArrivalSeconds": 10.0,
     "expirySeconds": 60.0,
     "startQueue": 3.0,
-    "startCoverage": 1.0,
+    "startCoverage": 0.9,
     "minCoverage": 0.6,
-    "maxCoverage": 1.4,
+    "maxCoverage": 1.0,
     "coveragePerSecond": 0.0025,
     "backlogToleranceSeconds": 20.0
   },
