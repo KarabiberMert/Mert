@@ -481,6 +481,34 @@ saat ileri alınır — sen yokken biriken parayı müdür dönüşte harcar.
   "Her kural verimi artırır. Hiç kural koymamak bir şey eksiltmez — işi kendin
   yaparsın, o kadar."
 
+**Madde 13 — pazar payı kayması (6 Eylül 2026)**
+
+Kayma `advance` içinde krediye yazılan saniyelerle işliyor
+(`driftPerSecond 1.4e-6`), yani depo tavanı kaymayı da sınırlıyor. Görünür bir
+kayma için iki DEBUG senaryosu eklendi: "Depoyu tavana çıkar" (24 saat) ve
+"Saati 2 gün ileri al". Ölçümü temiz tutmak için müdür kuralları kapatıldı —
+açık kalsalardı müdür yatırım yapıp payı geri getirirdi.
+
+Beş sıçrama (yaklaşık 66 saat kredi):
+
+| | Önce | Sonra |
+|---|---|---|
+| Pazar payı | %96,81 | **%63,70** |
+| Kasa | 7.666.237 ₺ | **17.937.532 ₺** |
+| Açık hücre (zemin kat) | 4 | 4 |
+
+Kuralın üç yarısı da tuttu:
+
+- **Pay rakiplere kaydı.** Ekranda Çınar Holding %16, Değirmen Grup %12,
+  Percolate %8. Ağırlıklar 1,4 : 1,0 : 0,7; kalan payın dağılımı birebir aynı.
+- **Para azalmadı, arttı** — 7,7 Mn → 17,9 Mn. Rakip mevcut geliri düşürmüyor.
+- **Yalnızca yeni hücre hakkı daraldı.** Panelde "Açık hücre: 3" yazıyor
+  (`branchSlots` formülü %63,7 için tam 3 veriyor) ama binada hâlâ **dört**
+  hücre çalışıyor ve kat oranı 209 ₺/sn'de duruyor. Açılmış şube kapanmıyor,
+  üretim geri gitmiyor.
+- **Yatırım payı geri getiriyor.** Üst kat açılınca pay 0,6370 → 0,6719, yani
+  **+0,0349** — `sharePerPurchase: 0.035` ile birebir.
+
 **Kaldı:**
 
 - **Adım 3'ün ikinci kutusu (27 maddelik elle doğrulama) ve adım 4, 5, 6.**

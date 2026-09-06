@@ -845,8 +845,10 @@ extension GameStore {
         case matureFloor
         case readyToIPO
         case forwardThreeHours
+        case forwardTwoDays
         case backOneHour
         case emptyCash
+        case maxWarehouse
 
         var id: String { rawValue }
 
@@ -859,8 +861,10 @@ extension GameStore {
             case .matureFloor: "Katı olgunlaştır"
             case .readyToIPO:  "Halka arza hazırla"
             case .forwardThreeHours: "Saati 3 saat ileri al"
+            case .forwardTwoDays:    "Saati 2 gün ileri al"
             case .backOneHour:       "Saati 1 saat geri al"
             case .emptyCash:         "Kasayı boşalt"
+            case .maxWarehouse:      "Depoyu tavana çıkar"
             }
         }
     }
@@ -898,6 +902,21 @@ extension GameStore {
             debugTimeOffset += 3 * 3600
             handleBecameActive()
 
+        case .forwardTwoDays:
+            // Pazar payı kayması krediye yazılan saniyelerle işliyor, o yüzden
+            // görünür bir kayma için depo tavanının da büyük olması gerekiyor.
+            handleWillResignActive()
+            debugTimeOffset += 48 * 3600
+            handleBecameActive()
+
+        case .maxWarehouse:
+            grantDebugMoney()
+            var adim = 0
+            while GameEngine.warehouseUpgradeCost(for: state, config: config) != nil, adim < 20 {
+                upgradeWarehouse()
+                adim += 1
+            }
+
         case .backOneHour:
             // Saat geriye alındı: `lastSeenAt` olduğu yerde kalıyor, yalnızca
             // şimdi geri gidiyor. Para ne artmalı ne azalmalı.
@@ -913,9 +932,9 @@ extension GameStore {
         // Toplu kurulum kutlamaları temizlenir; ama zaman senaryolarının ürettiği
         // dönüş özeti ve müdür raporu **durmalı** — onları görmek için varlar.
         switch scenario {
-        case .forwardThreeHours, .backOneHour, .emptyCash:
+        case .forwardThreeHours, .forwardTwoDays, .backOneHour, .emptyCash:
             break
-        case .rich, .secondFloor, .roof, .matureFloor, .readyToIPO:
+        case .rich, .secondFloor, .roof, .matureFloor, .readyToIPO, .maxWarehouse:
             clearDebugCelebrations()
         }
         persist()
