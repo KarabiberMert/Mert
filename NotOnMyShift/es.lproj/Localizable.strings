@@ -48,10 +48,9 @@
 "action.upgradeWarehouse" = "Ampliar el almacén";
 "action.staffFull" = "Detrás del mostrador ya no cabe nadie más.";
 "action.price" = "Precio";
-"action.shopFill" = "Mostrador %@ lleno";
+"action.serviceEvery" = "Una venta cada %@";
 "action.priceHint" = "Más barato trae más clientes, más caro trae menos";
-"action.waitingOrders" = "%lld pedidos";
-"action.noOrders" = "Sin pedidos";
+"action.waitingOrders" = "%1$lld / %2$lld pedidos";
 "action.confirmPrice" = "Aplicar";
 "action.satisfaction" = "Satisfacción";
 "action.coffeesToGo" = "faltan %lld";

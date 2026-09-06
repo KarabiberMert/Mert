@@ -88,24 +88,28 @@ final class EquipmentAndBranchTests: XCTestCase {
     // MARK: - Maaş
 
     func testWagesAreDeductedFromGross() {
-        // 2 eleman: çarpanlar 1.0 + 2.0 = 3.0, oran 1/sn → brüt 3.0
-        // maaş 2 × 0.25 = 0.5 → net 2.5
+        // Ölçülen ilişki: net = brüt − maaş. Mutlak sayılar servis süresine
+        // bağlı olduğu için burada iddia edilmiyor.
         let state = BalanceFixture.state(staffCount: 2, config: config)
 
-        XCTAssertEqual(GameEngine.grossRate(for: state, config: config), 3.0, accuracy: 1e-9)
-        XCTAssertEqual(GameEngine.wageRate(for: state, config: config), 0.5, accuracy: 1e-9)
-        XCTAssertEqual(GameEngine.productionRate(for: state, config: config), 2.5, accuracy: 1e-9)
+        let brut = GameEngine.grossRate(for: state, config: config)
+        let maas = GameEngine.wageRate(for: state, config: config)
+        XCTAssertGreaterThan(brut, 0)
+        XCTAssertEqual(maas, 2 * 0.25, accuracy: 1e-9, "İki eleman × saniyelik maaş")
+        XCTAssertEqual(GameEngine.productionRate(for: state, config: config), brut - maas, accuracy: 1e-9)
     }
 
     func testAdvanceCreditsTheNetRate() {
         let state = BalanceFixture.state(staffCount: 2, config: config)
         let next = GameEngine.advance(state, by: 10, config: config)
-        XCTAssertEqual(next.money, 25, accuracy: 1e-9)
+        // Satışlar tam adet olduğu için bir satışlık tolerans var.
+        let beklenen = GameEngine.productionRate(for: state, config: config) * 10
+        XCTAssertEqual(next.money, beklenen, accuracy: config.sectors[0].manual.revenuePerSale)
     }
 
     func testNetNeverGoesNegative() {
         // Maaş brütü geçse bile oyuncu geri gitmez; üretim sıfırda durur.
-        let heavy = BalanceFixture.config(ratePerSecond: 0.01, wagePerSecond: 5)
+        let heavy = BalanceFixture.config(wagePerSecond: 5)
         let state = BalanceFixture.state(staffCount: 3, config: heavy)
 
         XCTAssertGreaterThan(GameEngine.wageRate(for: state, config: heavy),
@@ -130,10 +134,18 @@ final class EquipmentAndBranchTests: XCTestCase {
             return XCTFail("Karşılaştırma kurulamadı")
         }
 
-        // Ekipman: brüt 3 → 6, maaş sabit 0,5 → net 5,5
-        XCTAssertEqual(GameEngine.productionRate(for: withKit, config: config), 5.5, accuracy: 1e-9)
-        // Üçüncü eleman: brüt 3 → 3,5, maaş 0,5 → 0,75 → net 2,75
-        XCTAssertEqual(GameEngine.productionRate(for: withStaff, config: config), 2.75, accuracy: 1e-9)
+        // Asıl iddia: makine her şeyi çarpar ve maaş istemez; eleman hem
+        // pahalıdır hem her saniye maaş ister.
+        XCTAssertGreaterThan(
+            GameEngine.productionRate(for: withKit, config: config),
+            GameEngine.productionRate(for: withStaff, config: config),
+            "Maaş ısırmaya başlayınca makine elemanı geçmeli"
+        )
+        XCTAssertEqual(
+            GameEngine.wageRate(for: withKit, config: config),
+            GameEngine.wageRate(for: base, config: config),
+            accuracy: 1e-9, "Ekipman maaş ödemez"
+        )
         XCTAssertGreaterThan(withKit.money, withStaff.money, "Üstelik ekipman daha ucuzdu")
     }
 
@@ -147,7 +159,9 @@ final class EquipmentAndBranchTests: XCTestCase {
                        GameEngine.grossRate(for: single, config: config) * 3, accuracy: 1e-9)
         XCTAssertEqual(GameEngine.wageRate(for: triple, config: config),
                        GameEngine.wageRate(for: single, config: config) * 3, accuracy: 1e-9)
-        XCTAssertEqual(GameEngine.productionRate(for: triple, config: config), 7.5, accuracy: 1e-9)
+        // Net de üç katı: brüt ve maaş birlikte çarpıldığı için oran korunur.
+        XCTAssertEqual(GameEngine.productionRate(for: triple, config: config),
+                       GameEngine.productionRate(for: single, config: config) * 3, accuracy: 1e-9)
     }
 
     func testBranchCostFollowsTheGrowthCurve() {

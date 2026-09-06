@@ -17,7 +17,9 @@ final class DemandTests: XCTestCase {
         // devreye girmesin.
         let config = BalanceFixture.config(
             revenuePerSale: 10,
-            ratePerSecond: 10,
+            serviceBaseSeconds: 1,
+            serviceRatePerStaffPoint: 0,
+            serviceMinimumSeconds: 1,
             starterArrivalSeconds: 1_000_000,
             baseArrivalSeconds: 1_000_000,
             demandStartQueue: 0,
@@ -40,7 +42,9 @@ final class DemandTests: XCTestCase {
     func testQueueSettlesAtTheExpiryLimitWhenDemandExceedsCapacity() {
         let config = BalanceFixture.config(
             revenuePerSale: 10,
-            ratePerSecond: 10,
+            serviceBaseSeconds: 1,
+            serviceRatePerStaffPoint: 0,
+            serviceMinimumSeconds: 1,
             starterArrivalSeconds: 1_000_000,
             baseArrivalSeconds: 0.5,          // 2 satış/sn taban
             cancelSeconds: 60,
@@ -212,7 +216,9 @@ final class DemandTests: XCTestCase {
     func testHighPriceDoesNotSpiralToTheFloor() {
         let config = BalanceFixture.config(
             revenuePerSale: 10,
-            ratePerSecond: 10,
+            serviceBaseSeconds: 1,
+            serviceRatePerStaffPoint: 0,
+            serviceMinimumSeconds: 1,
             starterArrivalSeconds: 1_000_000,
             baseArrivalSeconds: 1_000_000,
             cancelSeconds: 10,
@@ -343,7 +349,9 @@ final class DemandTests: XCTestCase {
         // Taban aralık devre dışı ki kapsama belirleyici olsun.
         let config = BalanceFixture.config(
             revenuePerSale: 10,
-            ratePerSecond: 10,
+            serviceBaseSeconds: 1,
+            serviceRatePerStaffPoint: 0,
+            serviceMinimumSeconds: 1,
             starterArrivalSeconds: 1_000_000,
             baseArrivalSeconds: 1_000_000,
             demandStartQueue: 0,
@@ -469,7 +477,9 @@ final class DemandTests: XCTestCase {
     func testStaffKeepServingWhileYouAreAway() {
         let config = BalanceFixture.config(
             revenuePerSale: 10,
-            ratePerSecond: 10,
+            serviceBaseSeconds: 1,
+            serviceRatePerStaffPoint: 0,
+            serviceMinimumSeconds: 1,
             starterArrivalSeconds: 1,
             baseArrivalSeconds: 1,
             demandStartQueue: 0,
@@ -495,7 +505,9 @@ final class PriceTests: XCTestCase {
     /// Taban geliş hızı devre dışı ki fiyat belirleyici olsun.
     private let config = BalanceFixture.config(
         revenuePerSale: 10,
-        ratePerSecond: 10,
+        serviceBaseSeconds: 1,
+        serviceRatePerStaffPoint: 0,
+        serviceMinimumSeconds: 1,
         starterArrivalSeconds: 1_000_000,
         baseArrivalSeconds: 1_000_000,
         demandStartQueue: 0,

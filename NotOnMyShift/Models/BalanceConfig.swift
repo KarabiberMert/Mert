@@ -12,6 +12,8 @@ struct BalanceConfig: Codable, Sendable, Equatable {
     /// Katların sırası. Sıfırıncı sektör zemin kattır ve baştan açıktır.
     var sectors: [SectorSpec]
     var warehouse: Warehouse
+    var service: Service
+    var shop: Shop
     var demand: Demand
     var counter: Counter
     var offline: Offline
@@ -59,8 +61,6 @@ struct BalanceConfig: Codable, Sendable, Equatable {
 
     /// Çağ 1: eleman.
     struct Staff: Codable, Sendable, Equatable {
-        /// Tek elemanın saniyelik taban getirisi. Elemanın kendi çarpanıyla çarpılır.
-        var ratePerSecond: Double
         /// İlk elemanın ücreti.
         var baseCost: Double
         /// Her elemanda ücretin çarpanı. `cost(n) = baseCost * costGrowth^n`
@@ -125,6 +125,38 @@ struct BalanceConfig: Codable, Sendable, Equatable {
             /// Bu seviyeye çıkmanın ücreti. İlk seviyede 0.
             var cost: Double
         }
+    }
+
+    /// Servis hızı: kadro bir siparişi kaç saniyede karşılıyor.
+    ///
+    /// Kapasite artık kadronun "saniyelik getirisi"nden değil bu **süreden**
+    /// türetiliyor. Sebebi oynanış: süre açıkça tasarlanınca müşterilerin bir
+    /// anda eriyip yok olması engelleniyor ve oyuncu "kaç saniyede bir satış"
+    /// diye somut bir sayı görüyor.
+    ///
+    /// Kısalan şey süre değil, **hız**: her kadro puanı saatlik servis hızını
+    /// sabit bir oranda artırıyor, süre de bunun tersi olarak kısalıyor
+    /// (6 → 4,7 → 4,0 → 3,5 → 3,1 → 2,7 sn). Süreyi doğrudan kısaltmayı
+    /// denedik ve bıraktık: sabit bir taban süreye çarpınca son iki eleman
+    /// hiçbir şey katmadan tam maaş alıyordu; oyuncu için "eleman almak
+    /// zarar" gibi görünen bir çukur oluşuyordu. Bu haliyle her elemanın
+    /// getirisi eşit ve daima pozitif, ekipman aldıkça da büyüyor.
+    struct Service: Codable, Sendable, Equatable {
+        /// Tek elemanlı tezgâhın servis süresi.
+        var baseSeconds: TimeInterval
+        /// Her ek kadro puanının servis hızına kattığı oran. 0,25 → ikinci
+        /// eleman hızı %25 artırır, süre 6 sn'den 4,7 sn'ye iner.
+        var ratePerStaffPoint: Double
+        /// Güvenlik tabanı: süre bunun altına inmez. Kadro tek başına buraya
+        /// yaklaşamaz; sınır ekipman çarpanı süreyi böldüğünde anlam kazanır.
+        var minimumSeconds: TimeInterval
+    }
+
+    /// Dükkânın kendisi.
+    struct Shop: Codable, Sendable, Equatable {
+        /// Bir şubenin kapısında bekleyebilecek en fazla sipariş. Şube
+        /// açtıkça toplam kapasite büyür.
+        var queueCapacityPerBranch: Double
     }
 
     /// Talep: dükkâna düşen siparişler.

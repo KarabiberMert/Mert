@@ -209,6 +209,7 @@ final class GameEngineTests: XCTestCase {
         XCTAssertEqual(state.floors[0].staff[0].id, "quick")
         XCTAssertEqual(GameEngine.productionRate(for: state, config: config), 1.0, accuracy: 1e-9)
         XCTAssertTrue(state.isAutomated)
+        let tekElemanli = state
 
         guard case .success(let afterSecond) = GameEngine.hireStaff(onFloor: 0, state, config: config) else {
             return XCTFail("İkinci eleman alınamadı")
@@ -216,8 +217,12 @@ final class GameEngineTests: XCTestCase {
         state = afterSecond
 
         XCTAssertEqual(state.money, 700, accuracy: 1e-9)              // 100 * 2^1 = 200
-        // İkinci elemanın çarpanı 2.0 → toplam oran 1.0 + 2.0
-        XCTAssertEqual(GameEngine.productionRate(for: state, config: config), 3.0, accuracy: 1e-9)
+        // İkinci eleman servis süresini kısaltır, dolayısıyla üretimi artırır.
+        // Artış artık doğrusal değil: her yeni eleman bir öncekinden az katar.
+        XCTAssertGreaterThan(
+            GameEngine.productionRate(for: state, config: config),
+            GameEngine.productionRate(for: tekElemanli, config: config)
+        )
     }
 
     func testHiringFailsWithoutEnoughMoney() {
@@ -304,13 +309,24 @@ final class GameEngineTests: XCTestCase {
 
         for sector in config.sectors {
             XCTAssertGreaterThan(sector.manual.revenuePerSale, 0)
-            XCTAssertGreaterThan(sector.staff.ratePerSecond, 0)
             XCTAssertGreaterThan(sector.staff.baseCost, 0)
             XCTAssertGreaterThan(sector.staff.costGrowth, 1, "Ücret eğrisi artmıyorsa oyun kırılır")
             XCTAssertGreaterThanOrEqual(sector.staff.wagePerSecond, 0)
-            XCTAssertLessThan(
-                sector.staff.wagePerSecond, sector.staff.ratePerSecond,
-                "'\(sector.id)': maaş taban üretimi geçerse ilk eleman zarar ettirir"
+
+            // Kapasite artık servis süresinden türüyor; değişmez aynı kaldı:
+            // ilk eleman zarar ettirmemeli.
+            guard let ilk = sector.staffPool.first else {
+                return XCTFail("'\(sector.id)': kadro havuzu boş")
+            }
+            var tekElemanli = FloorState(sectorID: sector.id)
+            tekElemanli.staff = [
+                StaffMember(id: ilk.id, rateMultiplier: ilk.rateMultiplier, hiredAtGameSeconds: 0)
+            ]
+            let brut = GameEngine.floorGross(tekElemanli, spec: sector, config: config)
+            let maas = GameEngine.floorWages(tekElemanli, spec: sector)
+            XCTAssertGreaterThan(
+                brut, maas,
+                "'\(sector.id)': ilk eleman maaşını çıkarmıyor"
             )
 
             XCTAssertFalse(sector.equipment.isEmpty)

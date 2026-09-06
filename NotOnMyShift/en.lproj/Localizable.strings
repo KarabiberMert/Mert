@@ -49,10 +49,9 @@
 "action.upgradeWarehouse" = "Grow the store room";
 "action.staffFull" = "No room behind the counter for anyone else.";
 "action.price" = "Price";
-"action.shopFill" = "Counter %@ full";
+"action.serviceEvery" = "A sale every %@";
 "action.priceHint" = "Cheaper brings more customers, dearer brings fewer";
-"action.waitingOrders" = "%lld orders";
-"action.noOrders" = "No orders yet";
+"action.waitingOrders" = "%1$lld / %2$lld orders";
 "action.confirmPrice" = "Apply";
 "action.satisfaction" = "Satisfaction";
 "action.coffeesToGo" = "%lld more to go";

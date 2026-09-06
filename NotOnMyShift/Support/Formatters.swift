@@ -128,6 +128,20 @@ enum DurationText {
         guard seconds.isFinite, seconds >= 1 else { return L.durationNone }
         return Duration.seconds(seconds).formatted(base.locale(locale))
     }
+
+    /// Servis süresi gibi **kısa** aralıklar: bir hane ondalık gösterir ve
+    /// 1 saniyenin altına da iner. `text` burada işe yaramıyor; o, saatleri
+    /// günleri yazan çevrimdışı özet için ondalığı gizliyor.
+    private static let short = Duration.UnitsFormatStyle(
+        allowedUnits: [.seconds],
+        width: .abbreviated,
+        fractionalPart: .show(length: 1)
+    )
+
+    static func brief(_ seconds: TimeInterval, locale: Locale = Money.current.numberLocale) -> String {
+        guard seconds.isFinite, seconds > 0 else { return L.durationNone }
+        return Duration.seconds(seconds).formatted(short.locale(locale))
+    }
 }
 
 /// Yüzde metni. Sayı yereli paranınkiyle aynı — ondalık ayracı bir ekranda

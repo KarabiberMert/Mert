@@ -73,25 +73,35 @@ final class FloorTests: XCTestCase {
             config: config
         )
 
-        XCTAssertEqual(GameEngine.floorNet(state.floors[0], spec: ground), 2.5, accuracy: 1e-9)
-        XCTAssertEqual(GameEngine.floorNet(state.floors[1], spec: upper), 9.0, accuracy: 1e-9)
-        XCTAssertEqual(GameEngine.grossRate(for: state, config: config), 13.0, accuracy: 1e-9)
+        // Ölçülen ilişki: bina neti katların netlerinin toplamı.
+        let zemin = GameEngine.floorNet(state.floors[0], spec: ground, config: config)
+        let ust = GameEngine.floorNet(state.floors[1], spec: upper, config: config)
+        XCTAssertGreaterThan(zemin, 0)
+        XCTAssertGreaterThan(ust, zemin, "Üst kat daha büyük sayılarla çalışıyor")
         XCTAssertEqual(GameEngine.wageRate(for: state, config: config), 1.5, accuracy: 1e-9)
-        XCTAssertEqual(GameEngine.productionRate(for: state, config: config), 11.5, accuracy: 1e-9)
+        XCTAssertEqual(GameEngine.productionRate(for: state, config: config), zemin + ust, accuracy: 1e-9)
+        XCTAssertEqual(
+            GameEngine.grossRate(for: state, config: config),
+            zemin + ust + GameEngine.wageRate(for: state, config: config),
+            accuracy: 1e-9
+        )
     }
 
     func testALosingFloorDoesNotDragDownAProfitableOne() {
         // Zarardaki kat sıfır üretir; kârdaki katın kazancını yemez.
-        let harsh = BalanceFixture.config(ratePerSecond: 0.01, wagePerSecond: 5)
+        let harsh = BalanceFixture.config(wagePerSecond: 5)
         let state = BalanceFixture.state(
             staffCount: 3,
             extraFloors: [BalanceFixture.upperFloor(staffCount: 1, config: harsh)],
             config: harsh
         )
 
-        XCTAssertEqual(GameEngine.floorNet(state.floors[0], spec: harsh.sectors[0]), 0, accuracy: 1e-9)
-        XCTAssertEqual(GameEngine.floorNet(state.floors[1], spec: harsh.sectors[1]), 9, accuracy: 1e-9)
-        XCTAssertEqual(GameEngine.productionRate(for: state, config: harsh), 9, accuracy: 1e-9)
+        let zarardaki = GameEngine.floorNet(state.floors[0], spec: harsh.sectors[0], config: harsh)
+        let karli = GameEngine.floorNet(state.floors[1], spec: harsh.sectors[1], config: harsh)
+        XCTAssertEqual(zarardaki, 0, accuracy: 1e-9, "Zarardaki kat sıfır üretir")
+        XCTAssertGreaterThan(karli, 0)
+        XCTAssertEqual(GameEngine.productionRate(for: state, config: harsh), karli, accuracy: 1e-9,
+                       "Zarardaki kat kârdakini aşağı çekmemeli")
     }
 
     func testFloorsKeepTheirOwnCrewAndKit() {
@@ -148,7 +158,12 @@ final class FloorTests: XCTestCase {
         )
 
         // Zemin kat çalışmaya devam eder, tanınmayan kat sessizce sıfır üretir.
-        XCTAssertEqual(GameEngine.productionRate(for: state, config: config), 2.5, accuracy: 1e-9)
+        let yalnizZemin = BalanceFixture.state(staffCount: 2, config: config)
+        XCTAssertEqual(
+            GameEngine.productionRate(for: state, config: config),
+            GameEngine.productionRate(for: yalnizZemin, config: config),
+            accuracy: 1e-9
+        )
         guard case .failure(let error) = GameEngine.hireStaff(onFloor: 1, state, config: config) else {
             return XCTFail("Tanınmayan sektörde alım geçmemeli")
         }

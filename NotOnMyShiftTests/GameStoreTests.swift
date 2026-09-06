@@ -444,19 +444,22 @@ final class GameStoreTests: XCTestCase {
             let store = GameStore(config: config, saves: saves, now: { BalanceFixture.epoch })
 
             XCTAssertEqual(store.maturityProgress, 1, accuracy: 1e-9)
-            XCTAssertEqual(store.saleValue ?? 0, 4_200, accuracy: 1e-6)
-            XCTAssertEqual(store.saleInvestmentRate, 4.2, accuracy: 1e-9)
+            let net = store.productionRate
+            let beklenen = net * config.prestige.payoutSeconds
+            XCTAssertEqual(store.saleValue ?? 0, beklenen, accuracy: 1e-6)
+            XCTAssertEqual(store.saleInvestmentRate, net * config.prestige.investmentShare, accuracy: 1e-9)
 
             store.sellSector()
 
-            XCTAssertEqual(store.state.money, 4_200, accuracy: 1e-6)
+            XCTAssertEqual(store.state.money, beklenen, accuracy: 1e-6)
             XCTAssertEqual(store.holdingPoints, 1)
             XCTAssertEqual(store.holdingMultiplier, 1.5, accuracy: 1e-9)
             XCTAssertEqual(store.sectorSaleCelebration, "coffee")
             XCTAssertTrue(store.isSelectedFloorSold)
-            // Kat hâlâ ödüyor: 4,2/sn kira × 1,5 puan çarpanı.
-            XCTAssertEqual(store.netRate(of: 0), 4.2, accuracy: 1e-9)
-            XCTAssertEqual(store.productionRate, 6.3, accuracy: 1e-9)
+            // Kat hâlâ ödüyor: donmuş kira × puan çarpanı.
+            let kira = net * config.prestige.investmentShare
+            XCTAssertEqual(store.netRate(of: 0), kira, accuracy: 1e-9)
+            XCTAssertEqual(store.productionRate, kira * store.holdingMultiplier, accuracy: 1e-9)
 
             store.dismissSectorSaleCelebration()
             XCTAssertNil(store.sectorSaleCelebration)

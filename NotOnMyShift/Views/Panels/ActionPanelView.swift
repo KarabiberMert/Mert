@@ -81,10 +81,9 @@ struct ActionPanelView: View {
         Button(action: onSell) {
             HStack(spacing: 10) {
                 Text(L.sectorSell(store.currentFloor?.sectorID ?? ""))
-                // Kuyruk tezgâhın üstünde durur: oyuncu kime sattığını görsün.
-                Text(store.waitingOrders >= 1
-                     ? L.waitingOrders(store.waitingOrders)
-                     : L.noOrders)
+                // Kuyruk tezgâhın üstünde durur: oyuncu kime sattığını ve
+                // dükkânın tavanına ne kadar kaldığını görsün.
+                Text(L.waitingOrders(store.waitingOrders, capacity: store.shopCapacity))
                     .font(Typography.label(13))
                     .foregroundStyle(Palette.plaster.opacity(0.7))
                     .lineLimit(1)
@@ -191,7 +190,7 @@ struct ActionPanelView: View {
                     // Onaylanmamış fiyat farklı renkte: henüz geçerli değil.
                     .foregroundStyle(hasUnconfirmedPrice ? Palette.inkSoft : Palette.mustardDeep)
                 Spacer(minLength: 8)
-                // Soğuma sürerken kalan süre, bittiğinde doluluk oranı.
+                // Soğuma sürerken kalan süre, bittiğinde kadronun servis hızı.
                 // İkisi aynı yerde: satır kalabalıklaşmasın.
                 if !store.canChangePrice {
                     Text(DurationText.text(store.priceCooldownRemaining))
@@ -199,8 +198,8 @@ struct ActionPanelView: View {
                         .foregroundStyle(Palette.inkFaint)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
-                } else if let fill = store.shopFill {
-                    Text(L.shopFill(Percent.text(fill)))
+                } else if store.serviceInterval.isFinite, store.serviceInterval > 0 {
+                    Text(L.serviceEvery(DurationText.brief(store.serviceInterval)))
                         .font(Typography.label(12))
                         .foregroundStyle(Palette.inkFaint)
                         .lineLimit(1)

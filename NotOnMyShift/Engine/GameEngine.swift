@@ -103,17 +103,63 @@ enum GameEngine {
     static func floorGross(
         _ floor: FloorState,
         spec: BalanceConfig.SectorSpec,
+        config: BalanceConfig,
         bonus: Double = 1
     ) -> Double {
         // Yatırım katı kira öder: kadrosu ve ekipmanı yok, oranı satışta dondu.
         guard !floor.isInvestment else { return max(0, floor.investmentRate) * max(0, bonus) }
 
-        let multiplierSum = floor.staff.reduce(0.0) { $0 + $1.rateMultiplier }
-        return spec.staff.ratePerSecond
-            * multiplierSum
-            * equipmentMultiplier(for: floor, spec: spec)
-            * Double(branchCount(for: floor, spec: spec))
+        // Kapasite servis süresinden türüyor: saniyede kaç sipariş
+        // karşılanabildiği × satış fiyatı.
+        return capacitySales(for: floor, spec: spec, config: config)
+            * max(0.0001, spec.manual.revenuePerSale)
             * max(0, bonus)
+    }
+
+    /// Kadronun toplam puanı. Nitelikli eleman daha çok sayılır.
+    static func staffPoints(of floor: FloorState) -> Double {
+        floor.staff.reduce(0.0) { $0 + max(0, $1.rateMultiplier) }
+    }
+
+    /// Bir siparişin karşılanma süresi (saniye).
+    ///
+    /// Tek elemanla dengedeki taban; her ek kadro puanı servis **hızını**
+    /// sabit oranda artırıyor, süre de onun tersi olarak kısalıyor. Ekipman
+    /// süreyi ayrıca bölüyor, yani makine yatırımı kadronun üstüne biniyor ve
+    /// eleman almanın getirisini de büyütüyor.
+    static func serviceInterval(
+        for floor: FloorState,
+        spec: BalanceConfig.SectorSpec,
+        config: BalanceConfig
+    ) -> TimeInterval {
+        let points = staffPoints(of: floor)
+        guard points > 0 else { return .infinity }
+        let service = config.service
+        let speed = 1 + max(0, service.ratePerStaffPoint) * (points - 1)
+        let raw = service.baseSeconds / max(0.01, speed)
+        let floored = max(max(0.01, service.minimumSeconds), raw)
+        return floored / max(1, equipmentMultiplier(for: floor, spec: spec))
+    }
+
+    /// Katın saniyede karşılayabildiği sipariş.
+    static func capacitySales(
+        for floor: FloorState,
+        spec: BalanceConfig.SectorSpec,
+        config: BalanceConfig
+    ) -> Double {
+        let interval = serviceInterval(for: floor, spec: spec, config: config)
+        guard interval.isFinite, interval > 0 else { return 0 }
+        return Double(branchCount(for: floor, spec: spec)) / interval
+    }
+
+    /// Dükkânın kapısında bekleyebilecek en fazla sipariş.
+    static func shopCapacity(
+        for floor: FloorState,
+        spec: BalanceConfig.SectorSpec,
+        config: BalanceConfig
+    ) -> Double {
+        max(0, config.shop.queueCapacityPerBranch)
+            * Double(branchCount(for: floor, spec: spec))
     }
 
     /// Katın süreç verimi. Kural yoksa 1 — **süreç kurmayan oyuncu hiçbir şey
@@ -145,9 +191,10 @@ enum GameEngine {
     static func floorNet(
         _ floor: FloorState,
         spec: BalanceConfig.SectorSpec,
+        config: BalanceConfig,
         bonus: Double = 1
     ) -> Double {
-        max(0, floorGross(floor, spec: spec, bonus: bonus) - floorWages(floor, spec: spec))
+        max(0, floorGross(floor, spec: spec, config: config, bonus: bonus) - floorWages(floor, spec: spec))
     }
 
     // MARK: - Talep
@@ -157,10 +204,11 @@ enum GameEngine {
     static func capacityRate(
         _ floor: FloorState,
         spec: BalanceConfig.SectorSpec,
+        config: BalanceConfig,
         buff: Double,
         bonus: Double
     ) -> Double {
-        floorGross(floor, spec: spec, bonus: bonus) * buff / salePrice(spec)
+        floorGross(floor, spec: spec, config: config, bonus: bonus) * buff / salePrice(spec)
     }
 
     private static func salePrice(_ spec: BalanceConfig.SectorSpec) -> Double {
@@ -253,7 +301,7 @@ enum GameEngine {
         let base = 1 / max(0.0001, interval)
         let buff = eventMultiplier(for: state) * holdingMultiplier(for: state, config: config)
         let bonus = processBonus(for: floor, state: state, config: config)
-        let capacity = capacityRate(floor, spec: spec, buff: buff, bonus: bonus)
+        let capacity = capacityRate(floor, spec: spec, config: config, buff: buff, bonus: bonus)
 
         // Kapasite terimi **üslü**: 1 olsaydı talep kapasiteyle tam orantılı
         // olur ve sistem ölçekten bağımsız kalırdı — büyümek hiçbir şeyi
@@ -307,17 +355,21 @@ enum GameEngine {
         capacity: Double,
         arrival: Double,
         seconds: TimeInterval,
+        shopCapacity: Double = .infinity,
         config: BalanceConfig
     ) -> DemandOutcome {
         let life = max(1, config.demand.cancelSeconds)
-        let start = max(0, queue)
+        // Dükkânın kapısı sonsuz değil: kapasiteyi aşan sipariş sıraya girmez.
+        let ceiling = max(0, shopCapacity)
+        let start = min(max(0, queue), ceiling)
         guard seconds > 0 else { return DemandOutcome(served: 0, queue: start, cancelled: 0) }
 
         /// İptal edilenler korunumdan çıkar: gelen + baştaki = karşılanan +
         /// kalan + iptal. Ayrı bir integral almaya gerek yok.
         func outcome(served: Double, rest: Double) -> DemandOutcome {
-            let cancelled = max(0, start + max(0, arrival) * seconds - served - rest)
-            return DemandOutcome(served: served, queue: max(0, rest), cancelled: cancelled)
+            let capped = min(max(0, rest), ceiling)
+            let cancelled = max(0, start + max(0, arrival) * seconds - served - capped)
+            return DemandOutcome(served: served, queue: capped, cancelled: cancelled)
         }
 
         // Kapasite yok (Çağ 0): kimse hizmet vermiyor. Kuyruk birikir ve
@@ -391,7 +443,7 @@ enum GameEngine {
         return sum(state, config) { floor, spec in
             guard !floor.isInvestment else { return 0 }
             let bonus = processBonus(for: floor, state: state, config: config)
-            let capacity = capacityRate(floor, spec: spec, buff: buff, bonus: bonus)
+            let capacity = capacityRate(floor, spec: spec, config: config, buff: buff, bonus: bonus)
             // `productionRate` ile **aynı** çarpanı kullanmalı, yoksa
             // "ortalama satış" fiyatın üstüne çıkar: kuyruk varken gelir tam
             // kapasiteyle, satış adedi geliş hızıyla hesaplanmış olurdu.
@@ -411,22 +463,6 @@ enum GameEngine {
         return max(0, productionRate(for: state, config: config) / sales)
     }
 
-    /// Tezgâhın ne kadarı dolu (0…1). Kapasite yoksa `nil` — Çağ 0'da
-    /// doluluk anlamsız, orada tezgâhı oyuncunun kendisi çalıştırıyor.
-    ///
-    /// Fiyat kaydırıcısının öğrettiği şey bu: doluluk 1'e yaklaşırken fiyatı
-    /// yükseltmek kazandırır, 1'in altına düşünce tezgâh boş kalmaya başlar.
-    static func shopFill(onFloor index: Int, _ state: GameState, config: BalanceConfig) -> Double? {
-        guard state.floors.indices.contains(index),
-              !state.floors[index].isInvestment,
-              let spec = spec(for: state.floors[index], config: config) else { return nil }
-        let floor = state.floors[index]
-        let buff = eventMultiplier(for: state) * holdingMultiplier(for: state, config: config)
-        let bonus = processBonus(for: floor, state: state, config: config)
-        guard capacityRate(floor, spec: spec, buff: buff, bonus: bonus) > 0 else { return nil }
-        return demandFactor(for: floor, spec: spec, state: state, config: config)
-    }
-
     /// Üretimin kapasiteye oranı (0…1). Ekrandaki saniyelik oran bunu içerir.
     static func demandFactor(
         for floor: FloorState,
@@ -437,7 +473,7 @@ enum GameEngine {
         guard !floor.isInvestment else { return 1 }
         let buff = eventMultiplier(for: state) * holdingMultiplier(for: state, config: config)
         let bonus = processBonus(for: floor, state: state, config: config)
-        let capacity = capacityRate(floor, spec: spec, buff: buff, bonus: bonus)
+        let capacity = capacityRate(floor, spec: spec, config: config, buff: buff, bonus: bonus)
         guard capacity > 0 else { return 1 }
         // Kuyruk varsa kapasite sınırlıyız: tam hızda çalışıyoruz.
         guard floor.demandQueue <= 0 else { return 1 }
@@ -469,7 +505,7 @@ enum GameEngine {
     static func grossRate(for state: GameState, config: BalanceConfig) -> Double {
         let holding = holdingMultiplier(for: state, config: config)
         return sum(state, config) { floor, spec in
-            floorGross(floor, spec: spec, bonus: processBonus(for: floor, state: state, config: config)) * holding
+            floorGross(floor, spec: spec, config: config, bonus: processBonus(for: floor, state: state, config: config)) * holding
         }
     }
 
@@ -497,7 +533,7 @@ enum GameEngine {
             // `floorGross` taban fiyatla ölçülüyor; oyuncunun koyduğu fiyata
             // çeviriyoruz. Kapasite satış adedidir, fiyat onu paraya çevirir.
             let priceRatio = price(for: floor, spec: spec) / salePrice(spec)
-            let gross = floorGross(floor, spec: spec, bonus: bonus) * buff * demand * priceRatio
+            let gross = floorGross(floor, spec: spec, config: config, bonus: bonus) * buff * demand * priceRatio
             return max(0, gross - floorWages(floor, spec: spec))
         }
     }
@@ -747,7 +783,7 @@ enum GameEngine {
             let floor = state.floors[index]
             guard let spec = spec(for: floor, config: config) else { continue }
             let bonus = processBonus(for: floor, state: state, config: config)
-            let capacity = capacityRate(floor, spec: spec, buff: buff, bonus: bonus)
+            let capacity = capacityRate(floor, spec: spec, config: config, buff: buff, bonus: bonus)
             let wages = floorWages(floor, spec: spec) * seconds
 
             // Yatırım katı kira öder: müşterisi yok, talep onu bağlamaz.
@@ -762,6 +798,7 @@ enum GameEngine {
                 capacity: capacity,
                 arrival: arrival,
                 seconds: seconds,
+                shopCapacity: shopCapacity(for: floor, spec: spec, config: config),
                 config: config
             )
             // Kadro ürünü tek tek satar. Yarım kalan satış bir sonraki
@@ -1399,7 +1436,7 @@ enum GameEngine {
         spec: BalanceConfig.SectorSpec,
         config: BalanceConfig
     ) -> Double {
-        max(0, floorNet(floor, spec: spec)) * max(0, config.prestige.investmentShare)
+        max(0, floorNet(floor, spec: spec, config: config)) * max(0, config.prestige.investmentShare)
     }
 
     /// Katı satmanın getireceği nakit. Kat olgun değilse `nil`.
@@ -1407,7 +1444,7 @@ enum GameEngine {
         guard state.floors.indices.contains(index) else { return nil }
         let floor = state.floors[index]
         guard let spec = spec(for: floor, config: config), isMature(floor, spec: spec) else { return nil }
-        return max(0, floorNet(floor, spec: spec))
+        return max(0, floorNet(floor, spec: spec, config: config))
             * holdingMultiplier(for: state, config: config)
             * max(0, config.prestige.payoutSeconds)
     }

@@ -908,3 +908,47 @@ korunuyor. 225 test.
   sayısı, dengedeki iki sayısal kaygı) bu oturumda dokunulmadı.
 - Değişiklikler commit edilmedi; çalışan kopyada duruyor.
 
+## Servis hızı, dükkân kapasitesi ve denge (6 Eylül)
+
+Ürün sahibinin isteği: kadronun açık bir servis hızı olsun (tek eleman 6 sn'de
+bir sipariş, iki eleman 5), dükkânın müşteri kapasitesi olsun ve ekranda yazsın.
+
+Kapasite artık `şube / servis süresi`. İlk yazdığım formül süreyi doğrudan
+kısaltıyordu (`6 - 1 × (puan - 1)`, taban 2 sn) ve **ölçünce oyunu bozduğu
+görüldü**: kahve havuzunda tam kadro 6,15 puan, yani beşinci ve altıncı eleman
+2 sn tabanına çarpıp hiçbir şey katmadan tam maaş alıyordu. Sonda tablo şuydu:
+
+    1 eleman 23 ₺/dk · 3 eleman 8 ₺/dk · tam kadro 12 ₺/dk
+
+Yani eleman almak zarardı. Kısalan şeyi süre yerine **hız** yaptım:
+`süre = taban / (1 + oran × (puan - 1))`, oran 0,25. Süreler 5,8 · 4,7 · 4,0 ·
+3,5 · 3,1 · 2,7 sn — ürün sahibinin istediği "6, 5, 4, 3" şekli, ama tabana
+çarpmadan. Her elemanın getirisi artık eşit ve daima pozitif; ekipman süreyi
+ayrıca böldüğü için eleman almanın değeri geliştirmelerle **büyüyor**.
+
+Maaşlar bu eğriye göre yeniden ayarlandı (kahve 0,30 → 0,10; fırın 3,5 → 1,2),
+ikisi de tam kadroda brütün %41'i. Yeni tablo:
+
+    1 eleman 36 ₺/dk · 3 eleman 43 ₺/dk · tam kadro 56 ₺/dk
+
+Kuyruk erken oyunda görünmüyordu (0,6 sipariş). Üç ölçümle: sabır 12 → 16 sn,
+memnuniyet tavanı 1,4 → 1,5, geliş tabanı 10 → 4 sn. Sonuncusu **yalnızca**
+erken oyunu ilgilendiriyor: taban 0,25/sn, tek elemanın kapasitesinin biraz
+üstünde, üç elemanı geçince bağlayıcı olmaktan çıkıyor. Tek elemanda kuyruk
+0,9 → 1,8'e çıktı, gelir hiç değişmedi.
+
+Fiyat taraması artık gerçek bir tepe: 2 ₺'de dükkân dolu (kuyruk 8,2) ama kasa
+boş (10 ₺/dk), 5 ₺'de zirve (59 ₺/dk), 8 ₺'de dükkân boş (11 ₺/dk). Tepe ekipman
+aldıkça kayıyor — oyuncunun ayarlayacağı şey bu.
+
+`prestige.payoutSeconds` 5400 → 25200. Sebep test: satış, katı kurmaya
+harcanandan (774.541 ₺) **az** getiriyordu (229.149 ₺), yani satmak zarardı.
+Yeni değerle 1.069.000 ₺, kurma bedelinin 1,38 katı.
+
+Ekranda: satış düğmesinde "1 / 15 sipariş" (kapasite hep yazılı), fiyat
+satırında "5,8 sn. arayla satış". Doluluk yüzdesi kaldırıldı — "1 / 15" onu
+zaten söylüyor; `GameEngine.shopFill` ve `action.noOrders` da silindi.
+
+Kapı yeşil (225 test), simülatörde görsel doğrulama yapıldı, Release derlemesi
+telefona kuruldu.
+

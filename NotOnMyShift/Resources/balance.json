@@ -13,11 +13,10 @@
         "maxPriceFactor": 2.0
       },
       "staff": {
-        "ratePerSecond": 1.2,
         "baseCost": 150.0,
         "costGrowth": 3.2,
         "maxCount": 6,
-        "wagePerSecond": 0.3
+        "wagePerSecond": 0.1
       },
       "equipment": [
         {
@@ -125,11 +124,10 @@
         "maxPriceFactor": 2.0
       },
       "staff": {
-        "ratePerSecond": 14.0,
         "baseCost": 1800.0,
         "costGrowth": 3.4,
         "maxCount": 5,
-        "wagePerSecond": 3.5
+        "wagePerSecond": 1.2
       },
       "equipment": [
         {
@@ -263,19 +261,19 @@
   },
   "demand": {
     "starterArrivalSeconds": 3.0,
-    "baseArrivalSeconds": 10.0,
+    "baseArrivalSeconds": 4.0,
     "cancelSeconds": 25.0,
     "startQueue": 3.0,
     "startSatisfaction": 0.9,
     "minSatisfaction": 0.6,
-    "maxSatisfaction": 1.4,
+    "maxSatisfaction": 1.5,
     "satisfactionPerSecond": 0.01,
     "priceElasticity": 2.0,
     "serviceWeight": 0.4,
     "priceFairnessFloor": 0.3,
     "capacityReference": 1.0,
     "capacityExponent": 1.0,
-    "patienceSeconds": 12.0,
+    "patienceSeconds": 16.0,
     "baulkSharpness": 2.0
   },
   "counter": {
@@ -418,7 +416,7 @@
     ]
   },
   "prestige": {
-    "payoutSeconds": 5400,
+    "payoutSeconds": 25200,
     "investmentShare": 0.15,
     "pointsPerSale": 1,
     "pointsPerCity": 2,
@@ -428,5 +426,13 @@
     "offlineMultiplier": 2.0,
     "boostMultiplier": 3.0,
     "boostSeconds": 1800
+  },
+  "service": {
+    "baseSeconds": 6.0,
+    "ratePerStaffPoint": 0.25,
+    "minimumSeconds": 0.2
+  },
+  "shop": {
+    "queueCapacityPerBranch": 15.0
   }
 }

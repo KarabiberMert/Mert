@@ -215,10 +215,10 @@ enum L {
                comment: "Label above the price slider.")
     }
 
-    /// Tezgâhın doluluğu. `value` hazır biçimlenmiş yüzde.
-    static func shopFill(_ value: String) -> String {
-        String(localized: "action.shopFill", defaultValue: "Counter \(value) full",
-               comment: "How much of the shop capacity demand fills. Value is a formatted percentage.")
+    /// Kadronun servis hızı. `value` hazır biçimlenmiş süre.
+    static func serviceEvery(_ value: String) -> String {
+        String(localized: "action.serviceEvery", defaultValue: "A sale every \(value)",
+               comment: "How often the crew serves one order. Value is a formatted duration.")
     }
 
     /// Fiyat kaydırıcısının altındaki ipucu.
@@ -227,16 +227,11 @@ enum L {
                comment: "One line explaining the price trade-off.")
     }
 
-    /// Bekleyen sipariş. 1 için de 20 için de doğru okunmalı.
-    static func waitingOrders(_ count: Int) -> String {
-        String(localized: "action.waitingOrders", defaultValue: "\(count) orders",
-               comment: "Orders waiting at the counter. Must read correctly for 1 as well as 20.")
-    }
-
-    /// Kuyruk boşken tezgâhın altındaki not.
-    static var noOrders: String {
-        String(localized: "action.noOrders", defaultValue: "No orders yet",
-               comment: "Shown when no order is waiting and the counter cannot sell.")
+    /// Bekleyen sipariş, dükkânın kapasitesiyle birlikte: "3 / 15 sipariş".
+    /// Kapasite hep yazılı ki oyuncu tavana ne kadar kaldığını görsün.
+    static func waitingOrders(_ count: Int, capacity: Int) -> String {
+        String(localized: "action.waitingOrders", defaultValue: "\(count) / \(capacity) orders",
+               comment: "Orders waiting at the counter out of the shop's capacity.")
     }
 
     /// Fiyat değişikliğini uygulayan düğme.

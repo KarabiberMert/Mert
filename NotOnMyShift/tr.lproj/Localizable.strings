@@ -51,10 +51,9 @@
 "action.upgradeWarehouse" = "Depoyu büyüt";
 "action.staffFull" = "Tezgâhın arkasına başka kimse sığmıyor.";
 "action.price" = "Fiyat";
-"action.shopFill" = "Tezgâh %@ dolu";
+"action.serviceEvery" = "%@ arayla satış";
 "action.priceHint" = "Ucuz satmak müşteriyi çoğaltır, pahalı satmak azaltır";
-"action.waitingOrders" = "%lld sipariş";
-"action.noOrders" = "Sipariş yok";
+"action.waitingOrders" = "%1$lld / %2$lld sipariş";
 "action.confirmPrice" = "Onayla";
 "action.satisfaction" = "Memnuniyet";
 "action.coffeesToGo" = "%lld satış daha";

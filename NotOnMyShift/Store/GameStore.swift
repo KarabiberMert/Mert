@@ -91,7 +91,7 @@ final class GameStore {
     func netRate(of index: Int) -> Double {
         guard floors.indices.contains(index),
               let spec = GameEngine.spec(for: floors[index], config: config) else { return 0 }
-        return GameEngine.floorNet(floors[index], spec: spec)
+        return GameEngine.floorNet(floors[index], spec: spec, config: config)
     }
 
     // MARK: - Seçili kata bağlı
@@ -592,6 +592,18 @@ final class GameStore {
         return GameEngine.priceRange(for: spec)
     }
 
+    /// Seçili dükkânın kapısında bekleyebilecek en fazla sipariş.
+    var shopCapacity: Int {
+        guard let floor = currentFloor, let spec = currentSpec, !floor.isInvestment else { return 0 }
+        return max(0, Int(GameEngine.shopCapacity(for: floor, spec: spec, config: config)))
+    }
+
+    /// Bir siparişin karşılanma süresi. Kadro ve ekipman kısaltıyor.
+    var serviceInterval: TimeInterval {
+        guard let floor = currentFloor, let spec = currentSpec, !floor.isInvestment else { return 0 }
+        return GameEngine.serviceInterval(for: floor, spec: spec, config: config)
+    }
+
     /// Bir satışın ortalama net getirisi. Sayaç bunu gösteriyor.
     var averageSaleValue: Double {
         GameEngine.averageSaleValue(for: state, config: config)
@@ -608,11 +620,6 @@ final class GameStore {
         let low = min(config.demand.minSatisfaction, config.demand.maxSatisfaction)
         let high = max(config.demand.minSatisfaction, config.demand.maxSatisfaction)
         return low...max(low, high)
-    }
-
-    /// Tezgâhın doluluk oranı. Çağ 0'da nil.
-    var shopFill: Double? {
-        GameEngine.shopFill(onFloor: selectedFloor, state, config: config)
     }
 
     /// Fiyat yeniden değiştirilebilir mi?

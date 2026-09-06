@@ -12,7 +12,6 @@ enum BalanceFixture {
         revenuePerSale: Double = 10,
         minPriceFactor: Double = 0.5,
         maxPriceFactor: Double = 2,
-        ratePerSecond: Double = 1,
         baseCost: Double = 100,
         costGrowth: Double = 2,
         maxStaff: Int = 3,
@@ -28,7 +27,6 @@ enum BalanceFixture {
                 maxPriceFactor: maxPriceFactor
             ),
             staff: .init(
-                ratePerSecond: ratePerSecond,
                 baseCost: baseCost,
                 costGrowth: costGrowth,
                 maxCount: maxStaff,
@@ -60,7 +58,6 @@ enum BalanceFixture {
             unlockCost: unlockCost,
             manual: .init(revenuePerSale: 100, minPriceFactor: 0.5, maxPriceFactor: 2),
             staff: .init(
-                ratePerSecond: 10,
                 baseCost: 1_000,
                 costGrowth: 2,
                 maxCount: 2,
@@ -82,13 +79,21 @@ enum BalanceFixture {
 
     static func config(
         revenuePerSale: Double = 10,
-        ratePerSecond: Double = 1,
         baseCost: Double = 100,
         costGrowth: Double = 2,
         maxStaff: Int = 3,
         wagePerSecond: Double = 0,
         // Varsayılan 0: elle satışı sayan testler motoru ölçüyor, soğumayı
         // değil. Soğumanın kendi testi ayrı.
+        // Servis: kadro puanı arttıkça süre kısalsın ki "eleman tutmak
+        // üretimi artırır" testleri anlamlı kalsın. 1 eleman (1,0 puan) → 2 sn,
+        // 2 eleman (3,0 puan) → 1 sn.
+        // Tek eleman (1,0 puan) → 10 sn → 0,1 satış/sn. Eski koşumun tek
+        // elemanlı sayılarıyla aynı; kadro arttıkça süre kısalıyor.
+        serviceBaseSeconds: TimeInterval = 10,
+        serviceRatePerStaffPoint: Double = 0.25,
+        serviceMinimumSeconds: TimeInterval = 1,
+        queueCapacityPerBranch: Double = 1_000_000,
         manualCooldownSeconds: TimeInterval = 0,
         minCooldownSeconds: TimeInterval = 0,
         priceChangeCooldownSeconds: TimeInterval = 0,
@@ -131,13 +136,35 @@ enum BalanceFixture {
         boostMultiplier: Double = 3,
         boostSeconds: Double = 60
     ) -> BalanceConfig {
-        BalanceConfig(
+        let service = BalanceConfig.Service(
+            baseSeconds: serviceBaseSeconds,
+            ratePerStaffPoint: serviceRatePerStaffPoint,
+            minimumSeconds: serviceMinimumSeconds
+        )
+        let shop = BalanceConfig.Shop(queueCapacityPerBranch: queueCapacityPerBranch)
+        let demand = BalanceConfig.Demand(
+            starterArrivalSeconds: starterArrivalSeconds,
+            baseArrivalSeconds: baseArrivalSeconds,
+            cancelSeconds: cancelSeconds,
+            startQueue: demandStartQueue,
+            startSatisfaction: startSatisfaction,
+            minSatisfaction: minSatisfaction,
+            maxSatisfaction: maxSatisfaction,
+            satisfactionPerSecond: satisfactionPerSecond,
+            priceFairnessFloor: priceFairnessFloor,
+            serviceWeight: serviceWeight,
+            capacityReference: capacityReference,
+            capacityExponent: capacityExponent,
+            patienceSeconds: patienceSeconds,
+            baulkSharpness: baulkSharpness,
+            priceElasticity: priceElasticity
+        )
+        return BalanceConfig(
             version: 1,
             building: .init(paletteFloors: plannedFloors),
             sectors: [
                 groundSector(
                     revenuePerSale: revenuePerSale,
-                    ratePerSecond: ratePerSecond,
                     baseCost: baseCost,
                     costGrowth: costGrowth,
                     maxStaff: maxStaff,
@@ -150,23 +177,9 @@ enum BalanceFixture {
                 .init(capacitySeconds: 28_800, cost: 500),     // 8 saat
                 .init(capacitySeconds: 86_400, cost: 1_500)    // 24 saat
             ]),
-            demand: .init(
-                starterArrivalSeconds: starterArrivalSeconds,
-                baseArrivalSeconds: baseArrivalSeconds,
-                cancelSeconds: cancelSeconds,
-                startQueue: demandStartQueue,
-                startSatisfaction: startSatisfaction,
-                minSatisfaction: minSatisfaction,
-                maxSatisfaction: maxSatisfaction,
-                satisfactionPerSecond: satisfactionPerSecond,
-                priceFairnessFloor: priceFairnessFloor,
-                serviceWeight: serviceWeight,
-                capacityReference: capacityReference,
-                capacityExponent: capacityExponent,
-                patienceSeconds: patienceSeconds,
-                baulkSharpness: baulkSharpness,
-                priceElasticity: priceElasticity
-            ),
+            service: service,
+            shop: shop,
+            demand: demand,
             counter: .init(
                 manualCooldownSeconds: manualCooldownSeconds,
                 minCooldownSeconds: minCooldownSeconds,

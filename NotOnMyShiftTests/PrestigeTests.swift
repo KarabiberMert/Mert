@@ -57,23 +57,26 @@ final class PrestigeTests: XCTestCase {
         var state = BalanceFixture.state(config: config)
         state.floors = [BalanceFixture.matureFloor(config: config)]
 
-        // Tam kadro (1,0 + 2,0 + 0,5) × taban 1 × öğütücü ×4 × 3 hücre = 42/sn
+        // Satış bedeli = katın neti × payoutSeconds. Mutlak sayı servis
+        // süresine bağlı olduğu için ilişkiden hesaplanıyor.
         let before = GameEngine.productionRate(for: state, config: config)
-        XCTAssertEqual(before, 42, accuracy: 1e-9)
-        XCTAssertEqual(GameEngine.saleValue(onFloor: 0, state, config: config) ?? 0, 4_200, accuracy: 1e-6)
+        XCTAssertGreaterThan(before, 0)
+        let beklenen = before * config.prestige.payoutSeconds
+        XCTAssertEqual(GameEngine.saleValue(onFloor: 0, state, config: config) ?? 0, beklenen, accuracy: 1e-6)
 
         guard case .success(let sold) = GameEngine.sellSector(onFloor: 0, state, config: config) else {
             return XCTFail("olgun kat satılmalıydı")
         }
 
-        XCTAssertEqual(sold.money, 4_200, accuracy: 1e-6)
+        XCTAssertEqual(sold.money, beklenen, accuracy: 1e-6)
         XCTAssertEqual(sold.holdingPoints, 1)
         XCTAssertEqual(sold.stats.sectorsSold, 1)
 
         // Binada kalıcı iz: kat duruyor ve hâlâ ödüyor.
         XCTAssertEqual(sold.floors.count, 1)
         XCTAssertTrue(sold.floors[0].isInvestment)
-        XCTAssertEqual(sold.floors[0].investmentRate, 4.2, accuracy: 1e-9)
+        XCTAssertEqual(sold.floors[0].investmentRate,
+                       before * config.prestige.investmentShare, accuracy: 1e-9)
         XCTAssertTrue(sold.floors[0].staff.isEmpty)
         XCTAssertTrue(sold.floors[0].equipmentLevels.isEmpty)
         XCTAssertEqual(sold.floors[0].branchCount, 1)
@@ -89,12 +92,16 @@ final class PrestigeTests: XCTestCase {
             return XCTFail("olgun kat satılmalıydı")
         }
 
-        // Kira 4,2/sn, puan çarpanı 1,5 → 6,3/sn. Kadro yok ama iş duruyor.
-        XCTAssertEqual(GameEngine.productionRate(for: sold, config: config), 6.3, accuracy: 1e-9)
+        // Kira = satıştaki netin payı, üstüne puan çarpanı biner.
+        let kira = GameEngine.productionRate(for: state, config: config)
+            * config.prestige.investmentShare
+        let beklenenOran = kira * GameEngine.holdingMultiplier(for: sold, config: config)
+        XCTAssertEqual(GameEngine.productionRate(for: sold, config: config), beklenenOran, accuracy: 1e-9)
         XCTAssertTrue(sold.isAutomated, "yatırım katı da sensiz üretir")
 
         let later = GameEngine.advance(sold, by: 100, config: config)
-        XCTAssertEqual(later.money - sold.money, 630, accuracy: 1e-6)
+        XCTAssertEqual(later.money - sold.money, beklenenOran * 100,
+                       accuracy: config.sectors[0].manual.revenuePerSale)
     }
 
     func testAnImmatureFloorCannotBeSold() {
@@ -157,15 +164,21 @@ final class PrestigeTests: XCTestCase {
             extraFloors: [BalanceFixture.upperFloor(staffCount: 1, config: config)],
             config: config
         )
-        // Zemin brüt 3/sn (maaşsız), fırın brüt 10/sn ve maaş 1/sn → net 12/sn.
-        XCTAssertEqual(GameEngine.productionRate(for: state, config: config), 12, accuracy: 1e-9)
-        XCTAssertEqual(GameEngine.manualRevenue(onFloor: 0, state, config: config), 10, accuracy: 1e-9)
+        // Ölçülen kural: puan **brüte** uygulanır, maaşa değil.
+        let brutOnce = GameEngine.grossRate(for: state, config: config)
+        let maasOnce = GameEngine.wageRate(for: state, config: config)
+        let elleOnce = GameEngine.manualRevenue(onFloor: 0, state, config: config)
+        XCTAssertEqual(GameEngine.productionRate(for: state, config: config),
+                       brutOnce - maasOnce, accuracy: 1e-9)
 
         state.holdingPoints = 2
         XCTAssertEqual(GameEngine.holdingMultiplier(for: state, config: config), 2, accuracy: 1e-9)
-        // Brüt ikiye katlanır, maaş yerinde kalır: 6 + (20 − 1) = 25/sn.
-        XCTAssertEqual(GameEngine.productionRate(for: state, config: config), 25, accuracy: 1e-9)
-        XCTAssertEqual(GameEngine.manualRevenue(onFloor: 0, state, config: config), 20, accuracy: 1e-9)
+        XCTAssertEqual(GameEngine.wageRate(for: state, config: config), maasOnce, accuracy: 1e-9,
+                       "Maaş puanla artmaz")
+        XCTAssertEqual(GameEngine.productionRate(for: state, config: config),
+                       brutOnce * 2 - maasOnce, accuracy: 1e-9)
+        XCTAssertEqual(GameEngine.manualRevenue(onFloor: 0, state, config: config),
+                       elleOnce * 2, accuracy: 1e-9)
     }
 
     /// Çarpan brüte uygulanır, maaşa değil — olay çarpanıyla aynı kural.
@@ -346,7 +359,7 @@ final class PrestigeTests: XCTestCase {
             return XCTFail("dengede iki sektör olmalı")
         }
         let mature = BalanceFixture.matureFloor(config: config)
-        let payout = GameEngine.floorNet(mature, spec: ground) * config.prestige.payoutSeconds
+        let payout = GameEngine.floorNet(mature, spec: ground, config: config) * config.prestige.payoutSeconds
         XCTAssertGreaterThan(payout, upstairs.unlockCost, "satış yeni kata yetmiyor")
 
         // Satış katı kurmanın bedelini geçmeli, yoksa satmak zarar olur.
