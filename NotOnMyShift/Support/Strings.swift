@@ -225,6 +225,12 @@ enum L {
                comment: "Shown when no order is waiting and the counter cannot sell.")
     }
 
+    /// Fiyat değişikliğini uygulayan düğme.
+    static var confirmPrice: String {
+        String(localized: "action.confirmPrice", defaultValue: "Apply",
+               comment: "Button that applies the new price the player dialled in.")
+    }
+
     /// Memnuniyet barının etiketi.
     static var satisfaction: String {
         String(localized: "action.satisfaction", defaultValue: "Satisfaction",

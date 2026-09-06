@@ -34,6 +34,9 @@ struct ActionPanelView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Soğuma çubuğunun kalan payı (1 → 0). Satıştan sonra sağdan sola çekilir.
     @State private var cooldownSweep: Double = 0
+    /// Kaydırıcının çevirdiği fiyat. Onaylanana kadar dükkâna işlemez —
+    /// fiyat oynatmak bir karar, kaydırıcıyı gezdirmek değil.
+    @State private var draftPrice: Double?
 
     var body: some View {
         VStack(spacing: 10) {
@@ -183,9 +186,10 @@ struct ActionPanelView: View {
                 Text(L.price)
                     .font(Typography.display(15))
                     .foregroundStyle(Palette.ink)
-                Text(Money.exactText(store.price))
+                Text(Money.exactText(shownPrice))
                     .font(Typography.money(15))
-                    .foregroundStyle(Palette.mustardDeep)
+                    // Onaylanmamış fiyat farklı renkte: henüz geçerli değil.
+                    .foregroundStyle(hasUnconfirmedPrice ? Palette.inkSoft : Palette.mustardDeep)
                 Spacer(minLength: 8)
                 // Soğuma sürerken kalan süre, bittiğinde doluluk oranı.
                 // İkisi aynı yerde: satır kalabalıklaşmasın.
@@ -204,13 +208,31 @@ struct ActionPanelView: View {
                 }
             }
 
-            Slider(
-                value: Binding(get: { store.price }, set: { store.setPrice($0) }),
-                in: store.priceRange
-            )
-            .tint(Palette.mustard)
-            .disabled(!store.canChangePrice)
-            .opacity(store.canChangePrice ? 1 : 0.45)
+            HStack(spacing: 10) {
+                Slider(
+                    value: Binding(
+                        get: { shownPrice },
+                        set: { draftPrice = $0 }
+                    ),
+                    in: store.priceRange
+                )
+                .tint(Palette.mustard)
+                .disabled(!store.canChangePrice)
+                .opacity(store.canChangePrice ? 1 : 0.45)
+
+                if hasUnconfirmedPrice {
+                    Button(L.confirmPrice) {
+                        if let value = draftPrice { store.setPrice(value) }
+                        draftPrice = nil
+                    }
+                    .font(Typography.label(13))
+                    .foregroundStyle(Palette.plaster)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(Palette.enamel, in: Capsule())
+                    .buttonStyle(.plain)
+                }
+            }
 
             Text(L.priceHint)
                 .font(Typography.label(11))
@@ -222,6 +244,17 @@ struct ActionPanelView: View {
         }
         .padding(.horizontal, 4)
         .padding(.bottom, 2)
+    }
+
+    /// Kaydırıcının gösterdiği fiyat: onaylanmamış taslak varsa o, yoksa
+    /// dükkânın geçerli fiyatı.
+    private var shownPrice: Double { draftPrice ?? store.price }
+
+    /// Kaydırıcı geçerli fiyattan uzaklaştı mı?
+    private var hasUnconfirmedPrice: Bool {
+        guard let draft = draftPrice else { return false }
+        // Kaydırıcı sürekli; kuruş farkını değişiklik saymayalım.
+        return abs(draft - store.price) > 0.01
     }
 
     /// Memnuniyet barı. Zamanında karşılanan sipariş doldurur, iptal olan

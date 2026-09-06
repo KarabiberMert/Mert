@@ -166,6 +166,65 @@ final class DemandTests: XCTestCase {
         XCTAssertEqual(sonra.floors[0].servedByHand, 0, accuracy: 1e-9, "Sayaç sıfırlanır")
     }
 
+    /// Fiyat memnuniyeti de etkiler: ucuz dükkân sevilir, pahalı tolere
+    /// edilir. Ama **tek başına belirlemez** — servis baskın kalır.
+    func testPriceMovesSatisfactionButServiceStaysDominant() {
+        let config = BalanceFixture.config(
+            minSatisfaction: 0.6,
+            maxSatisfaction: 1.0,
+            satisfactionPerSecond: 1,        // tek adımda hedefe otursun
+            serviceWeight: 0.7
+        )
+
+        // Kusursuz servis, en ucuz fiyat → tavan.
+        let ucuz = GameEngine.nextSatisfaction(
+            current: 0.6, served: 10, cancelled: 0, priceScore: 1, seconds: 100, config: config
+        )
+        XCTAssertEqual(ucuz, 1.0, accuracy: 1e-9)
+
+        // Kusursuz servis, en pahalı fiyat → düşer ama tabana inmez.
+        let pahali = GameEngine.nextSatisfaction(
+            current: 1.0, served: 10, cancelled: 0, priceScore: 0, seconds: 100, config: config
+        )
+        XCTAssertEqual(pahali, 0.88, accuracy: 1e-9, "0,6 + 0,4 × 0,7")
+        XCTAssertGreaterThan(pahali, config.demand.minSatisfaction, "Fiyat tek başına dibe çekemez")
+
+        // Berbat servis, en ucuz fiyat → yine de düşük: servis baskın.
+        let kotuServis = GameEngine.nextSatisfaction(
+            current: 1.0, served: 0, cancelled: 10, priceScore: 1, seconds: 100, config: config
+        )
+        XCTAssertEqual(kotuServis, 0.72, accuracy: 1e-9, "0,6 + 0,4 × 0,3")
+        XCTAssertLessThan(kotuServis, pahali, "Kötü servis, pahalı fiyattan daha çok zarar verir")
+    }
+
+    /// Pahalı fiyat çöküş sarmalına sokmamalı: talep düşer, memnuniyet biraz
+    /// iner, ama ikisi birbirini besleyip dibe çakmaz.
+    func testHighPriceDoesNotSpiralToTheFloor() {
+        let config = BalanceFixture.config(
+            revenuePerSale: 10,
+            ratePerSecond: 10,
+            starterArrivalSeconds: 1_000_000,
+            baseArrivalSeconds: 1_000_000,
+            cancelSeconds: 10,
+            demandStartQueue: 0,
+            startSatisfaction: 0.9,
+            minSatisfaction: 0.6,
+            maxSatisfaction: 1.0,
+            satisfactionPerSecond: 0.01,
+            serviceWeight: 0.7
+        )
+        var state = BalanceFixture.state(staffCount: 1, demandQueue: 0, config: config)
+        state = GameEngine.setPrice(20, onFloor: 0, state, config: config)   // en pahalı
+
+        let sonra = GameEngine.advance(state, by: 3600, config: config)
+
+        // Kadro yetiştiği için iptal yok; hedef 0,6 + 0,4 × (0,7 × 1 + 0,3 × 0).
+        XCTAssertEqual(sonra.floors[0].satisfaction, 0.88, accuracy: 1e-6)
+        XCTAssertGreaterThan(sonra.floors[0].satisfaction, 0.8, "Sarmal yok")
+        // Ve dükkân hâlâ para kazanıyor.
+        XCTAssertGreaterThan(sonra.money, 0)
+    }
+
     /// Ekosistemin bütünü: yetişen oyuncunun memnuniyeti yükselir,
     /// yetişemeyenin düşer. Çağ 0'da tezgâhı oyuncu çalıştırdığı için asıl
     /// sınav burası.
@@ -236,31 +295,31 @@ final class DemandTests: XCTestCase {
 
         // Hepsi iptal → taban.
         let kotu = GameEngine.nextSatisfaction(
-            current: 1, served: 0, cancelled: 50, seconds: 1000, config: config
+            current: 1, served: 0, cancelled: 50, priceScore: 0, seconds: 1000, config: config
         )
         XCTAssertEqual(kotu, 0.6, accuracy: 1e-9, "Taban aşılmaz")
 
         // Hepsi karşılandı → tavan.
         let iyi = GameEngine.nextSatisfaction(
-            current: 0.6, served: 50, cancelled: 0, seconds: 1000, config: config
+            current: 0.6, served: 50, cancelled: 0, priceScore: 1, seconds: 1000, config: config
         )
         XCTAssertEqual(iyi, 1.0, accuracy: 1e-9, "Zamanında servis tavana kadar ödüllendirir")
 
         // Yarısı iptal → hedef tam ortada (0,8).
         let orta = GameEngine.nextSatisfaction(
-            current: 0.6, served: 25, cancelled: 25, seconds: 1000, config: config
+            current: 0.6, served: 25, cancelled: 25, priceScore: 0.5, seconds: 1000, config: config
         )
         XCTAssertEqual(orta, 0.8, accuracy: 1e-9)
 
         // Tek adımda uçmaz: hız dengede tanımlı.
         let yavas = GameEngine.nextSatisfaction(
-            current: 0.6, served: 50, cancelled: 0, seconds: 10, config: config
+            current: 0.6, served: 50, cancelled: 0, priceScore: 1, seconds: 10, config: config
         )
         XCTAssertEqual(yavas, 0.7, accuracy: 1e-9)
 
         // Hiç sipariş geçmediyse memnuniyet yerinde kalır.
         let sessiz = GameEngine.nextSatisfaction(
-            current: 0.85, served: 0, cancelled: 0, seconds: 1000, config: config
+            current: 0.85, served: 0, cancelled: 0, priceScore: 1, seconds: 1000, config: config
         )
         XCTAssertEqual(sessiz, 0.85, accuracy: 1e-9, "Kapalı dükkân ne kazanır ne kaybeder")
     }

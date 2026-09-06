@@ -683,6 +683,40 @@ kaldırılacak.
 
 Şema 9 → 11. 210 → 217 test.
 
+**Fiyat memnuniyete bağlandı, onay adımı eklendi (6 Eylül 2026)**
+
+Ürün sahibi "fiyat da memnuniyeti değiştirsin, hepsini ortakla, hiçbir şey
+hızlı artıp azalmasın" dedi. Buradaki asıl risk **çöküş sarmalı**: fiyat hem
+talebi hem memnuniyeti tek başına sürüklerse pahalı dükkân az müşteri → düşen
+memnuniyet → daha az müşteri döngüsüne girer ve dibi bulur.
+
+Çözüm, memnuniyeti tek bir şeye değil **ağırlıklı karışıma** bağlamak:
+
+    hedef = taban + (tavan − taban) × (servis × 0,7 + fiyat adaleti × 0,3)
+
+- `servis` = karşılanan / (karşılanan + iptal)
+- `fiyat adaleti` = en ucuzda 1, en pahalıda 0 (aralık içinde doğrusal)
+
+Sayılarla: kusursuz servis + en pahalı fiyat → 0,88 (düşer ama tabana inmez).
+Berbat servis + en ucuz fiyat → 0,72. Yani **kötü servis, pahalı fiyattan daha
+çok zarar verir** — servis baskın kalıyor ve sarmal oluşmuyor. İkisinin de
+testi var (`testPriceMovesSatisfactionButServiceStaysDominant`,
+`testHighPriceDoesNotSpiralToTheFloor`).
+
+Ekosistem artık tek halka: fiyat → sipariş hızı **ve** memnuniyet → sipariş
+hızı. Geliştirmeler bunu oyuncunun lehine çeviriyor; ekipman hem kapasiteyi
+büyütüyor (sipariş kapasiteye oranlı) hem tezgâhı hızlandırıyor (daha çok
+zamanında karşılanan sipariş → daha yüksek memnuniyet).
+
+Hız da yavaşlatıldı: `satisfactionPerSecond` 0,02 → **0,01**, yani tabandan
+tavana ~40 saniye. Hiçbir parametre bir anda uçmuyor.
+
+**Onay adımı:** kaydırıcı artık taslak değiştiriyor, dükkâna işlemiyor.
+Onaylanmamış fiyat gri gösteriliyor ve yanında "Onayla" düğmesi beliriyor;
+basınca uygulanıyor ve soğuma başlıyor. Soğuma **30 → 5 saniye**.
+
+217 → 219 test.
+
 **Kaldı:**
 
 - **Adım 3'ün ikinci kutusu (27 maddelik elle doğrulama) ve adım 4, 5, 6.**

@@ -51,6 +51,7 @@
 "action.priceHint" = "Cheaper brings more customers, dearer brings fewer";
 "action.waitingOrders" = "%lld orders";
 "action.noOrders" = "No orders yet";
+"action.confirmPrice" = "Apply";
 "action.satisfaction" = "Satisfaction";
 "action.coffeesToGo" = "%lld more to go";
 

@@ -195,6 +195,19 @@ enum GameEngine {
         return pow(base / current, max(1, config.demand.priceElasticity))
     }
 
+    /// Fiyatın adalet puanı (0…1): en ucuzda 1, en pahalıda 0.
+    ///
+    /// Memnuniyete **ağırlıklı** girer, tek başına belirlemez. Fiyat hem
+    /// talebi hem memnuniyeti tek başına sürükleseydi pahalı dükkân çöküş
+    /// sarmalına girerdi.
+    static func priceScore(for floor: FloorState, spec: BalanceConfig.SectorSpec) -> Double {
+        let range = priceRange(for: spec)
+        let span = range.upperBound - range.lowerBound
+        guard span > 0 else { return 1 }
+        let current = price(for: floor, spec: spec)
+        return min(1, max(0, (range.upperBound - current) / span))
+    }
+
     /// Tezgâhın soğuma süresi. Ekipman kahveyi hızlandırır.
     static func manualCooldown(
         for floor: FloorState,
@@ -309,6 +322,7 @@ enum GameEngine {
         current: Double,
         served: Double,
         cancelled: Double,
+        priceScore: Double,
         seconds: TimeInterval,
         config: BalanceConfig
     ) -> Double {
@@ -318,8 +332,13 @@ enum GameEngine {
         let total = max(0, served) + max(0, cancelled)
         guard total > 0 else { return min(max(current, low), high) }
 
-        let success = max(0, served) / total
-        let target = low + (high - low) * success
+        // Hedef iki şeyin ağırlıklı karışımı: siparişi zamanında karşıladın mı,
+        // ve fiyatın adil mi. Ağırlık dengede tanımlı; servis baskın.
+        let service = max(0, served) / total
+        let weight = min(1, max(0, demand.serviceWeight))
+        let score = service * weight + min(1, max(0, priceScore)) * (1 - weight)
+
+        let target = low + (high - low) * score
         let step = max(0, demand.satisfactionPerSecond) * seconds
         let moved = current < target ? min(target, current + step) : max(target, current - step)
         return min(max(moved, low), high)
@@ -686,6 +705,7 @@ enum GameEngine {
                 // Kadronun karşıladığı + oyuncunun elle karşıladığı.
                 served: outcome.served + max(0, floor.servedByHand),
                 cancelled: outcome.cancelled,
+                priceScore: priceScore(for: floor, spec: spec),
                 seconds: seconds,
                 config: config
             )

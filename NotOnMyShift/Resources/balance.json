@@ -269,13 +269,14 @@
     "startSatisfaction": 0.9,
     "minSatisfaction": 0.6,
     "maxSatisfaction": 1.0,
-    "satisfactionPerSecond": 0.02,
-    "priceElasticity": 2.0
+    "satisfactionPerSecond": 0.01,
+    "priceElasticity": 2.0,
+    "serviceWeight": 0.7
   },
   "counter": {
     "manualCooldownSeconds": 2.0,
     "minCooldownSeconds": 0.25,
-    "priceChangeCooldownSeconds": 30.0
+    "priceChangeCooldownSeconds": 5.0
   },
   "offline": {
     "minimumReportSeconds": 60

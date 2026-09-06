@@ -165,6 +165,15 @@ struct BalanceConfig: Codable, Sendable, Equatable {
         /// nefes alsın; tek bir iptal her şeyi çevirmesin.
         var satisfactionPerSecond: Double
 
+        /// Memnuniyette servis kalitesinin ağırlığı (0…1). Kalanı fiyat
+        /// adaletine düşer.
+        ///
+        /// Ayrı ağırlıklar şart: fiyat hem talebi hem memnuniyeti tek başına
+        /// belirleseydi pahalı bir dükkân çöküş sarmalına girerdi — az müşteri,
+        /// düşen memnuniyet, daha az müşteri. Ağırlıklı karışımda fiyat
+        /// memnuniyeti eğer ama dibe çekemez; asıl belirleyici servis kalır.
+        var serviceWeight: Double
+
         /// Fiyat esnekliği. Sipariş `(taban fiyat / fiyat)^esneklik` ile
         /// çarpılır.
         ///

@@ -104,6 +104,8 @@ enum BalanceFixture {
         minSatisfaction: Double = 1,
         maxSatisfaction: Double = 1,
         satisfactionPerSecond: Double = 0,
+        // Varsayılan 1: karışımı ölçmeyen testlerde yalnızca servis konuşsun.
+        serviceWeight: Double = 1,
         priceElasticity: Double = 2,
         minimumReportSeconds: TimeInterval = 60,
         upperUnlockCost: Double = 1_000,
@@ -150,6 +152,7 @@ enum BalanceFixture {
                 minSatisfaction: minSatisfaction,
                 maxSatisfaction: maxSatisfaction,
                 satisfactionPerSecond: satisfactionPerSecond,
+                serviceWeight: serviceWeight,
                 priceElasticity: priceElasticity
             ),
             counter: .init(

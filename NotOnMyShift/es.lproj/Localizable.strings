@@ -50,6 +50,7 @@
 "action.priceHint" = "Más barato trae más clientes, más caro trae menos";
 "action.waitingOrders" = "%lld pedidos";
 "action.noOrders" = "Sin pedidos";
+"action.confirmPrice" = "Aplicar";
 "action.satisfaction" = "Satisfacción";
 "action.coffeesToGo" = "faltan %lld";
 

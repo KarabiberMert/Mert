@@ -53,6 +53,7 @@
 "action.priceHint" = "Ucuz satmak müşteriyi çoğaltır, pahalı satmak azaltır";
 "action.waitingOrders" = "%lld sipariş";
 "action.noOrders" = "Sipariş yok";
+"action.confirmPrice" = "Onayla";
 "action.satisfaction" = "Memnuniyet";
 "action.coffeesToGo" = "%lld satış daha";
 
