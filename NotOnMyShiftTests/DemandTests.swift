@@ -420,6 +420,52 @@ final class DemandTests: XCTestCase {
         XCTAssertLessThan(ortalama, fiyat, "Maaş düşülünce ortalama fiyatın altında kalmalı")
     }
 
+    /// Sıra uzayınca gelen müşteri kapıdan döner. Doğrusal olmayan bu fren
+    /// birikimi kendiliğinden sınırlıyor: bekleme sabra yaklaştıkça yeni
+    /// sipariş girişi kesiliyor, kuyruk sonsuza gitmiyor.
+    func testBaulkingKeepsTheWaitNearPatience() {
+        let config = BalanceFixture.config(patienceSeconds: 10, baulkSharpness: 2)
+        let spec = config.sectors[0]
+
+        // Boş kuyrukta fren yok.
+        var floor = FloorState(sectorID: spec.id, demandQueue: 0)
+        XCTAssertEqual(GameEngine.baulkFactor(for: floor, capacity: 1, config: config), 1, accuracy: 1e-9)
+
+        // Bekleme sabra eşitken yarı yarıya: 1/(1+1²).
+        floor = FloorState(sectorID: spec.id, demandQueue: 10)
+        XCTAssertEqual(GameEngine.baulkFactor(for: floor, capacity: 1, config: config), 0.5, accuracy: 1e-9)
+
+        // Sabrın iki katında fren sertleşiyor: 1/(1+2²).
+        floor = FloorState(sectorID: spec.id, demandQueue: 20)
+        XCTAssertEqual(GameEngine.baulkFactor(for: floor, capacity: 1, config: config), 0.2, accuracy: 1e-9)
+
+        // Çağ 0'da fren yok: orada tezgâhı oyuncu çalıştırıyor.
+        floor = FloorState(sectorID: spec.id, demandQueue: 50)
+        XCTAssertEqual(GameEngine.baulkFactor(for: floor, capacity: 0, config: config), 1, accuracy: 1e-9)
+    }
+
+    /// Fren gerçekten birikimi kesiyor: aynı kurulumda sabırlı ve sabırsız
+    /// müşteriyle kuyruk karşılaştırılıyor.
+    func testBaulkingShortensTheQueue() throws {
+        let base = try BalanceConfig.load()
+        var frensiz = base
+        frensiz.demand.patienceSeconds = 1_000_000
+
+        func kuyruk(_ config: BalanceConfig) -> Double {
+            var state = GameState.newGame(characterID: "kahveci", now: BalanceFixture.epoch)
+            state = GameEngine.normalised(state, config: config)
+            state.money = 1_000_000
+            guard case .success(let hired) = GameEngine.hireStaff(onFloor: 0, state, config: config) else {
+                return -1
+            }
+            var sonra = hired
+            for _ in 0..<900 { sonra = GameEngine.advance(sonra, by: 1, config: config) }
+            return sonra.floors[0].demandQueue
+        }
+
+        XCTAssertLessThan(kuyruk(base), kuyruk(frensiz), "Fren kuyruğu kısaltmalı")
+    }
+
     func testStaffKeepServingWhileYouAreAway() {
         let config = BalanceFixture.config(
             revenuePerSale: 10,

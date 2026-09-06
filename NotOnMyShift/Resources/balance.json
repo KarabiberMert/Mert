@@ -272,7 +272,11 @@
     "satisfactionPerSecond": 0.01,
     "priceElasticity": 2.0,
     "serviceWeight": 0.4,
-    "priceFairnessFloor": 0.3
+    "priceFairnessFloor": 0.3,
+    "capacityReference": 1.0,
+    "capacityExponent": 1.0,
+    "patienceSeconds": 12.0,
+    "baulkSharpness": 2.0
   },
   "counter": {
     "manualCooldownSeconds": 2.0,

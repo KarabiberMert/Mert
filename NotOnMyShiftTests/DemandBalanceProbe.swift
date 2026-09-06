@@ -85,22 +85,52 @@ final class DemandBalanceProbe: XCTestCase {
         let taban = olc(base)
         let pahali = olc(range.upperBound)
 
-        // Memnuniyet ortada tepe yapar: iki uç da cezalanır.
-        XCTAssertGreaterThan(taban.memnuniyet, ucuz.memnuniyet, "Taşan dükkân memnun değil")
-        XCTAssertGreaterThan(taban.memnuniyet, pahali.memnuniyet, "Pahalı dükkân da memnun değil")
+        let orta = olc((range.lowerBound + base) / 2)
 
         // Fiyatı yükseltmek memnuniyeti düşürür — ürün sahibinin şartı.
         XCTAssertLessThan(pahali.memnuniyet, taban.memnuniyet)
+
+        // Ucuz satmak memnuniyeti düşürmez: müşteri kuyrukta beklemek yerine
+        // kapıdan dönüyor, dolayısıyla servis puanı çökmüyor. Ceza kasada.
+        XCTAssertGreaterThanOrEqual(ucuz.memnuniyet, taban.memnuniyet - 0.01)
+
+        // Kuyruk fiyatla tekdüze azalır: ucuz doldurur, pahalı boşaltır.
+        XCTAssertGreaterThan(ucuz.kuyruk, orta.kuyruk)
+        XCTAssertGreaterThan(orta.kuyruk, taban.kuyruk)
+        XCTAssertGreaterThan(taban.kuyruk, 1, "Taban fiyatta dükkânda sıra olmalı")
+        XCTAssertEqual(pahali.kuyruk, 0, accuracy: 1e-6, "Pahalı fiyat sırayı eritir")
 
         // Gelir tepesi kuyruğun olduğu yerde: en kârlı oynayış dükkânı dolu
         // tutmak. Boş tezgâh en iyi seçenek olsaydı oyun ters çalışırdı.
         XCTAssertGreaterThan(taban.gelir, ucuz.gelir)
         XCTAssertGreaterThan(taban.gelir, pahali.gelir)
-        XCTAssertGreaterThan(taban.kuyruk, 1, "Taban fiyatta dükkânda sıra olmalı")
-        XCTAssertEqual(pahali.kuyruk, 0, accuracy: 1e-6, "Pahalı fiyat sırayı eritir")
 
-        // Ucuz satmak müşteriyi çoğaltır ama kazandırmaz.
-        XCTAssertGreaterThan(ucuz.kuyruk, taban.kuyruk * 5, "Ucuz fiyat dükkânı taşırır")
+        // Bekleme sabrın çok üstüne çıkmamalı — fren birikimi kesiyor.
+        let capacity = 6 * config.sectors[0].staff.ratePerSecond / base
+        XCTAssertLessThan(taban.kuyruk / capacity, config.demand.patienceSeconds,
+                          "Bekleme sabrın altında kalmalı")
+    }
+
+    func testPrintLateGamePriceRecovery() throws {
+        let base = try shipped()
+        for exponent in [1.0, 0.85] {
+            var config = base
+            config.demand.capacityExponent = exponent
+            config.demand.patienceSeconds = 12
+            print("PROBE ==== üs \(exponent) · tam kadro + ekipman · fiyat taraması ====")
+            let range = GameEngine.priceRange(for: config.sectors[0])
+            for adim in 0...6 {
+                let price = range.lowerBound + (range.upperBound - range.lowerBound) * Double(adim) / 6
+                let state = run(config: config, staff: 6, equipment: true,
+                                branches: 1, price: price, seconds: 900)
+                let floor = state.floors[0]
+                print(String(
+                    format: "PROBE   fiyat %4.1f ₺  memnuniyet %.2f  kuyruk %6.1f  ₺/dk %11.0f",
+                    price, floor.satisfaction, floor.demandQueue,
+                    GameEngine.productionRate(for: state, config: config) * 60
+                ))
+            }
+        }
     }
 
     func testPrintEquilibriumAcrossStages() throws {

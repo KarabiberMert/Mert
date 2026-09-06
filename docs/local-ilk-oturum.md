@@ -851,6 +851,51 @@ Simülatörde doğrulandı: 1 eleman ile memnuniyet %79, tezgâh %100 dolu, orta
 
 222 test.
 
+**Adaptif fren: iki aday ölçüldü, biri elendi (6 Eylül 2026)**
+
+Ürün sahibi "birikimler olmasın, doğrusal olmasın, duruma göre adaptif olsun,
+sonra test et ve en iyisini çalıştır" dedi. İki aday mekanizma eklenip
+`DemandBalanceProbe` ile ölçüldü.
+
+**Aday 1 — kapıdan dönme (baulk). Kabul edildi.**
+Sıra uzadıkça gelen müşteri sıraya girmiyor:
+`fren = 1 / (1 + (bekleme/sabır)^sertlik)`. Doğrusal değil ve kendini
+sınırlıyor. Ölçüm: bekleme 5,7 → 3,6 saniye, kuyruk %37 kısa, **gelir aynı**.
+Birikim sorunu böylece kaynağında kesildi.
+
+**Aday 2 — kapasite üssü. Ölçüldü, elendi.**
+Talep kapasiteyle tam orantılı olduğu için sistem ölçekten bağımsız: büyümek
+hiçbir şeyi değiştirmiyor, memnuniyet her aşamada aynı yere oturuyor. Üssü 1'in
+altına çekmek bunu kırıyor ama ölçüm gösterdi ki **yeni bir karar üretmiyor**:
+
+    üs 0,85 · tam kadro + ekipman
+      fiyat 3 ₺ → kuyruk 80,6 · 2333 ₺/dk
+      fiyat 4 ₺ → kuyruk  0,0 · 2714 ₺/dk   ← tepe, dükkân boş
+
+Dükkân boşalıyor ama oyuncu fiyatı düşürerek toparlayamıyor — sıra geri geliyor,
+para gidiyor. Karşılığında gelir %14 düşüyor. Üs 1'de bırakıldı; gerekçe
+`BalanceConfig` yorumunda. Yeni bir kol (reklam/bilinirlik) gelince yeniden
+değerlendirilmeli.
+
+**Frenin yan etkisi — şekil senin kurallarına daha çok uydu.** Müşteri kuyrukta
+bekleyip iptal olmak yerine kapıdan döndüğü için ucuz fiyatta servis puanı
+çökmüyor:
+
+| Fiyat | Memnuniyet | Kuyruk | ₺/dk |
+|---|---|---|---|
+| 2 ₺ | %81 | 31,2 | 113 |
+| 3 ₺ | %82 | 17,4 | 224 |
+| **4 ₺** | %81 | **6,6** | **335** |
+| 5 ₺ | %77 | 0 | 323 |
+| 8 ₺ | %49 | 0 | 111 |
+
+Kuyruk fiyatla tekdüze azalıyor, memnuniyet taban üstünde tekdüze düşüyor,
+gelir tepesi hâlâ kuyruğun olduğu yerde. Ucuz satmanın cezası artık
+memnuniyette değil kasada — daha okunur bir sonuç.
+
+Şekil `testBalanceShapeRewardsKeepingTheShopBusy` ile, fren de iki ayrı testle
+korunuyor. 225 test.
+
 **Kaldı:**
 
 - **Adım 3'ün ikinci kutusu (27 maddelik elle doğrulama) ve adım 4, 5, 6.**

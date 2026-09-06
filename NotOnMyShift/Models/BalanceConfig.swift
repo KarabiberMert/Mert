@@ -185,6 +185,30 @@ struct BalanceConfig: Codable, Sendable, Equatable {
         /// (müşteri gelmez) cezalanıyor ve denge ortada kalıyor.
         var serviceWeight: Double
 
+        /// Kapasite teriminin çapa noktası (satış/sn). Bu kapasitede üs
+        /// etkisiz; altında yükseltir, üstünde bastırır.
+        var capacityReference: Double
+
+        /// Talebin kapasiteye bağlılık üssü.
+        ///
+        /// 1 ise talep kapasiteyle **tam orantılı** olur ve sistem ölçekten
+        /// bağımsız hale gelir: büyümek hiçbir şeyi değiştirmez, memnuniyet
+        /// her aşamada aynı yere oturur.
+        ///
+        /// 1'in altı **ölçülüp elendi** (`testSweepCandidateFormulas`). 0,85
+        /// ile geç oyunda dükkân boşalıyor ama oyuncu fiyatı düşürerek
+        /// toparlayamıyor: 3 ₺'de sıra geri geliyor, gelir 2714'ten 2333'e
+        /// düşüyor. Yeni bir karar üretmeden geliri %14 kırıyor. Yeni bir kol
+        /// (reklam/bilinirlik) gelene kadar 1 kalmalı.
+        var capacityExponent: Double
+
+        /// Müşterinin katlanacağı bekleme. Sıra bunu aşmaya başlayınca gelen
+        /// müşteri kapıdan döner.
+        var patienceSeconds: TimeInterval
+
+        /// Kapıdan dönmenin sertliği. Büyüdükçe fren daha ani devreye girer.
+        var baulkSharpness: Double
+
         /// Fiyat esnekliği. Sipariş `(taban fiyat / fiyat)^esneklik` ile
         /// çarpılır.
         ///

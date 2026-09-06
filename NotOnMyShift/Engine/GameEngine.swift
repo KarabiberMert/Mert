@@ -254,10 +254,39 @@ enum GameEngine {
         let buff = eventMultiplier(for: state) * holdingMultiplier(for: state, config: config)
         let bonus = processBonus(for: floor, state: state, config: config)
         let capacity = capacityRate(floor, spec: spec, buff: buff, bonus: bonus)
-        // Fiyat hem tabanı hem kapasite terimini etkiler: pahalı dükkâna
-        // Çağ 0'da da az müşteri gelir.
-        return max(base, capacity * satisfaction(for: floor, config: config))
+
+        // Kapasite terimi **üslü**: 1 olsaydı talep kapasiteyle tam orantılı
+        // olur ve sistem ölçekten bağımsız kalırdı — büyümek hiçbir şeyi
+        // değiştirmezdi. Üs 1'in altında kapasite talebi geçmeye başlıyor.
+        let reference = max(0.0001, config.demand.capacityReference)
+        let shaped = reference * pow(max(0, capacity) / reference,
+                                     max(0.01, config.demand.capacityExponent))
+
+        let wanted = max(base, shaped * satisfaction(for: floor, config: config))
             * priceFactor(for: floor, spec: spec, config: config)
+
+        // Sıra uzadıkça gelen müşteri kapıdan döner. Doğrusal olmayan bu fren
+        // birikimi kendiliğinden sınırlıyor: bekleme sabra yaklaştıkça yeni
+        // sipariş girişi kesiliyor.
+        return wanted * baulkFactor(for: floor, capacity: capacity, config: config)
+    }
+
+    /// Kapıdan dönme çarpanı (0…1).
+    ///
+    /// Beklenen bekleme `kuyruk / kapasite`. Sabra oranı büyüdükçe çarpan
+    /// hızla düşüyor: `1 / (1 + (bekleme/sabır)^sertlik)`. Kapasite yoksa
+    /// (Çağ 0) fren uygulanmaz — orada tezgâhı oyuncu çalıştırıyor.
+    static func baulkFactor(
+        for floor: FloorState,
+        capacity: Double,
+        config: BalanceConfig
+    ) -> Double {
+        guard capacity > 0 else { return 1 }
+        let patience = max(0.0001, config.demand.patienceSeconds)
+        let wait = max(0, floor.demandQueue) / capacity
+        let ratio = wait / patience
+        guard ratio > 0 else { return 1 }
+        return 1 / (1 + pow(ratio, max(0.01, config.demand.baulkSharpness)))
     }
 
     /// Bir segmentte verilen hizmet ve kalan kuyruk.

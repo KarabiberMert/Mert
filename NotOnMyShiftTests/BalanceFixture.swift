@@ -108,6 +108,12 @@ enum BalanceFixture {
         serviceWeight: Double = 1,
         priceFairnessFloor: Double = 1,
         priceElasticity: Double = 2,
+        // Varsayılanlar etkisiz: üs 1 ve sabır çok büyük, yani bu iki
+        // mekanizmayı ölçmeyen testler eskisi gibi çalışır.
+        capacityReference: Double = 1,
+        capacityExponent: Double = 1,
+        patienceSeconds: TimeInterval = 1_000_000,
+        baulkSharpness: Double = 2,
         minimumReportSeconds: TimeInterval = 60,
         upperUnlockCost: Double = 1_000,
         plannedFloors: Int = 8,
@@ -155,6 +161,10 @@ enum BalanceFixture {
                 satisfactionPerSecond: satisfactionPerSecond,
                 priceFairnessFloor: priceFairnessFloor,
                 serviceWeight: serviceWeight,
+                capacityReference: capacityReference,
+                capacityExponent: capacityExponent,
+                patienceSeconds: patienceSeconds,
+                baulkSharpness: baulkSharpness,
                 priceElasticity: priceElasticity
             ),
             counter: .init(
