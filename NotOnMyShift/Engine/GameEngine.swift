@@ -208,10 +208,10 @@ enum GameEngine {
         )
     }
 
-    /// Katın kapsaması. Kayıt kurulmamışsa dengedeki başlangıç değeri.
-    static func coverage(for floor: FloorState, config: BalanceConfig) -> Double {
-        let value = floor.demandCoverage < 0 ? config.demand.startCoverage : floor.demandCoverage
-        return min(max(value, config.demand.minCoverage), config.demand.maxCoverage)
+    /// Katın memnuniyeti. Kayıt kurulmamışsa dengedeki başlangıç değeri.
+    static func satisfaction(for floor: FloorState, config: BalanceConfig) -> Double {
+        let value = floor.satisfaction < 0 ? config.demand.startSatisfaction : floor.satisfaction
+        return min(max(value, config.demand.minSatisfaction), config.demand.maxSatisfaction)
     }
 
     /// Talebin geliş hızı (satış/saniye).
@@ -235,7 +235,7 @@ enum GameEngine {
         let capacity = capacityRate(floor, spec: spec, buff: buff, bonus: bonus)
         // Fiyat hem tabanı hem kapasite terimini etkiler: pahalı dükkâna
         // Çağ 0'da da az müşteri gelir.
-        return max(base, capacity * coverage(for: floor, config: config))
+        return max(base, capacity * satisfaction(for: floor, config: config))
             * priceFactor(for: floor, spec: spec, config: config)
     }
 
@@ -244,10 +244,12 @@ enum GameEngine {
     /// Kapalı form: `dQ/dt = (λ − servis) − Q/T` doğrusal olduğu için iki
     /// saatlik yokluk da tek hesapta çıkar. Döngüye çevirmeye gerek yok.
     struct DemandOutcome: Sendable, Equatable {
-        /// Segmentte karşılanan talep (satış adedi).
+        /// Segmentte karşılanan sipariş (satış adedi).
         var served: Double
         /// Segment sonunda kuyrukta kalan.
         var queue: Double
+        /// Beklerken kendini iptal eden sipariş. Memnuniyeti bu düşürür.
+        var cancelled: Double
     }
 
     static func serveDemand(
@@ -257,56 +259,70 @@ enum GameEngine {
         seconds: TimeInterval,
         config: BalanceConfig
     ) -> DemandOutcome {
-        let life = max(1, config.demand.expirySeconds)
+        let life = max(1, config.demand.cancelSeconds)
         let start = max(0, queue)
-        guard seconds > 0 else { return DemandOutcome(served: 0, queue: start) }
+        guard seconds > 0 else { return DemandOutcome(served: 0, queue: start, cancelled: 0) }
+
+        /// İptal edilenler korunumdan çıkar: gelen + baştaki = karşılanan +
+        /// kalan + iptal. Ayrı bir integral almaya gerek yok.
+        func outcome(served: Double, rest: Double) -> DemandOutcome {
+            let cancelled = max(0, start + max(0, arrival) * seconds - served - rest)
+            return DemandOutcome(served: served, queue: max(0, rest), cancelled: cancelled)
+        }
 
         // Kapasite yok (Çağ 0): kimse hizmet vermiyor. Kuyruk birikir ve
-        // bekleyenler kaçar; denge noktası λ·T.
+        // bekleyen siparişler iptal olur; denge noktası λ·T.
         guard capacity > 0 else {
             let limit = life * max(0, arrival)
-            let rest = limit + (start - limit) * exp(-seconds / life)
-            return DemandOutcome(served: 0, queue: max(0, rest))
+            return outcome(served: 0, rest: limit + (start - limit) * exp(-seconds / life))
         }
 
         if arrival >= capacity {
             // Kapasite sınırlı: sürekli tam hızda servis, kuyruk büyür.
             let limit = life * (arrival - capacity)
-            let rest = limit + (start - limit) * exp(-seconds / life)
-            return DemandOutcome(served: capacity * seconds, queue: max(0, rest))
+            return outcome(
+                served: capacity * seconds,
+                rest: limit + (start - limit) * exp(-seconds / life)
+            )
         }
 
-        // Talep sınırlı: önce birikmiş kuyruk boşalır, sonra geliş hızında.
+        // Sipariş sınırlı: önce birikmiş kuyruk boşalır, sonra geliş hızında.
+        // Kadro yetiştiği için iptal olmaz — korunum bunu kendiliğinden verir.
         let drain = capacity - arrival
         let drainSeconds = start / drain
         if seconds <= drainSeconds {
-            return DemandOutcome(served: capacity * seconds, queue: max(0, start - drain * seconds))
+            return outcome(served: capacity * seconds, rest: start - drain * seconds)
         }
-        let served = capacity * drainSeconds + arrival * (seconds - drainSeconds)
-        return DemandOutcome(served: served, queue: 0)
+        return outcome(served: capacity * drainSeconds + arrival * (seconds - drainSeconds), rest: 0)
     }
 
-    /// Kapsamanın segment sonundaki değeri.
+    /// Memnuniyetin segment sonundaki değeri.
     ///
-    /// Kuyruk hoşgörü süresinin altındaysa dükkân iyi çalışıyor demektir ve
-    /// kapsama tavana doğru tırmanır; kuyruk birikirse tabana doğru iner.
-    /// Taban dengede tanımlı — ihmal geliri sıfırlamaz, yavaşlatır.
-    static func nextCoverage(
+    /// **Sonuçtan** beslenir, kuyruk uzunluğundan değil: zamanında karşılanan
+    /// sipariş yükseltir, iptal olan düşürür. Hedef, o segmentteki başarı
+    /// oranının dengedeki alt ve üst sınır arasına düşürülmüş hâlidir;
+    /// memnuniyet oraya `satisfactionPerSecond` hızıyla yaklaşır.
+    ///
+    /// Hiç sipariş geçmediyse memnuniyet olduğu yerde kalır — kapalı bir
+    /// dükkân ne kazanır ne kaybeder.
+    static func nextSatisfaction(
         current: Double,
-        queue: Double,
-        capacity: Double,
+        served: Double,
+        cancelled: Double,
         seconds: TimeInterval,
         config: BalanceConfig
     ) -> Double {
         let demand = config.demand
-        let reference = capacity > 0 ? capacity : 1 / max(0.0001, demand.starterArrivalSeconds)
-        let backlogSeconds = max(0, queue) / max(0.0001, reference)
-        let target = backlogSeconds > max(0, demand.backlogToleranceSeconds)
-            ? demand.minCoverage
-            : demand.maxCoverage
-        let step = max(0, demand.coveragePerSecond) * seconds
+        let low = min(demand.minSatisfaction, demand.maxSatisfaction)
+        let high = max(demand.minSatisfaction, demand.maxSatisfaction)
+        let total = max(0, served) + max(0, cancelled)
+        guard total > 0 else { return min(max(current, low), high) }
+
+        let success = max(0, served) / total
+        let target = low + (high - low) * success
+        let step = max(0, demand.satisfactionPerSecond) * seconds
         let moved = current < target ? min(target, current + step) : max(target, current - step)
-        return min(max(moved, demand.minCoverage), demand.maxCoverage)
+        return min(max(moved, low), high)
     }
 
     /// Tezgâhın ne kadarı dolu (0…1). Kapasite yoksa `nil` — Çağ 0'da
@@ -462,8 +478,8 @@ enum GameEngine {
         }
         // Şema 8 öncesi kayıtlarda kapsama yok; dengedeki başlangıç konur.
         for index in next.floors.indices {
-            if next.floors[index].demandCoverage < 0 {
-                next.floors[index].demandCoverage = config.demand.startCoverage
+            if next.floors[index].satisfaction < 0 {
+                next.floors[index].satisfaction = config.demand.startSatisfaction
             }
             if next.floors[index].demandQueue < 0 {
                 next.floors[index].demandQueue = max(0, config.demand.startQueue)
@@ -665,13 +681,15 @@ enum GameEngine {
             earned += max(0, outcome.served * price(for: floor, spec: spec) - wages)
 
             next.floors[index].demandQueue = outcome.queue
-            next.floors[index].demandCoverage = nextCoverage(
-                current: coverage(for: floor, config: config),
-                queue: outcome.queue,
-                capacity: capacity,
+            next.floors[index].satisfaction = nextSatisfaction(
+                current: satisfaction(for: floor, config: config),
+                // Kadronun karşıladığı + oyuncunun elle karşıladığı.
+                served: outcome.served + max(0, floor.servedByHand),
+                cancelled: outcome.cancelled,
                 seconds: seconds,
                 config: config
             )
+            next.floors[index].servedByHand = 0
         }
 
         next.elapsedGameSeconds += seconds
@@ -807,10 +825,16 @@ enum GameEngine {
               !state.floors[index].isInvestment,
               let spec = spec(for: state.floors[index], config: config) else { return state }
 
-        // Müşteri gelmeden satış olmaz: tezgâh bir talebi karşılar.
+        // Sipariş gelmeden satış olmaz: tezgâh bir siparişi karşılar.
         var next = normalised(state, config: config)
         guard next.floors[index].demandQueue >= 1 else { return state }
         next.floors[index].demandQueue -= 1
+
+        // Elle karşılanan sipariş de memnuniyet oranına girer. Ayrı bir artı
+        // vermek yetmiyor: hedef **oran** olduğu için, karşılanan siparişler
+        // aynı kesirin payına yazılmalı. Yoksa tek bir iptal hedefi tabana
+        // çeker ve oyuncunun emeği görünmez olur.
+        next.floors[index].servedByHand += 1
 
         let revenue = manualRevenue(for: state.floors[index], spec: spec)
             * eventMultiplier(for: state)

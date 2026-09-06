@@ -128,6 +128,70 @@ final class GameStoreTests: XCTestCase {
         }
     }
 
+    /// Fiyat oynatmak bir karar olsun: iki değişiklik arasında bekleme var
+    /// ve kalan süre ekranda gösterilebilsin diye açık.
+    func testPriceChangeWaitsForItsCooldown() async throws {
+        try await withTemporaryDirectory { directory in
+            let config = BalanceFixture.config(priceChangeCooldownSeconds: 30)
+            let clock = TestClock(BalanceFixture.epoch)
+            let store = GameStore(
+                config: config,
+                saves: SaveStore(containerDirectory: directory),
+                now: clock.provider
+            )
+
+            let baslangic = store.price
+            store.setPrice(baslangic * 2)
+            XCTAssertEqual(store.price, baslangic * 2, accuracy: 1e-9)
+            XCTAssertFalse(store.canChangePrice)
+            XCTAssertEqual(store.priceCooldownRemaining, 30, accuracy: 1e-9)
+
+            // Soğuma sürerken ikinci değişiklik yok sayılır.
+            store.setPrice(baslangic)
+            XCTAssertEqual(store.price, baslangic * 2, accuracy: 1e-9)
+
+            // Süre dolunca yeniden değiştirilebilir.
+            clock.date = BalanceFixture.epoch.addingTimeInterval(30)
+            XCTAssertTrue(store.canChangePrice)
+            store.setPrice(baslangic)
+            XCTAssertEqual(store.price, baslangic, accuracy: 1e-9)
+
+            store.handleWillResignActive()
+        }
+    }
+
+    /// Sıfırlama gerçekten en baştan başlatır: kayıt silinir, soğumalar
+    /// sıfırlanır, oyuncu uygulamayı ilk kez açmış gibi görür.
+    func testStartOverLooksLikeAFreshInstall() async throws {
+        try await withTemporaryDirectory { directory in
+            let config = BalanceFixture.config(manualCooldownSeconds: 2, priceChangeCooldownSeconds: 30)
+            let clock = TestClock(BalanceFixture.epoch)
+            let store = GameStore(
+                config: config,
+                saves: SaveStore(containerDirectory: directory),
+                now: clock.provider
+            )
+
+            for _ in 0..<10 { clock.date.addTimeInterval(2); store.sellManually() }
+            store.hireStaff()
+            store.setPrice(store.price * 2)
+            XCTAssertFalse(store.state.floors[0].staff.isEmpty)
+            XCTAssertFalse(store.canChangePrice)
+
+            store.startOver()
+
+            XCTAssertEqual(store.state.money, 0, accuracy: 1e-9)
+            XCTAssertEqual(store.state.stats.manualSales, 0)
+            XCTAssertTrue(store.state.floors[0].staff.isEmpty)
+            XCTAssertEqual(store.state.cityNumber, 1)
+            XCTAssertEqual(store.state.holdingPoints, 0)
+            XCTAssertTrue(store.canChangePrice, "Soğumalar da sıfırlanmalı")
+            XCTAssertTrue(store.canSellManually, "Kapıda yeniden müşteri olmalı")
+
+            store.handleWillResignActive()
+        }
+    }
+
     func testProgressSurvivesRelaunch() async throws {
         try await withTemporaryDirectory { directory in
             let config = BalanceFixture.config()

@@ -51,8 +51,9 @@
 "action.price" = "Fiyat";
 "action.shopFill" = "Tezgâh %@ dolu";
 "action.priceHint" = "Ucuz satmak müşteriyi çoğaltır, pahalı satmak azaltır";
-"action.waitingCustomers" = "%lld kişi bekliyor";
-"action.noCustomers" = "Tezgâhta kimse yok";
+"action.waitingOrders" = "%lld sipariş";
+"action.noOrders" = "Sipariş yok";
+"action.satisfaction" = "Memnuniyet";
 "action.coffeesToGo" = "%lld satış daha";
 
 /* Depo */

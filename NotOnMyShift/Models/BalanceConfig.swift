@@ -127,12 +127,16 @@ struct BalanceConfig: Codable, Sendable, Equatable {
         }
     }
 
-    /// Talep: dükkâna gelen müşteri akışı.
+    /// Talep: dükkâna düşen siparişler.
     ///
-    /// Talep **kapasiteye oranlı** ölçeklenir: geliş hızı, katın satış
-    /// kapasitesinin `coverage` katıdır. Böylece iş büyüdükçe talep de büyür
-    /// ve denge tablosu geçerli kalır; sistem bir ödül/ceza bandı olarak
-    /// çalışır. Kapasite yokken (Çağ 0) taban geliş hızı devreye girer.
+    /// Sipariş **kapasiteye oranlı** ölçeklenir: geliş hızı, katın satış
+    /// kapasitesinin `memnuniyet` katıdır. Böylece iş büyüdükçe sipariş de
+    /// büyür ve denge tablosu geçerli kalır.
+    ///
+    /// Ekosistem sonuçtan beslenir: zamanında karşılanan sipariş memnuniyeti
+    /// yükseltir, iptal olan düşürür; memnuniyet de bir sonraki siparişlerin
+    /// hızını belirler. Ayrı bir kuyruk tavanına gerek yok — iptal süresi
+    /// kuyruğu kendiliğinden `geliş hızı × iptal süresi` civarında tutar.
     struct Demand: Codable, Sendable, Equatable {
         /// Kadro yokken geliş aralığı. Oyunun ilk dakikası akıcı kalsın diye
         /// `baseArrivalSeconds`'tan kısadır.
@@ -140,34 +144,32 @@ struct BalanceConfig: Codable, Sendable, Equatable {
         /// Kadro varken taban geliş aralığı. Kapasite terimi bunu aşınca
         /// belirleyici olmaktan çıkar — taban yalnızca alt sınırdır.
         var baseArrivalSeconds: TimeInterval
-        /// Kuyrukta bu kadar bekleyen talep gider.
-        var expirySeconds: TimeInterval
-        /// Yeni dükkânın kapısındaki hazır müşteri. Sıfır olsaydı oyuncu
-        /// uygulamayı açtığında satacak kimse bulamazdı.
+        /// Bekleyen sipariş bu süre sonunda kendini iptal eder.
+        var cancelSeconds: TimeInterval
+        /// Yeni dükkâna açılışta düşmüş sipariş. Sıfır olsaydı oyuncu
+        /// uygulamayı açtığında karşılayacak bir şey bulamazdı.
         var startQueue: Double
-        /// Yeni dükkânın kapsaması: kapasitenin ne kadarı doluyor.
-        var startCoverage: Double
-        /// Kapsama bunun altına inmez — ihmal geliri sıfırlamaz, yavaşlatır.
-        var minCoverage: Double
-        /// Kapsama bunun üstüne çıkmaz ve **1'i geçmemeli**.
+
+        /// Yeni dükkânın memnuniyeti.
+        var startSatisfaction: Double
+        /// Memnuniyet bunun altına inmez — kötü gün geliri sıfırlamaz.
+        var minSatisfaction: Double
+        /// Memnuniyet bunun üstüne çıkmaz ve **1'i geçmemeli**.
         ///
         /// Geçerse geliş hızı kapasiteyi aşar; o zaman kadronun birikmiş
-        /// kuyruğu eritecek boş kapasitesi kalmaz ve kuyruk yalnızca müşteriler
-        /// kaçtığı için azalır. Tavan 1 olunca kadro kuyruğu gerçekten servis
-        /// eder ve o müşteriler paraya döner. Reklamın işi de budur:
-        /// kapsamayı tavana doğru itmek.
-        var maxCoverage: Double
-        /// Kapsamanın saniyede değişme hızı. Ekosistem yavaş nefes alsın.
-        var coveragePerSecond: Double
-        /// Kuyruk bu kadar saniyelik işi aşarsa kapsama düşmeye başlar.
-        var backlogToleranceSeconds: TimeInterval
+        /// siparişi eritecek boş kapasitesi kalmaz ve kuyruk yalnızca
+        /// iptallerle azalır. Tavan 1 olunca kadro siparişi gerçekten
+        /// karşılar ve o siparişler paraya döner.
+        var maxSatisfaction: Double
+        /// Memnuniyetin saniyede hedefe yaklaşma hızı. Ekosistem yavaş
+        /// nefes alsın; tek bir iptal her şeyi çevirmesin.
+        var satisfactionPerSecond: Double
 
-        /// Fiyat esnekliği. Talep `(taban fiyat / fiyat)^esneklik` ile çarpılır.
+        /// Fiyat esnekliği. Sipariş `(taban fiyat / fiyat)^esneklik` ile
+        /// çarpılır.
         ///
         /// 1'den büyük olmalı: aksi hâlde pahalıya satmak her zaman kazandırır
-        /// ve kaydırıcının bir anlamı kalmaz. 1'den büyükken tepe nokta
-        /// **talebin kapasiteyi tam doldurduğu fiyat** olur — oyuncunun
-        /// öğrenmesi gereken tek kural budur.
+        /// ve kaydırıcının bir anlamı kalmaz.
         var priceElasticity: Double
     }
 
@@ -178,6 +180,9 @@ struct BalanceConfig: Codable, Sendable, Equatable {
         var manualCooldownSeconds: TimeInterval
         /// Soğuma bunun altına inmez — tezgâh sınırsız bir musluk olmasın.
         var minCooldownSeconds: TimeInterval
+        /// İki fiyat değişikliği arasındaki en kısa süre. Fiyat oynatmak bir
+        /// karar olsun; kaydırıcıyı sürekli oynatarak talep kovalanmasın.
+        var priceChangeCooldownSeconds: TimeInterval
     }
 
     struct Offline: Codable, Sendable, Equatable {

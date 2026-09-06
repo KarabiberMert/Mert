@@ -644,6 +644,45 @@ değişince ekrandaki saniyelik oran yanlış olurdu. Fiyat oranıyla çarpılı
 
 Şema 8 → 9: kat başına `price`, `decodeIfPresent` ile. 205 → 210 test.
 
+**Talep → sipariş: ekosistem sonuçtan besleniyor (6 Eylül 2026)**
+
+Ürün sahibi modeli yeniden tarif etti ve daha iyisi çıktı. "Bekleyen kişi"
+yerine **sipariş** (online sipariş gibi); bekleyen sipariş **10 saniyede**
+kendini iptal ediyor; zamanında karşılanan memnuniyeti yükseltiyor, iptal olan
+düşürüyor; memnuniyet de bir sonraki siparişlerin hızını belirliyor.
+
+Yan fayda: **kuyruk tavanına gerek kalmadı.** İptal süresi kendisi sınır —
+kuyruk `geliş hızı × 10` civarında dengeleniyor (Çağ 0'da ~3 sipariş). Bir tur
+önce eklenen `maxQueue` kaldırıldı.
+
+Kapsama (`coverage`) kavramı **memnuniyet**e (`satisfaction`) dönüştü; artık
+kuyruk uzunluğuna değil sonuca bakıyor: hedef, o segmentteki
+`karşılanan / (karşılanan + iptal)` oranının dengedeki alt ve üst sınıra
+düşürülmüş hâli. Hiç sipariş geçmediyse memnuniyet yerinde kalıyor — kapalı
+dükkân ne kazanır ne kaybeder.
+
+İptal sayısı ayrı bir integralle değil **korunumla** çıkıyor:
+`gelen + baştaki = karşılanan + kalan + iptal`. Kapalı form bozulmadı.
+
+**İki hata ekranda yakalandı:**
+
+1. Üç sipariş karşıladım, bar yine tabana indi. Elle satışlar memnuniyete hiç
+   sayılmıyordu — motor yalnızca kadronun karşıladığını "servis" kabul ediyor,
+   Çağ 0'da ise kadro yok. İlk düzeltme (satış anında sabit bir artı) yetmedi:
+   hedef bir **oran** olduğu için tek iptal hedefi tabana çekiyor ve artı ancak
+   başabaş getiriyordu. Doğrusu elle karşılananları aynı kesirin payına
+   yazmak — `FloorState.servedByHand` sayacı satışta artıyor, motor bir sonraki
+   adımda orana katıp sıfırlıyor. Test 0,64'ten 0,78'e çıktı.
+2. Bar boş görünüyordu ama etiket %60 diyordu; barı alt sınıra göre
+   ölçeklemiştim. Mutlak değeri gösteriyor artık.
+
+Ekranda: satış düğmesinde "3 sipariş", altında **Memnuniyet barı** ve yüzde.
+Sağ üstte **geçici** "Baştan başla" tuşu — `#if DEBUG` içinde **değil**, çünkü
+telefonda denenen derleme Release. Onay adımı var; yayın turundan önce
+kaldırılacak.
+
+Şema 9 → 11. 210 → 217 test.
+
 **Kaldı:**
 
 - **Adım 3'ün ikinci kutusu (27 maddelik elle doğrulama) ve adım 4, 5, 6.**

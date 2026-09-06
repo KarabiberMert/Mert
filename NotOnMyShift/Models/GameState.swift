@@ -14,7 +14,9 @@ struct GameState: Codable, Sendable, Equatable {
     /// 4 → kat kat bina (tek dükkân yerine `floors`) · 5 → olaylar ve pazar
     /// 6 → çatı katı ve süreç katmanı · 7 → sektör satışı ve holding puanı
     /// 8 → talep: kat başına kuyruk ve kapsama · 9 → kat başına fiyat
-    static let currentSchemaVersion = 9
+    /// 10 → kapsama yerine memnuniyet: sonuçtan beslenen ekosistem
+    /// 11 → elle karşılanan siparişler de memnuniyet oranına giriyor
+    static let currentSchemaVersion = 11
 
     /// `marketShare` ve `nextEventAtGameSeconds` için "henüz kurulmadı" işareti.
     /// Kod çözücünün dengeye erişimi yok; ilk değerleri motor koyuyor.
@@ -333,15 +335,15 @@ struct FloorState: Codable, Sendable, Equatable, Identifiable {
     /// iz"i bu: sattığın şey yok olmaz, kira ödemeye devam eder. (şema 7)
     var investmentRate: Double
 
-    /// Karşılanmamış talep. Tekil kart listesi değil, sürekli bir stok:
+    /// Karşılanmamış sipariş. Tekil kart listesi değil, sürekli bir stok:
     /// motor kapalı formda kalsın diye. Ekranda `floor(demandQueue)` kadar
-    /// bekleyen müşteri olarak okunur. (şema 8)
+    /// bekleyen sipariş olarak okunur. (şema 8)
     var demandQueue: Double
 
-    /// Talebin kapasiteyi karşılama oranı. 1,0 = talep tam kapasite kadar.
-    /// Hızlı servis ve reklam yükseltir, biriken kuyruk düşürür; dengedeki
-    /// alt sınırın altına inmez. (şema 8)
-    var demandCoverage: Double
+    /// Müşteri memnuniyeti (0…1). Zamanında karşılanan sipariş yükseltir,
+    /// iptal olan düşürür. Bir sonraki siparişlerin geliş hızını bu belirler:
+    /// memnun mahalle daha çok sipariş verir. (şema 10)
+    var satisfaction: Double
 
     /// Oyuncunun koyduğu satış fiyatı. Dengedeki taban fiyatın
     /// `minPriceFactor`–`maxPriceFactor` aralığında gezer.
@@ -350,11 +352,18 @@ struct FloorState: Codable, Sendable, Equatable, Identifiable {
     /// talebin kapasiteyi tam doldurduğu fiyattır. (şema 9)
     var price: Double
 
+    /// Son ilerlemeden beri **elle** karşılanan sipariş. Motor bir sonraki
+    /// adımda memnuniyet oranına katıp sıfırlar.
+    ///
+    /// Geçici bir sayaç ama kayıtta duruyor: motor saf kalsın diye elle satış
+    /// ile zamanın ilerlemesi arasındaki köprü buradan geçiyor. (şema 11)
+    var servedByHand: Double
+
     var id: String { sectorID }
 
     private enum CodingKeys: String, CodingKey {
         case sectorID, staff, equipmentLevels, branchCount, investmentRate
-        case demandQueue, demandCoverage, price
+        case demandQueue, satisfaction, price, servedByHand
     }
 
     init(
@@ -367,8 +376,9 @@ struct FloorState: Codable, Sendable, Equatable, Identifiable {
         demandQueue: Double = GameState.unset,
         // Motor dengeden başlangıç kapsamasını koyar,
         // çünkü kod çözücünün dengeye erişimi yok.
-        demandCoverage: Double = GameState.unset,
-        price: Double = GameState.unset
+        satisfaction: Double = GameState.unset,
+        price: Double = GameState.unset,
+        servedByHand: Double = 0
     ) {
         self.sectorID = sectorID
         self.staff = staff
@@ -376,8 +386,9 @@ struct FloorState: Codable, Sendable, Equatable, Identifiable {
         self.branchCount = max(1, branchCount)
         self.investmentRate = max(0, investmentRate)
         self.demandQueue = demandQueue
-        self.demandCoverage = demandCoverage
+        self.satisfaction = satisfaction
         self.price = price
+        self.servedByHand = max(0, servedByHand)
     }
 
     init(from decoder: any Decoder) throws {
@@ -390,9 +401,10 @@ struct FloorState: Codable, Sendable, Equatable, Identifiable {
         // Şema 8 öncesi kayıtlarda talep yoktu: kuyruk boş, kapsama motorun
         // dengeden dolduracağı "kurulmadı" değeri.
         demandQueue = try container.decodeIfPresent(Double.self, forKey: .demandQueue) ?? GameState.unset
-        demandCoverage = try container.decodeIfPresent(Double.self, forKey: .demandCoverage) ?? GameState.unset
+        satisfaction = try container.decodeIfPresent(Double.self, forKey: .satisfaction) ?? GameState.unset
         // Şema 9 öncesi kayıtlarda fiyat yok: motor dengedeki tabanı koyar.
         price = try container.decodeIfPresent(Double.self, forKey: .price) ?? GameState.unset
+        servedByHand = max(0, try container.decodeIfPresent(Double.self, forKey: .servedByHand) ?? 0)
     }
 
     /// Bu kat satıldı mı? Yatırım katı üretir ama artık yönetilmez.

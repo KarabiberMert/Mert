@@ -264,18 +264,18 @@
   "demand": {
     "starterArrivalSeconds": 3.0,
     "baseArrivalSeconds": 10.0,
-    "expirySeconds": 60.0,
+    "cancelSeconds": 10.0,
     "startQueue": 3.0,
-    "startCoverage": 0.9,
-    "minCoverage": 0.6,
-    "maxCoverage": 1.0,
-    "coveragePerSecond": 0.0025,
-    "backlogToleranceSeconds": 20.0,
+    "startSatisfaction": 0.9,
+    "minSatisfaction": 0.6,
+    "maxSatisfaction": 1.0,
+    "satisfactionPerSecond": 0.02,
     "priceElasticity": 2.0
   },
   "counter": {
     "manualCooldownSeconds": 2.0,
-    "minCooldownSeconds": 0.25
+    "minCooldownSeconds": 0.25,
+    "priceChangeCooldownSeconds": 30.0
   },
   "offline": {
     "minimumReportSeconds": 60

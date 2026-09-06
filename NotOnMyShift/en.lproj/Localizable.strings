@@ -49,8 +49,9 @@
 "action.price" = "Price";
 "action.shopFill" = "Counter %@ full";
 "action.priceHint" = "Cheaper brings more customers, dearer brings fewer";
-"action.waitingCustomers" = "%lld waiting";
-"action.noCustomers" = "No one at the counter yet";
+"action.waitingOrders" = "%lld orders";
+"action.noOrders" = "No orders yet";
+"action.satisfaction" = "Satisfaction";
 "action.coffeesToGo" = "%lld more to go";
 
 /* Store room */

@@ -397,6 +397,9 @@ final class GameStore {
     @ObservationIgnored private var hasBoostedThisSession = false
     /// Çevrimdışı katlama, dönüş özetinde bir kez sunulur.
     @ObservationIgnored private var hasDoubledThisReturn = false
+    /// Son fiyat değişikliğinin anı. Fiyat oynatmak bir karar olsun diye
+    /// aralarında bekleme var.
+    private var lastPriceChangeAt: Date?
     /// Son elle satışın anı. Tezgâhın soğuma süresi buradan ölçülür.
     /// Kayda yazılmıyor: bir saniyelik bir kuralın yeniden açılışta
     /// yaşaması gerekmiyor, motorun saf kalması ise gerekiyor.
@@ -551,14 +554,14 @@ final class GameStore {
 
     /// Seçili katın kapısında bekleyen müşteri sayısı.
     /// Kuyruk sürekli bir stok; oyuncuya tam sayı olarak gösteriliyor.
-    var waitingCustomers: Int {
+    var waitingOrders: Int {
         guard let floor = currentFloor, !floor.isInvestment else { return 0 }
         return max(0, Int(floor.demandQueue))
     }
 
     /// Tezgâh satışa hazır mı? İki şart: soğuma bitmiş ve bekleyen müşteri var.
     var canSellManually: Bool {
-        manualCooldownRemaining <= 0 && waitingCustomers >= 1
+        manualCooldownRemaining <= 0 && waitingOrders >= 1
     }
 
     /// Seçili katın soğuma süresi. Ekipman aldıkça kısalır.
@@ -589,14 +592,50 @@ final class GameStore {
         return GameEngine.priceRange(for: spec)
     }
 
+    /// Seçili katın müşteri memnuniyeti (0…1). Yatırım katında nil.
+    var satisfaction: Double? {
+        guard let floor = currentFloor, !floor.isInvestment else { return nil }
+        return GameEngine.satisfaction(for: floor, config: config)
+    }
+
+    /// Memnuniyetin dengedeki alt ve üst sınırı — bar bunu ölçek alsın.
+    var satisfactionRange: ClosedRange<Double> {
+        let low = min(config.demand.minSatisfaction, config.demand.maxSatisfaction)
+        let high = max(config.demand.minSatisfaction, config.demand.maxSatisfaction)
+        return low...max(low, high)
+    }
+
     /// Tezgâhın doluluk oranı. Çağ 0'da nil.
     var shopFill: Double? {
         GameEngine.shopFill(onFloor: selectedFloor, state, config: config)
     }
 
+    /// Fiyat yeniden değiştirilebilir mi?
+    var canChangePrice: Bool { priceCooldownRemaining <= 0 }
+
+    /// Fiyatın yeniden değiştirilebilmesine kalan süre.
+    var priceCooldownRemaining: TimeInterval {
+        guard let last = lastPriceChangeAt else { return 0 }
+        let gecen = now().timeIntervalSince(last)
+        guard gecen >= 0 else { return 0 }
+        return max(0, config.counter.priceChangeCooldownSeconds - gecen)
+    }
+
     /// Fiyatı değiştir. Sınır dışı değer kırpılır.
+    ///
+    /// Soğuma sürerken yok sayılır: kaydırıcı zaten kapalı, ama tezgâha
+    /// dokunmakla aynı kural burada da geçerli olsun.
     func setPrice(_ value: Double) {
-        state = GameEngine.setPrice(value, onFloor: selectedFloor, state, config: config)
+        guard canChangePrice else { return }
+        let previous = price
+        let next = GameEngine.setPrice(value, onFloor: selectedFloor, state, config: config)
+        // Kaydırıcı bırakıldığında aynı değer gelirse soğumayı başlatma.
+        guard abs(next.floors[safe: selectedFloor]?.price ?? previous) != abs(previous) else {
+            state = next
+            return
+        }
+        state = next
+        lastPriceChangeAt = now()
         persist()
     }
 
@@ -810,10 +849,16 @@ final class GameStore {
     func startOver() {
         stopTicking()
         saves.deleteAll()
-        state = GameState.newGame(
-            characterID: "kahveci",
-            sectorID: config.sectors.first?.id ?? GameState.groundSectorID,
-            now: now()
+        // Normalleştirme şart: yeni oyunun talebi ve fiyatı "kurulmadı"
+        // olarak doğuyor. Doldurmazsak sıfırlamadan sonraki ilk saniyede
+        // kapıda müşteri olmaz ve tezgâh ölü görünür.
+        state = GameEngine.normalised(
+            GameState.newGame(
+                characterID: "kahveci",
+                sectorID: config.sectors.first?.id ?? GameState.groundSectorID,
+                now: now()
+            ),
+            config: config
         )
         offlineReport = nil
         firstHireCelebration = nil
@@ -825,6 +870,9 @@ final class GameStore {
         hasOfferedEventThisSession = false
         hasBoostedThisSession = false
         hasDoubledThisReturn = false
+        lastManualSaleAt = nil
+        lastPriceChangeAt = nil
+        isResigned = false
         lastActionError = nil
         didRecoverFromBackup = false
         didFailToSave = false

@@ -91,17 +91,19 @@ enum BalanceFixture {
         // değil. Soğumanın kendi testi ayrı.
         manualCooldownSeconds: TimeInterval = 0,
         minCooldownSeconds: TimeInterval = 0,
+        priceChangeCooldownSeconds: TimeInterval = 0,
         // Talep varsayılanları bol: kapsama 1'de sabit ve kuyruk derin, yani
         // talebi ölçmeyen testler eskisi gibi kapasiteyle çalışır.
         starterArrivalSeconds: TimeInterval = 1,
         baseArrivalSeconds: TimeInterval = 1,
-        demandExpirySeconds: TimeInterval = 60,
+        cancelSeconds: TimeInterval = 60,
         demandStartQueue: Double = 1000,
-        startCoverage: Double = 1,
-        minCoverage: Double = 1,
-        maxCoverage: Double = 1,
-        coveragePerSecond: Double = 0,
-        backlogToleranceSeconds: TimeInterval = 20,
+        // Memnuniyet varsayılan olarak 1'de sabit: onu ölçmeyen testler
+        // eskisi gibi kapasiteyle çalışsın.
+        startSatisfaction: Double = 1,
+        minSatisfaction: Double = 1,
+        maxSatisfaction: Double = 1,
+        satisfactionPerSecond: Double = 0,
         priceElasticity: Double = 2,
         minimumReportSeconds: TimeInterval = 60,
         upperUnlockCost: Double = 1_000,
@@ -142,18 +144,18 @@ enum BalanceFixture {
             demand: .init(
                 starterArrivalSeconds: starterArrivalSeconds,
                 baseArrivalSeconds: baseArrivalSeconds,
-                expirySeconds: demandExpirySeconds,
+                cancelSeconds: cancelSeconds,
                 startQueue: demandStartQueue,
-                startCoverage: startCoverage,
-                minCoverage: minCoverage,
-                maxCoverage: maxCoverage,
-                coveragePerSecond: coveragePerSecond,
-                backlogToleranceSeconds: backlogToleranceSeconds,
+                startSatisfaction: startSatisfaction,
+                minSatisfaction: minSatisfaction,
+                maxSatisfaction: maxSatisfaction,
+                satisfactionPerSecond: satisfactionPerSecond,
                 priceElasticity: priceElasticity
             ),
             counter: .init(
                 manualCooldownSeconds: manualCooldownSeconds,
-                minCooldownSeconds: minCooldownSeconds
+                minCooldownSeconds: minCooldownSeconds,
+                priceChangeCooldownSeconds: priceChangeCooldownSeconds
             ),
             offline: .init(minimumReportSeconds: minimumReportSeconds),
             // Jitter 0: testlerde olay aralığı tam olarak gapSeconds.
@@ -251,7 +253,7 @@ enum BalanceFixture {
         // motorun normalleştirmesine bırakırdı.
         for index in state.floors.indices {
             state.floors[index].demandQueue = demandQueue
-            state.floors[index].demandCoverage = config.demand.startCoverage
+            state.floors[index].satisfaction = config.demand.startSatisfaction
             if let spec = config.sectors.first(where: { $0.id == state.floors[index].sectorID }) {
                 state.floors[index].price = spec.manual.revenuePerSale
             }

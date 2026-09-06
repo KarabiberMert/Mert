@@ -11,6 +11,8 @@ struct RootView: View {
     @State private var cashBumped = false
     @State private var tab: ActionPanelView.Tab = .crew
     @State private var showsSupport = false
+    /// GEÇİCİ: deneme için sıfırlama onayı.
+    @State private var showsResetConfirm = false
 
     var body: some View {
         ZStack {
@@ -30,19 +32,40 @@ struct RootView: View {
                 .padding(.horizontal, 22)
                 .padding(.top, 6)
                 .overlay(alignment: .topTrailing) {
-                    if !store.hasRemovedAds {
-                        Button { showsSupport = true } label: {
-                            Text(L.supportOpen)
+                    HStack(spacing: 8) {
+                        // GEÇİCİ — yalnızca deneme için. Yayın turundan önce
+                        // kaldırılacak. `#if DEBUG` içinde değil, çünkü telefonda
+                        // denenen derleme Release ve orada görünmesi gerekiyor.
+                        Button { showsResetConfirm = true } label: {
+                            Text(L.startOver)
                                 .font(Typography.label(12))
-                                .foregroundStyle(Palette.enamel)
+                                .foregroundStyle(Palette.inkFaint)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 5)
                                 .background(
-                                    Capsule().stroke(Palette.enamel.opacity(0.35), lineWidth: 1)
+                                    Capsule().stroke(Palette.inkFaint.opacity(0.35), lineWidth: 1)
                                 )
                         }
                         .buttonStyle(.plain)
+
+                        if !store.hasRemovedAds {
+                            Button { showsSupport = true } label: {
+                                Text(L.supportOpen)
+                                    .font(Typography.label(12))
+                                    .foregroundStyle(Palette.enamel)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(
+                                        Capsule().stroke(Palette.enamel.opacity(0.35), lineWidth: 1)
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
+                }
+                // Kazara basmak bütün ilerlemeyi silerdi; tek onay adımı var.
+                .confirmationDialog(L.startOver, isPresented: $showsResetConfirm, titleVisibility: .visible) {
+                    Button(L.startOver, role: .destructive) { store.startOver() }
                 }
                 // Bu sayfa bilerek burada duruyor, kökte değil: SwiftUI'da aynı
                 // görünüme iki `.sheet` zincirlenirse yalnızca biri sunulur ve

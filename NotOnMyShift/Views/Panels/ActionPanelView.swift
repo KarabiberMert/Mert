@@ -79,9 +79,9 @@ struct ActionPanelView: View {
             HStack(spacing: 10) {
                 Text(L.sectorSell(store.currentFloor?.sectorID ?? ""))
                 // Kuyruk tezgâhın üstünde durur: oyuncu kime sattığını görsün.
-                Text(store.waitingCustomers >= 1
-                     ? L.waitingCustomers(store.waitingCustomers)
-                     : L.noCustomers)
+                Text(store.waitingOrders >= 1
+                     ? L.waitingOrders(store.waitingOrders)
+                     : L.noOrders)
                     .font(Typography.label(13))
                     .foregroundStyle(Palette.plaster.opacity(0.7))
                     .lineLimit(1)
@@ -187,7 +187,15 @@ struct ActionPanelView: View {
                     .font(Typography.money(15))
                     .foregroundStyle(Palette.mustardDeep)
                 Spacer(minLength: 8)
-                if let fill = store.shopFill {
+                // Soğuma sürerken kalan süre, bittiğinde doluluk oranı.
+                // İkisi aynı yerde: satır kalabalıklaşmasın.
+                if !store.canChangePrice {
+                    Text(DurationText.text(store.priceCooldownRemaining))
+                        .font(Typography.label(12))
+                        .foregroundStyle(Palette.inkFaint)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                } else if let fill = store.shopFill {
                     Text(L.shopFill(Percent.text(fill)))
                         .font(Typography.label(12))
                         .foregroundStyle(Palette.inkFaint)
@@ -201,15 +209,58 @@ struct ActionPanelView: View {
                 in: store.priceRange
             )
             .tint(Palette.mustard)
+            .disabled(!store.canChangePrice)
+            .opacity(store.canChangePrice ? 1 : 0.45)
 
             Text(L.priceHint)
                 .font(Typography.label(11))
                 .foregroundStyle(Palette.inkFaint)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
+
+            satisfactionBar
         }
         .padding(.horizontal, 4)
         .padding(.bottom, 2)
+    }
+
+    /// Memnuniyet barı. Zamanında karşılanan sipariş doldurur, iptal olan
+    /// boşaltır; dolu bar daha çok sipariş demek.
+    ///
+    /// Ölçek dengedeki alt sınırdan başlar: bar hiç boşalmadığı için değil,
+    /// memnuniyet oraya inemediği için. Yanlış bir "sıfırlandı" hissi vermesin.
+    @ViewBuilder
+    private var satisfactionBar: some View {
+        if let value = store.satisfaction {
+            // Bar mutlak değeri gösterir, alt sınıra göre ölçeklenmez:
+            // yanındaki yüzdeyle aynı şeyi söylesin. Taban %60 ise bar da
+            // %60 dolu görünür, boş değil.
+            let fraction = min(1, max(0, value))
+
+            HStack(spacing: 8) {
+                Text(L.satisfaction)
+                    .font(Typography.label(12))
+                    .foregroundStyle(Palette.inkSoft)
+
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Palette.enamel.opacity(0.15))
+                        Capsule()
+                            .fill(fraction < 0.35 ? Palette.mustardDeep : Palette.pistachio)
+                            .frame(width: proxy.size.width * fraction)
+                    }
+                    .frame(maxHeight: .infinity, alignment: .center)
+                }
+                .frame(height: 6)
+
+                Text(Percent.text(value))
+                    .font(Typography.label(12))
+                    .foregroundStyle(Palette.inkFaint)
+                    .monospacedDigit()
+            }
+            .padding(.top, 2)
+        }
     }
 
     @ViewBuilder

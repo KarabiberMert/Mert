@@ -48,8 +48,9 @@
 "action.price" = "Precio";
 "action.shopFill" = "Mostrador %@ lleno";
 "action.priceHint" = "Más barato trae más clientes, más caro trae menos";
-"action.waitingCustomers" = "%lld esperando";
-"action.noCustomers" = "No hay nadie en el mostrador";
+"action.waitingOrders" = "%lld pedidos";
+"action.noOrders" = "Sin pedidos";
+"action.satisfaction" = "Satisfacción";
 "action.coffeesToGo" = "faltan %lld";
 
 /* Almacén */

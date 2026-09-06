@@ -21,9 +21,9 @@ final class DemandTests: XCTestCase {
             starterArrivalSeconds: 1_000_000,
             baseArrivalSeconds: 1_000_000,
             demandStartQueue: 0,
-            startCoverage: 0.25,
-            minCoverage: 0.25,
-            maxCoverage: 0.25
+            startSatisfaction: 0.25,
+            minSatisfaction: 0.25,
+            maxSatisfaction: 0.25
         )
         let state = BalanceFixture.state(staffCount: 1, demandQueue: 0, config: config)
 
@@ -43,9 +43,9 @@ final class DemandTests: XCTestCase {
             ratePerSecond: 10,
             starterArrivalSeconds: 1_000_000,
             baseArrivalSeconds: 0.5,          // 2 satış/sn taban
-            demandExpirySeconds: 60,
+            cancelSeconds: 60,
             demandStartQueue: 0,
-            startCoverage: 1, minCoverage: 1, maxCoverage: 1
+            startSatisfaction: 1, minSatisfaction: 1, maxSatisfaction: 1
         )
         let state = BalanceFixture.state(staffCount: 1, demandQueue: 0, config: config)
 
@@ -60,9 +60,9 @@ final class DemandTests: XCTestCase {
     func testWithoutStaffTheQueueFillsAndOverflowLeaves() {
         let config = BalanceFixture.config(
             starterArrivalSeconds: 3,          // 1/3 satış/sn
-            demandExpirySeconds: 60,
+            cancelSeconds: 60,
             demandStartQueue: 0,
-            startCoverage: 1, minCoverage: 1, maxCoverage: 1
+            startSatisfaction: 1, minSatisfaction: 1, maxSatisfaction: 1
         )
         let state = BalanceFixture.state(staffCount: 0, demandQueue: 0, config: config)
 
@@ -71,12 +71,52 @@ final class DemandTests: XCTestCase {
         XCTAssertEqual(next.money, 0, accuracy: 1e-9, "Kadro yokken kimse satmaz")
     }
 
-    /// Müşteri gelmeden elle satış olmaz; müşteri gelince olur.
-    func testManualSaleNeedsAWaitingCustomer() {
+    /// Kuyruğa ayrı bir tavan koymuyoruz: **iptal süresi kendisi sınırdır.**
+    /// Denge noktası `geliş hızı × iptal süresi`.
+    func testCancelTimeBoundsTheQueueOnItsOwn() {
+        let config = BalanceFixture.config(
+            starterArrivalSeconds: 1,        // saniyede bir sipariş
+            cancelSeconds: 10,
+            demandStartQueue: 0,
+            startSatisfaction: 1, minSatisfaction: 1, maxSatisfaction: 1
+        )
+        let state = BalanceFixture.state(staffCount: 0, demandQueue: 0, config: config)
+
+        // İptal olmasa 10.000 sipariş birikirdi; 1/sn × 10 sn = 10'da duruyor.
+        let next = GameEngine.advance(state, by: 10_000, config: config)
+        XCTAssertEqual(next.floors[0].demandQueue, 10, accuracy: 1e-6)
+    }
+
+    /// Karşılanamayan siparişler gerçekten iptal olarak sayılır — korunum:
+    /// gelen + baştaki = karşılanan + kalan + iptal.
+    func testUnservedOrdersAreCountedAsCancelled() {
+        let config = BalanceFixture.config(cancelSeconds: 10)
+        let outcome = GameEngine.serveDemand(
+            queue: 5, capacity: 0, arrival: 1, seconds: 100, config: config
+        )
+        XCTAssertEqual(outcome.served, 0, accuracy: 1e-9)
+        XCTAssertEqual(outcome.queue, 10, accuracy: 1e-3, "Denge noktası λ·T")
+        XCTAssertEqual(outcome.cancelled, 5 + 100 - 0 - outcome.queue, accuracy: 1e-9)
+        XCTAssertGreaterThan(outcome.cancelled, 0)
+    }
+
+    /// Kadro yetişirken iptal olmaz.
+    func testNothingCancelsWhileTheShopKeepsUp() {
+        let config = BalanceFixture.config(cancelSeconds: 10)
+        let outcome = GameEngine.serveDemand(
+            queue: 2, capacity: 5, arrival: 1, seconds: 10, config: config
+        )
+        XCTAssertEqual(outcome.cancelled, 0, accuracy: 1e-9)
+        XCTAssertEqual(outcome.queue, 0, accuracy: 1e-9)
+        XCTAssertEqual(outcome.served, 2 + 10, accuracy: 1e-9, "Baştaki iki sipariş de karşılandı")
+    }
+
+    /// Müşteri gelmeden elle satış olmaz; müşteri gelince olur.    /// Müşteri gelmeden elle satış olmaz; müşteri gelince olur.
+    func testManualSaleNeedsAWaitingOrder() {
         let config = BalanceFixture.config(
             starterArrivalSeconds: 10,
             demandStartQueue: 0,
-            startCoverage: 1, minCoverage: 1, maxCoverage: 1
+            startSatisfaction: 1, minSatisfaction: 1, maxSatisfaction: 1
         )
         let bos = BalanceFixture.state(demandQueue: 0, config: config)
 
@@ -99,6 +139,80 @@ final class DemandTests: XCTestCase {
         )
     }
 
+    /// Elle karşılanan sipariş memnuniyet **oranına** girer: satış anında
+    /// sayaca yazılır, bir sonraki ilerlemede kadronun karşıladıklarıyla
+    /// birlikte değerlendirilir. Ayrı bir artı vermek yetmezdi — hedef bir
+    /// oran olduğu için tek iptal hedefi tabana çekerdi.
+    func testServingByHandCountsTowardTheSatisfactionRatio() {
+        let config = BalanceFixture.config(
+            starterArrivalSeconds: 1_000_000,   // yeni sipariş gelmesin
+            cancelSeconds: 10,
+            demandStartQueue: 0,
+            startSatisfaction: 0.7,
+            minSatisfaction: 0.6,
+            maxSatisfaction: 1.0,
+            satisfactionPerSecond: 0.02
+        )
+        var state = BalanceFixture.state(demandQueue: 5, config: config)
+        state.floors[0].satisfaction = 0.7
+
+        let satildi = GameEngine.sellManually(onFloor: 0, state, config: config)
+        XCTAssertEqual(satildi.floors[0].servedByHand, 1, accuracy: 1e-9, "Satış sayaca yazılır")
+        XCTAssertEqual(satildi.floors[0].demandQueue, 4, accuracy: 1e-9)
+
+        // Bir sonraki ilerlemede orana giriyor: iptal yok, hedef tavan.
+        let sonra = GameEngine.advance(satildi, by: 2, config: config)
+        XCTAssertEqual(sonra.floors[0].satisfaction, 0.74, accuracy: 1e-6)
+        XCTAssertEqual(sonra.floors[0].servedByHand, 0, accuracy: 1e-9, "Sayaç sıfırlanır")
+    }
+
+    /// Ekosistemin bütünü: yetişen oyuncunun memnuniyeti yükselir,
+    /// yetişemeyenin düşer. Çağ 0'da tezgâhı oyuncu çalıştırdığı için asıl
+    /// sınav burası.
+    func testKeepingUpRaisesSatisfactionAndFallingBehindLowersIt() {
+        let config = BalanceFixture.config(
+            manualCooldownSeconds: 2,
+            minCooldownSeconds: 2,
+            starterArrivalSeconds: 3,        // üç saniyede bir sipariş
+            cancelSeconds: 10,
+            demandStartQueue: 3,
+            startSatisfaction: 0.7,
+            minSatisfaction: 0.6,
+            maxSatisfaction: 1.0,
+            satisfactionPerSecond: 0.02
+        )
+
+        // Yetişen oyuncu: iki saniyede bir satış, geliş hızından hızlı.
+        var yetisen = BalanceFixture.state(demandQueue: 3, config: config)
+        yetisen.floors[0].satisfaction = 0.7
+        for _ in 0..<30 {
+            yetisen = GameEngine.advance(yetisen, by: 2, config: config)
+            yetisen = GameEngine.sellManually(onFloor: 0, yetisen, config: config)
+        }
+        // Nereye oturduğu bir denge sayısı: oyuncunun geliş hızından ne kadar
+        // hızlı olduğuna bağlı (burada 2 sn soğumaya karşı 3 sn geliş).
+        // Testin ölçtüğü şey yön: yetişmek memnuniyeti yükseltir.
+        XCTAssertGreaterThan(
+            yetisen.floors[0].satisfaction, 0.75,
+            "Zamanında karşılayan oyuncu başladığı yerin üstüne çıkmalı"
+        )
+
+        // Yetişemeyen oyuncu: hiç dokunmuyor, siparişler iptal oluyor.
+        var yetisemeyen = BalanceFixture.state(demandQueue: 3, config: config)
+        yetisemeyen.floors[0].satisfaction = 0.7
+        yetisemeyen = GameEngine.advance(yetisemeyen, by: 60, config: config)
+        XCTAssertEqual(
+            yetisemeyen.floors[0].satisfaction, 0.6, accuracy: 1e-9,
+            "İhmal tabana indirir — ama sıfıra değil"
+        )
+
+        // Asıl iddia bu: iki oyuncu arasında gerçek bir fark var.
+        XCTAssertGreaterThan(
+            yetisen.floors[0].satisfaction,
+            yetisemeyen.floors[0].satisfaction + 0.1
+        )
+    }
+
     /// Yeni dükkânın kapısında hazır müşteri olur — uygulamayı açan oyuncu
     /// satacak kimse bulamazsa oyun başlamaz.
     func testNewShopOpensWithCustomersWaiting() {
@@ -110,36 +224,48 @@ final class DemandTests: XCTestCase {
         XCTAssertEqual(normal.floors[0].demandQueue, 3, accuracy: 1e-9)
     }
 
-    /// Kuyruk hoşgörüyü aşınca kapsama iner, ama **tabanın altına inmez**.
-    /// Rapor §6'nın ruhu: ihmal yavaşlatır, geri götürmez.
-    func testCoverageFallsWithBacklogButNeverBelowTheFloor() {
+    /// Memnuniyet **sonuçtan** beslenir: zamanında karşılanan sipariş
+    /// yükseltir, iptal olan düşürür. Taban aşılmaz — kötü gün geliri
+    /// sıfırlamaz, yavaşlatır.
+    func testSatisfactionFollowsServedVersusCancelled() {
         let config = BalanceFixture.config(
-            minCoverage: 0.6,
-            maxCoverage: 1.4,
-            coveragePerSecond: 0.01,
-            backlogToleranceSeconds: 20
+            minSatisfaction: 0.6,
+            maxSatisfaction: 1.0,
+            satisfactionPerSecond: 0.01
         )
 
-        // Kuyruk 100 kişi, kapasite 1 satış/sn → 100 saniyelik birikmiş iş.
-        let dolu = GameEngine.nextCoverage(
-            current: 1, queue: 100, capacity: 1, seconds: 1000, config: config
+        // Hepsi iptal → taban.
+        let kotu = GameEngine.nextSatisfaction(
+            current: 1, served: 0, cancelled: 50, seconds: 1000, config: config
         )
-        XCTAssertEqual(dolu, 0.6, accuracy: 1e-9, "Taban aşılmaz")
+        XCTAssertEqual(kotu, 0.6, accuracy: 1e-9, "Taban aşılmaz")
 
-        // Kuyruk boş → kapsama tavana tırmanır.
-        let bos = GameEngine.nextCoverage(
-            current: 1, queue: 0, capacity: 1, seconds: 1000, config: config
+        // Hepsi karşılandı → tavan.
+        let iyi = GameEngine.nextSatisfaction(
+            current: 0.6, served: 50, cancelled: 0, seconds: 1000, config: config
         )
-        XCTAssertEqual(bos, 1.4, accuracy: 1e-9, "Hızlı servis tavana kadar ödüllendirir")
+        XCTAssertEqual(iyi, 1.0, accuracy: 1e-9, "Zamanında servis tavana kadar ödüllendirir")
+
+        // Yarısı iptal → hedef tam ortada (0,8).
+        let orta = GameEngine.nextSatisfaction(
+            current: 0.6, served: 25, cancelled: 25, seconds: 1000, config: config
+        )
+        XCTAssertEqual(orta, 0.8, accuracy: 1e-9)
 
         // Tek adımda uçmaz: hız dengede tanımlı.
-        let yavas = GameEngine.nextCoverage(
-            current: 1, queue: 0, capacity: 1, seconds: 10, config: config
+        let yavas = GameEngine.nextSatisfaction(
+            current: 0.6, served: 50, cancelled: 0, seconds: 10, config: config
         )
-        XCTAssertEqual(yavas, 1.1, accuracy: 1e-9)
+        XCTAssertEqual(yavas, 0.7, accuracy: 1e-9)
+
+        // Hiç sipariş geçmediyse memnuniyet yerinde kalır.
+        let sessiz = GameEngine.nextSatisfaction(
+            current: 0.85, served: 0, cancelled: 0, seconds: 1000, config: config
+        )
+        XCTAssertEqual(sessiz, 0.85, accuracy: 1e-9, "Kapalı dükkân ne kazanır ne kaybeder")
     }
 
-    /// Kadro birikmiş kuyruğu **servis ederek** eritir — müşteriler kaçtığı
+    /// Kadro birikmiş kuyruğu **servis ederek** eritir    /// Kadro birikmiş kuyruğu **servis ederek** eritir — müşteriler kaçtığı
     /// için değil. Ölçüt para: eriyen kişi sayısı kadar satış yapılmış olmalı.
     func testStaffWorkThroughTheQueueAndGetPaidForIt() {
         // Kapasite 1 satış/sn (10 ₺/sn ÷ 10 ₺), geliş 0,5 satış/sn.
@@ -150,7 +276,7 @@ final class DemandTests: XCTestCase {
             starterArrivalSeconds: 1_000_000,
             baseArrivalSeconds: 1_000_000,
             demandStartQueue: 0,
-            startCoverage: 0.5, minCoverage: 0.5, maxCoverage: 0.5
+            startSatisfaction: 0.5, minSatisfaction: 0.5, maxSatisfaction: 0.5
         )
         let state = BalanceFixture.state(staffCount: 1, demandQueue: 100, config: config)
 
@@ -162,13 +288,13 @@ final class DemandTests: XCTestCase {
         XCTAssertEqual(next.money, 1000, accuracy: 1e-6, "Eriyen müşteriler paraya dönmeli")
     }
 
-    /// Kapsama tavanı 1'i geçmemeli. Geçerse kadronun boş kapasitesi kalmaz ve
-    /// kuyruk yalnızca müşteriler kaçtığı için azalır — istediğimiz bu değil.
-    func testShippedBalanceKeepsCoverageAtOrBelowFullCapacity() throws {
+    /// Memnuniyet tavanı 1'i geçmemeli. Geçerse kadronun boş kapasitesi
+    /// kalmaz ve kuyruk yalnızca iptallerle azalır — istediğimiz bu değil.
+    func testShippedBalanceKeepsSatisfactionAtOrBelowFullCapacity() throws {
         let config = try BalanceConfig.load()
-        XCTAssertLessThanOrEqual(config.demand.maxCoverage, 1.0)
-        XCTAssertLessThanOrEqual(config.demand.startCoverage, config.demand.maxCoverage)
-        XCTAssertLessThanOrEqual(config.demand.minCoverage, config.demand.startCoverage)
+        XCTAssertLessThanOrEqual(config.demand.maxSatisfaction, 1.0)
+        XCTAssertLessThanOrEqual(config.demand.startSatisfaction, config.demand.maxSatisfaction)
+        XCTAssertLessThanOrEqual(config.demand.minSatisfaction, config.demand.startSatisfaction)
     }
 
     /// Sen yokken kadro talebi karşılar: çevrimdışı kazanç talep yüzünden
@@ -180,7 +306,7 @@ final class DemandTests: XCTestCase {
             starterArrivalSeconds: 1,
             baseArrivalSeconds: 1,
             demandStartQueue: 0,
-            startCoverage: 1, minCoverage: 1, maxCoverage: 1
+            startSatisfaction: 1, minSatisfaction: 1, maxSatisfaction: 1
         )
         let state = BalanceFixture.state(staffCount: 1, demandQueue: 0, config: config)
 
@@ -206,7 +332,7 @@ final class PriceTests: XCTestCase {
         starterArrivalSeconds: 1_000_000,
         baseArrivalSeconds: 1_000_000,
         demandStartQueue: 0,
-        startCoverage: 1, minCoverage: 1, maxCoverage: 1,
+        startSatisfaction: 1, minSatisfaction: 1, maxSatisfaction: 1,
         priceElasticity: 2
     )
 
